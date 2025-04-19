@@ -2,6 +2,8 @@ package org.example.MainKt
 
 //./gradlew shadowJar
 
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.runBlocking
 import java.awt.BasicStroke
 import javax.swing.JFrame
 import java.awt.event.KeyAdapter
@@ -10,6 +12,7 @@ import javax.swing.JPanel
 import java.awt.Color
 import java.awt.Graphics
 import java.awt.Graphics2D
+import java.awt.MouseInfo
 import java.awt.Toolkit
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
@@ -33,7 +36,7 @@ class Player {
     private val margin = 1
     private var movementSpeed = 2.5
     private var lastMouseX: Int? = null // Przechowuje poprzednią pozycję X myszy
-    private val sensitivity = 0.005 // Nowa zmienna dla czułości myszy (mniejsza wartość = wolniejszy obrót)
+    private val sensitivity = 0.01 // Nowa zmienna dla czułości myszy (mniejsza wartość = wolniejszy obrót)
 
     private fun canMoveTo(x: Int, y: Int): Boolean {
         val left = x - playerSize / 2
@@ -102,10 +105,15 @@ class Player {
 
     fun updateAngleFromMouse(mouseX: Int, centerX: Int) {
         // Oblicz deltaX względem środka ekranu
-        val deltaX = mouseX - centerX
+        //val deltaX = MouseInfo.getPointerInfo().location.x - 960
         // Skaluj ruch myszy z uwzględnieniem czułości
-        val angleChange = deltaX * sensitivity
-        currentangle += angleChange.toInt()
+        //val angleChange = deltaX * sensitivity
+        if(MouseInfo.getPointerInfo().location.x > centerX) {
+            currentangle += (((MouseInfo.getPointerInfo().location.x) - centerX) * sensitivity).toInt()
+        }
+        if(MouseInfo.getPointerInfo().location.x < centerX) {
+            currentangle += (((MouseInfo.getPointerInfo().location.x) - centerX) * sensitivity).toInt()
+        }
         // Logiczny reset: ustawiamy lastMouseX na środek ekranu
         lastMouseX = centerX
     }
@@ -292,7 +300,7 @@ class PlayerOnScreen : JPanel() {
 }
 
 
-fun main() {
+fun main() = runBlocking {
     // Podstawa wyświetlania
     val frame = JFrame("rolada z gówna")
     frame.defaultCloseOperation = JFrame.EXIT_ON_CLOSE
@@ -396,6 +404,12 @@ fun main() {
             centerY = frame.y + frame.height / 2
         }
     })
+    while (true) {
+        delay(65)
+        Robot().mouseMove(MouseInfo.getPointerInfo().location.x,2000)
+        Robot().mouseMove(960,1200)
+        Robot().mouseMove(960,384)
+    }
 }
 
 class Map {

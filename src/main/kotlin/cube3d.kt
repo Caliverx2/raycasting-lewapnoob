@@ -17,6 +17,7 @@ import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.coroutines.*
 import kotlinx.coroutines.*
+import java.awt.MouseInfo
 
 class CubePanel : JPanel(), ActionListener {
     private var angleX = 0.0
