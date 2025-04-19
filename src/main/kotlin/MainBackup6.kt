@@ -13,13 +13,11 @@ import java.awt.Graphics2D
 import java.awt.Toolkit
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
-import java.awt.event.MouseMotionAdapter
-import java.awt.Robot
 import java.awt.geom.Line2D
 import javax.swing.JLayeredPane
 import kotlin.concurrent.fixedRateTimer
 import kotlin.math.*
-
+/*
 var positionX = 100
 var positionY = 100
 var currentangle = 0
@@ -29,25 +27,27 @@ var shoty = 0.0
 class Player {
     private val map = Map()
     private val tileSize = 30
-    private val playerSize = 2
-    private val margin = 1
+    private val playerSize = 2 // Rozmiar gracza w pikselach (np. szerokość/wysokość prostokąta)
+    private val margin = 1 // Margines błędu w pikselach
     private var movementSpeed = 2.5
-    private var lastMouseX: Int? = null // Przechowuje poprzednią pozycję X myszy
-    private val sensitivity = 0.005 // Nowa zmienna dla czułości myszy (mniejsza wartość = wolniejszy obrót)
 
     private fun canMoveTo(x: Int, y: Int): Boolean {
+        // Oblicz granice prostokąta reprezentującego gracza
         val left = x - playerSize / 2
         val right = x + playerSize / 2
         val top = y - playerSize / 2
         val bottom = y + playerSize / 2
 
+        // Sprawdź kafelki, w których znajdują się rogi prostokąta gracza
         val gridLeft = (left - margin) / tileSize
         val gridRight = (right + margin) / tileSize
         val gridTop = (top - margin) / tileSize
         val gridBottom = (bottom + margin) / tileSize
 
+        // Sprawdź, czy wszystkie kafelki w obszarze są wolne (nie są ścianami)
         for (gridY in gridTop..gridBottom) {
             for (gridX in gridLeft..gridRight) {
+                // Sprawdź granice siatki i czy kafelek jest ścianą
                 if (gridY !in map.grid.indices || gridX !in map.grid[gridY].indices || ((map.grid[gridY][gridX] != 0) and (map.grid[gridY][gridX] != 5))) {
                     return false
                 }
@@ -93,21 +93,11 @@ class Player {
     }
 
     fun anglea() {
-        currentangle -= 2
+        currentangle -= 2 //9
     }
 
     fun angled() {
-        currentangle += 2
-    }
-
-    fun updateAngleFromMouse(mouseX: Int, centerX: Int) {
-        // Oblicz deltaX względem środka ekranu
-        val deltaX = mouseX - centerX
-        // Skaluj ruch myszy z uwzględnieniem czułości
-        val angleChange = deltaX * sensitivity
-        currentangle += angleChange.toInt()
-        // Logiczny reset: ustawiamy lastMouseX na środek ekranu
-        lastMouseX = centerX
+        currentangle += 2 //9
     }
 }
 
@@ -291,44 +281,40 @@ class PlayerOnScreen : JPanel() {
     }
 }
 
-
 fun main() {
-    // Podstawa wyświetlania
+    //podstawa wyświetlania
     val frame = JFrame("rolada z gówna")
     frame.defaultCloseOperation = JFrame.EXIT_ON_CLOSE
-    frame.iconImage = Toolkit.getDefaultToolkit().getImage("src/main/resources/icon/icon.jpg")
+    //frame.isAlwaysOnTop = true
+    //frame.isUndecorated = true
+    frame.iconImage = Toolkit.getDefaultToolkit().getImage("src/main/resources/icon/icon.jpg" )
     frame.isResizable = false
     frame.setSize(1366, 768)
     frame.setLocation(((Toolkit.getDefaultToolkit().screenSize.width - frame.width)/2), ((Toolkit.getDefaultToolkit().screenSize.height - frame.height)/2))
-
-    // Ukrycie kursora
-    frame.cursor = frame.toolkit.createCustomCursor(
-        java.awt.image.BufferedImage(1, 1, java.awt.image.BufferedImage.TYPE_INT_ARGB),
-        java.awt.Point(0, 0),
-        "invisible"
-    )
-
     frame.isVisible = true
 
-    // Warstwy
+    //warstwy
     val layeredPane = JLayeredPane()
     layeredPane.setSize(1366, 768)
     layeredPane.setBounds(0, 0, 1366, 768)
     frame.add(layeredPane)
 
     val mapa = Mappingmap()
+    mapa.hasFocus()
     mapa.isOpaque = false
     mapa.layout = null
     mapa.setSize(1366, 768)
     mapa.setBounds(0, 0, 1366, 768)
 
     val ekran = Tlo()
+    ekran.hasFocus()
     ekran.isOpaque = true
     ekran.layout = null
     ekran.setSize(1366, 768)
     ekran.setBounds(0, 0, 1366, 768)
 
     val playerOnScreen = PlayerOnScreen()
+    playerOnScreen.hasFocus()
     playerOnScreen.isOpaque = false
     playerOnScreen.setSize(1366, 768)
     playerOnScreen.setBounds(0, 0, 1366, 768)
@@ -343,57 +329,31 @@ fun main() {
     layeredPane.add(playerOnScreen, 4)
     layeredPane.add(renderCast, 6)
 
-    // Inicjalizacja gracza
-    val player = Player()
-
-    // Środek okna
-    var centerX = frame.width / 2
-    var centerY = frame.height / 2
-
-    // Obsługa myszy (strzał)
     frame.addMouseListener(object : MouseAdapter() {
         override fun mousePressed(event: MouseEvent) {
             if (event.button == MouseEvent.BUTTON1) {
                 RenderCast().shotgun()
-            } else {
+            }
+
+            else {
                 println("Naciśnięto klawisz: ${event.button}")
             }
         }
     })
 
-    // Obsługa ruchu myszy
-    frame.addMouseMotionListener(object : MouseMotionAdapter() {
-        override fun mouseMoved(e: MouseEvent) {
-            // Przekazuj pozycję myszy i środek ekranu
-            player.updateAngleFromMouse(e.x, centerX)
-        }
-
-        override fun mouseDragged(e: MouseEvent) {
-            // Przekazuj pozycję myszy i środek ekranu
-            player.updateAngleFromMouse(e.x, centerX)
-        }
-    })
-
-    // Obsługa klawiatury
     frame.addKeyListener(object : KeyAdapter() {
         override fun keyPressed(event: KeyEvent) {
             when (event.keyCode) {
-                KeyEvent.VK_W -> player.w()
-                KeyEvent.VK_S -> player.s()
-                KeyEvent.VK_A -> player.a()
-                KeyEvent.VK_D -> player.d()
-                KeyEvent.VK_LEFT -> player.anglea()
-                KeyEvent.VK_RIGHT -> player.angled()
-            }
-        }
-    })
+                KeyEvent.VK_W -> Player().w()
+                KeyEvent.VK_S -> Player().s()
+                KeyEvent.VK_A -> Player().a()
+                KeyEvent.VK_D -> Player().d()
+                KeyEvent.VK_LEFT -> Player().anglea()
+                KeyEvent.VK_RIGHT -> Player().angled()
 
-    // Obsługa przesunięcia okna
-    frame.addComponentListener(object : java.awt.event.ComponentAdapter() {
-        override fun componentMoved(e: java.awt.event.ComponentEvent?) {
-            // Aktualizuj centerX i centerY, jeśli okno się przesunie
-            centerX = frame.x + frame.width / 2
-            centerY = frame.y + frame.height / 2
+                //KeyEvent.VK_SPACE -> println("kosmos bratku")
+                //else -> println("Naciśnięto klawisz: ${event.keyCode}")
+            }
         }
     })
 }
@@ -446,4 +406,4 @@ class Mappingmap : JPanel() {
         }
         isOpaque = false
     }
-}
+} */
