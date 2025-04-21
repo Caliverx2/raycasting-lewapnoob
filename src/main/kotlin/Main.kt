@@ -13,11 +13,14 @@ import java.awt.Color
 import java.awt.Graphics
 import java.awt.Graphics2D
 import java.awt.MouseInfo
+import java.awt.Point
 import java.awt.Toolkit
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import java.awt.event.MouseMotionAdapter
 import java.awt.Robot
+import java.awt.event.ComponentAdapter
+import java.awt.event.ComponentEvent
 import java.awt.image.BufferedImage
 import java.io.File
 import javax.imageio.ImageIO
@@ -33,7 +36,7 @@ var currentangle = 0
 var shotx = 0.0
 var shoty = 0.0
 
-class Player(private val renderCast: RenderCast, private val playerOnScreen: PlayerOnScreen) {
+class Player() {
     private val map = Map()
     private val tileSize = 30
     private val playerSize = 2
@@ -107,11 +110,11 @@ class Player(private val renderCast: RenderCast, private val playerOnScreen: Pla
         currentangle += rotationSpeed
     }
 
-    fun updateAngleFromMouse(mouseX: Int, centerX: Int) {
-        if (MouseInfo.getPointerInfo().location.x == 960) {
-            currentangle += 0
+    fun updateAngleFromMouse() {
+        currentangle += if (MouseInfo.getPointerInfo().location.x == 960) {
+            0
         } else {
-            currentangle += (((MouseInfo.getPointerInfo().location.x) - 960) * sensitivity).toInt()
+            (((MouseInfo.getPointerInfo().location.x) - 960) * sensitivity).toInt()
         }
     }
 
@@ -237,10 +240,10 @@ class RenderCast : JPanel() {
             val deltaDistX = if (rayDirX == 0.0) 1e30 else abs(1 / rayDirX)
             val deltaDistY = if (rayDirY == 0.0) 1e30 else abs(1 / rayDirY)
 
-            var stepX = 0
-            var stepY = 0
-            var sideDistX = 0.0
-            var sideDistY = 0.0
+            var stepX: Int
+            var stepY: Int
+            var sideDistX: Double
+            var sideDistY: Double
             var side = 0 // 0 dla X, 1 dla Y
 
             if (rayDirX < 0) {
@@ -260,9 +263,9 @@ class RenderCast : JPanel() {
 
             var hitWall = false
             var wallType = 0
-            var distance = 0.0
-            var hitX = 0.0
-            var hitY = 0.0
+            var distance: Double
+            var hitX: Double
+            var hitY: Double
 
             // Pętla DDA
             while (!hitWall) {
@@ -333,8 +336,8 @@ class RenderCast : JPanel() {
 
             // Oblicz wysokość ściany na ekranie
             val lineHeight = ((wallHeight * screenHeight) / (distance * tileSize)).toInt().coerceIn(0, screenHeight * 2)
-            val drawStart = (-lineHeight / 2 + screenHeight / 2).toInt().coerceAtLeast(0)
-            val drawEnd = (lineHeight / 2 + screenHeight / 2).toInt().coerceAtMost(screenHeight)
+            val drawStart = (-lineHeight / 2 + screenHeight / 2).coerceAtLeast(0)
+            val drawEnd = (lineHeight / 2 + screenHeight / 2).coerceAtMost(screenHeight)
 
             // Proste cieniowanie oparte tylko na odległości
             val shadeFactor = (1.0 - (distance / shadeDistanceScale)).coerceIn(minBrightness, maxBrightness)
@@ -350,7 +353,7 @@ class RenderCast : JPanel() {
 
                 // Pobieranie koloru z tekstury
                 val finalTextureX = textureX.toInt().coerceIn(0, textureSize - 1)
-                var color = texture.getRGB(finalTextureX, textureY)
+                val color = texture.getRGB(finalTextureX, textureY)
 
                 // Cieniowanie
                 val originalColor = Color(color)
@@ -421,8 +424,8 @@ fun main() = runBlocking {
 
     // Ukrycie kursora
     frame.cursor = frame.toolkit.createCustomCursor(
-        java.awt.image.BufferedImage(1, 1, java.awt.image.BufferedImage.TYPE_INT_ARGB),
-        java.awt.Point(0, 0),
+        BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB),
+        Point(0, 0),
         "invisible"
     )
 
@@ -462,14 +465,13 @@ fun main() = runBlocking {
     layeredPane.add(renderCast, 6)
 
     // Inicjalizacja gracza
-    val player = Player(renderCast, playerOnScreen)
+    val player = Player()
 
     // Śledzenie stanu klawiszy z jawnym typem kotlin.collections.MutableMap<Int, Boolean>
     val keysPressed: MutableMap<Int, Boolean> = mutableMapOf()
 
     // Środek okna
     var centerX = frame.width / 2
-    var centerY = frame.height / 2
 
     // Obsługa myszy (strzał)
     frame.addMouseListener(object : MouseAdapter() {
@@ -485,13 +487,13 @@ fun main() = runBlocking {
     // Obsługa ruchu myszy
     frame.addMouseMotionListener(object : MouseMotionAdapter() {
         override fun mouseMoved(e: MouseEvent) {
-            player.updateAngleFromMouse(e.x, centerX)
+            player.updateAngleFromMouse()
             renderCast.repaint()
             playerOnScreen.repaint()
         }
 
         override fun mouseDragged(e: MouseEvent) {
-            player.updateAngleFromMouse(e.x, centerX)
+            player.updateAngleFromMouse()
             renderCast.repaint()
             playerOnScreen.repaint()
         }
@@ -516,10 +518,9 @@ fun main() = runBlocking {
     })
 
     // Obsługa przesunięcia okna
-    frame.addComponentListener(object : java.awt.event.ComponentAdapter() {
-        override fun componentMoved(e: java.awt.event.ComponentEvent?) {
+    frame.addComponentListener(object : ComponentAdapter() {
+        override fun componentMoved(e: ComponentEvent?) {
             centerX = frame.x + frame.width / 2
-            centerY = frame.y + frame.height / 2
         }
     })
 
