@@ -1,28 +1,13 @@
-package org.example.MainKt
-
-//./gradlew shadowJar
-
+package org.example
+/*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
-import java.awt.BasicStroke
-import javax.swing.JFrame
-import java.awt.event.KeyAdapter
-import java.awt.event.KeyEvent
-import javax.swing.JPanel
-import java.awt.Color
-import java.awt.Graphics
-import java.awt.Graphics2D
-import java.awt.MouseInfo
-import java.awt.Toolkit
-import java.awt.event.MouseAdapter
-import java.awt.event.MouseEvent
-import java.awt.event.MouseMotionAdapter
-import java.awt.Robot
-import java.awt.geom.Line2D
-import javax.swing.JLayeredPane
+import java.awt.*
+import java.awt.event.*
+import javax.swing.*
+import javax.swing.text.SimpleAttributeSet
 import kotlin.concurrent.fixedRateTimer
 import kotlin.math.*
-
 
 var map = true
 var positionX = 100
@@ -37,8 +22,8 @@ class Player {
     private val playerSize = 2
     private val margin = 1
     private var movementSpeed = 2.5
-    private var lastMouseX: Int? = null // Przechowuje poprzednią pozycję X myszy
-    private val sensitivity = 0.01 // Nowa zmienna dla czułości myszy (mniejsza wartość = wolniejszy obrót)
+    private var lastMouseX: Int? = null
+    private val sensitivity = 0.01
 
     private fun canMoveTo(x: Int, y: Int): Boolean {
         val left = x - playerSize / 2
@@ -53,7 +38,7 @@ class Player {
 
         for (gridY in gridTop..gridBottom) {
             for (gridX in gridLeft..gridRight) {
-                if (gridY !in map.grid.indices || gridX !in map.grid[gridY].indices || ((map.grid[gridY][gridX] != 0) and (map.grid[gridY][gridX] != 5))) {
+                if (gridY !in map.grid.indices || gridX !in map.grid[gridY].indices || ((map.grid[gridY][gridX] != 0) && (map.grid[gridY][gridX] != 5))) {
                     return false
                 }
             }
@@ -106,17 +91,12 @@ class Player {
     }
 
     fun updateAngleFromMouse(mouseX: Int, centerX: Int) {
-        // Oblicz deltaX względem środka ekranu
-        //val deltaX = MouseInfo.getPointerInfo().location.x - 960
-        // Skaluj ruch myszy z uwzględnieniem czułości
-        //val angleChange = deltaX * sensitivity
-        if(MouseInfo.getPointerInfo().location.x > centerX) {
+        if (MouseInfo.getPointerInfo().location.x > centerX) {
             currentangle += (((MouseInfo.getPointerInfo().location.x) - centerX) * sensitivity).toInt()
         }
-        if(MouseInfo.getPointerInfo().location.x < centerX) {
+        if (MouseInfo.getPointerInfo().location.x < centerX) {
             currentangle += (((MouseInfo.getPointerInfo().location.x) - centerX) * sensitivity).toInt()
         }
-        // Logiczny reset: ustawiamy lastMouseX na środek ekranu
         lastMouseX = centerX
     }
 }
@@ -125,41 +105,32 @@ class Tlo : JPanel() {
     init {
         isOpaque = true
     }
+
     override fun paintComponent(v: Graphics) {
         super.paintComponent(v)
-        v.color = Color.lightGray
-        v.fillRect(0, 0, 1368*2, 768/2)   //57, 32
-        v.color = Color.darkGray
-        v.fillRect(0, 384, 1368*2, (768/2))   //57, 32
+        v.color = Color.LIGHT_GRAY
+        v.fillRect(0, 0, 1368 * 2, 768 / 2)
+        v.color = Color.LIGHT_GRAY
+        v.fillRect(0, 384, 1368 * 2, (768 / 2))
     }
 }
 
-class RenderCast : JPanel() {
+class RenderCast : JTextPane() {
     private val timer = fixedRateTimer(name = "ray-rend", initialDelay = 250, period = 150) { render() }
-    private val lines = mutableListOf<Line2D.Double>()
-
-    private val rayCount = 190
+    private val columns = 80
+    private val rows = 25
+    private val rayCount = columns
     private val rayDistances = DoubleArray(rayCount) { 0.0 }
     private val hitTileValues = IntArray(rayCount) { 0 }
     private val fov = 80.0
     private val angleIncrement = fov / rayCount
-
     private val map = Map()
-    private var brightness = 0.85 // Domyślna jasność (1.0 = pełna jasność)
+    private var brightness = 0.85
 
     init {
-        for (row in map.grid.indices) {
-            for (col in map.grid[row].indices) {
-                if (map.grid[row][col] >= 1) {
-                    val x = col * 30.0
-                    val y = row * 30.0
-                    lines.add(Line2D.Double(x, y, x + 30.0, y))
-                    lines.add(Line2D.Double(x, y + 30.0, x + 30.0, y + 30.0))
-                    lines.add(Line2D.Double(x, y, x, y + 30.0))
-                    lines.add(Line2D.Double(x + 30.0, y, x + 30.0, y + 30.0))
-                }
-            }
-        }
+        font = Font("Courier New", Font.PLAIN, 14)
+        isEditable = false
+        background = Color.BLACK
     }
 
     fun shotgun() {
@@ -190,7 +161,6 @@ class RenderCast : JPanel() {
         if (!hit) {
             distansofgun = 300.0
         }
-        repaint()
     }
 
     private fun render() {
@@ -222,96 +192,128 @@ class RenderCast : JPanel() {
                 hitTileValues[i] = 0
             }
         }
-        repaint()
+        updateAsciiRender()
     }
 
-    override fun paintComponent(v: Graphics) {
-        super.paintComponent(v)
-        val stripWidth = (1366.0 / rayCount).toInt()
-        val startX = ((1366.0 - stripWidth * rayCount) / 2).toInt()
+    private fun updateAsciiRender() {
+        val doc = styledDocument
+        doc.remove(0, doc.length)
 
-        for (i in 0 until rayCount) {
-            val relativeAngle = Math.toRadians(i * angleIncrement - fov / 2)
-            val correctedDistance = rayDistances[i] * cos(relativeAngle)
+        val chars = arrayOf(".", ",", ":", ";", "'", "\"", "^", "~", "-", "=", "_", "*", "+", "#", "%", "@", "$", "&", "X", "M")
 
-            fun map(value: Double, fromLow: Double, fromHigh: Double, toLow: Double, toHigh: Double): Double {
-                return (value - fromLow) * (toHigh - toLow) / (fromHigh - fromLow) + toLow
+        for (row in 0 until rows) {
+            val builder = StringBuilder()
+            val attributes = SimpleAttributeSet()
+
+            for (col in 0 until columns) {
+                val relativeAngle = Math.toRadians(col * angleIncrement - fov / 2)
+                val correctedDistance = rayDistances[col] * cos(relativeAngle)
+                val wallHeight = (800.0 / correctedDistance).toInt().coerceAtMost(rows - 2)
+                val wallTop = (rows - wallHeight) / 2
+                val wallBottom = wallTop + wallHeight
+
+                val intensity = (1.0 - (correctedDistance / 300.0)).coerceIn(0.2, 1.0)
+                val grayValue = (intensity * 255 * brightness).toInt().coerceIn(50, 255)
+
+                when {
+                    row < wallTop -> {
+                        //StyleConstants.setForeground(attributes, Color.BLUE.darker())
+                        builder.append('*')
+                    }
+                    row in wallTop until wallBottom -> {
+                        val charIndex = (19 * intensity).toInt().coerceIn(0, 19) // Mapowanie odległości na indeks znaku
+                        val char = chars[charIndex]
+                        builder.append(char)
+                    }
+                    else -> {
+                        //StyleConstants.setForeground(attributes, Color.GREEN.darker())
+                        builder.append('*')
+                    }
+                }
             }
-
-            val intensity = map(correctedDistance, 0.0, 300.0, 1.0, 0.1)
-            val blueValue = (intensity * 180).toInt().coerceIn(0, 180)
-
-            // Ustaw kolor z uwzględnieniem jasności
-            v.color = if (hitTileValues[i] == 5) {
-                // Dla wartości 5 (żółty): skaluj jasność
-                val yellowR = (Color.YELLOW.red * brightness).toInt().coerceIn(0, 255)
-                val yellowG = (Color.YELLOW.green * brightness).toInt().coerceIn(0, 255)
-                val yellowB = (Color.YELLOW.blue * brightness).toInt().coerceIn(0, 255)
-                Color(yellowR, yellowG, yellowB)
-            } else {
-                // Dla ścian (niebieski): skaluj jasność
-                val scaledBlue = (blueValue * brightness).toInt().coerceIn(0, 255)
-                Color(0, 0, scaledBlue)
+            while (builder.length < columns) {
+                builder.append(' ')
             }
-
-            val stripHeight = (5000 / correctedDistance).toInt().coerceAtMost(768)
-            v.fillRect(
-                (startX + i * stripWidth), ((768 - stripHeight) / 2), stripWidth, (stripHeight *  1.5).toInt())
-
-            val g2 = v as Graphics2D
-            g2.color = Color.red
-            g2.stroke = BasicStroke(5f)
-            g2.drawLine((shotx/3).toInt(), (shoty/3).toInt(), (shotx/3).toInt(), (shoty/3).toInt())
-            g2.color = Color.lightGray
-            g2.drawLine(1366/2, 768/2, 1366/2, 768/2)
-        }       // 1366, 768
+            builder.append('\n')
+            doc.insertString(doc.length, builder.toString(), attributes)
+        }
     }
 }
 
 class PlayerOnScreen : JPanel() {
-    private val timer2 = fixedRateTimer(name = "ray-calc", initialDelay = 500, period = 1) {pozycjagracza()}
-
-    private var x = 0 //positionX
-    private var y = 0 //positionY
-    private var xposs = 1 //CurrentRayPositionX
-    private var yposs = 1 //CurrentRayPositionY
+    private val timer2 = fixedRateTimer(name = "ray-calc", initialDelay = 500, period = 1) { pozycjagracza() }
+    private var x = 0
+    private var y = 0
+    private var xposs = 1
+    private var yposs = 1
 
     private fun pozycjagracza() {
         x = positionX
         y = positionY
-
-        //rayAngle = Math.toRadians(angle)   obliczanie kąta promienia w radianach
-        //xPozycjaPromienia = (x + distance * cos(rayAngle)).toInt()  wzór: promień wokół fov gracza
-        //yPozycjaPromienia = (y + distance * sin(rayAngle)).toInt()
-
         val angleru = Math.toRadians(currentangle.toDouble())
-        xposs = (x/3 + 10 * cos(angleru)).toInt()
-        yposs = (y/3 + 10 * sin(angleru)).toInt()
+        xposs = (x / 3 + 10 * cos(angleru)).toInt()
+        yposs = (y / 3 + 10 * sin(angleru)).toInt()
         repaint()
     }
+
     override fun paintComponent(v: Graphics) {
         super.paintComponent(v)
         v.color = Color.green
-        v.fillRect((x-2)/3, (y-2)/3, 4, 4)
+        v.fillRect((x - 2) / 3, (y - 2) / 3, 4, 4)
 
         val g2 = v as Graphics2D
         g2.color = Color.yellow
         g2.stroke = BasicStroke(2f)
-        g2.drawLine((x)/3, (y)/3, (xposs).toInt(), (yposs).toInt())
+        g2.drawLine(x / 3, y / 3, xposs, yposs)
     }
 }
 
+class Map {
+    val grid: Array<IntArray> = arrayOf(
+        intArrayOf(5, 5, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1),
+        intArrayOf(5, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1),
+        intArrayOf(1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1),
+        intArrayOf(1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1),
+        intArrayOf(1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 1, 1, 1, 1),
+        intArrayOf(1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1),
+        intArrayOf(1, 0, 0, 1, 0, 0, 1, 1, 1, 1, 0, 0, 1, 0, 0, 1),
+        intArrayOf(1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1),
+        intArrayOf(1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1),
+        intArrayOf(1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 5),
+        intArrayOf(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 5, 5)
+    )
+}
+
+class Mappingmap : JPanel() {
+    private val map = Map()
+    private val mnoznik = 10
+
+    override fun paintComponent(v: Graphics) {
+        super.paintComponent(v)
+        v.color = Color.gray
+        for (row in map.grid.indices) {
+            for (col in map.grid[row].indices) {
+                if (map.grid[row][col] == 1) {
+                    v.color = Color.gray
+                    v.fillRect(col * mnoznik, row * mnoznik, mnoznik, mnoznik)
+                }
+                if (map.grid[row][col] == 5) {
+                    v.color = Color.YELLOW
+                    v.fillRect(col * mnoznik, row * mnoznik, mnoznik, mnoznik)
+                }
+            }
+        }
+        isOpaque = false
+    }
+}
 
 fun main() = runBlocking {
-    // Podstawa wyświetlania
     val frame = JFrame("rolada z gówna")
     frame.defaultCloseOperation = JFrame.EXIT_ON_CLOSE
-    frame.iconImage = Toolkit.getDefaultToolkit().getImage("src/main/resources/icon/icon.jpg")
     frame.isResizable = false
     frame.setSize(1366, 768)
-    frame.setLocation(((Toolkit.getDefaultToolkit().screenSize.width - frame.width)/2), ((Toolkit.getDefaultToolkit().screenSize.height - frame.height)/2))
+    frame.setLocation(((Toolkit.getDefaultToolkit().screenSize.width - frame.width) / 2), ((Toolkit.getDefaultToolkit().screenSize.height - frame.height) / 2))
 
-    // Ukrycie kursora
     frame.cursor = frame.toolkit.createCustomCursor(
         java.awt.image.BufferedImage(1, 1, java.awt.image.BufferedImage.TYPE_INT_ARGB),
         java.awt.Point(0, 0),
@@ -320,7 +322,6 @@ fun main() = runBlocking {
 
     frame.isVisible = true
 
-    // Warstwy
     val layeredPane = JLayeredPane()
     layeredPane.setSize(1366, 768)
     layeredPane.setBounds(0, 0, 1366, 768)
@@ -353,38 +354,31 @@ fun main() = runBlocking {
     layeredPane.add(playerOnScreen, 4)
     layeredPane.add(renderCast, 6)
 
-    // Inicjalizacja gracza
     val player = Player()
 
-    // Środek okna
     var centerX = frame.width / 2
     var centerY = frame.height / 2
 
-    // Obsługa myszy (strzał)
     frame.addMouseListener(object : MouseAdapter() {
         override fun mousePressed(event: MouseEvent) {
             if (event.button == MouseEvent.BUTTON1) {
-                RenderCast().shotgun()
-            } else {
+                renderCast.shotgun()
+            } /*else {
                 println("Naciśnięto klawisz: ${event.button}")
-            }
+            }*/
         }
     })
 
-    // Obsługa ruchu myszy
     frame.addMouseMotionListener(object : MouseMotionAdapter() {
         override fun mouseMoved(e: MouseEvent) {
-            // Przekazuj pozycję myszy i środek ekranu
             player.updateAngleFromMouse(e.x, centerX)
         }
 
         override fun mouseDragged(e: MouseEvent) {
-            // Przekazuj pozycję myszy i środek ekranu
             player.updateAngleFromMouse(e.x, centerX)
         }
     })
 
-    // Obsługa klawiatury
     frame.addKeyListener(object : KeyAdapter() {
         override fun keyPressed(event: KeyEvent) {
             when (event.keyCode) {
@@ -394,8 +388,7 @@ fun main() = runBlocking {
                 KeyEvent.VK_D -> player.d()
                 KeyEvent.VK_LEFT -> player.anglea()
                 KeyEvent.VK_RIGHT -> player.angled()
-                KeyEvent.VK_SPACE -> RenderCast().shotgun()
-                //
+                KeyEvent.VK_SPACE -> renderCast.shotgun()
                 KeyEvent.VK_UP -> player.w()
                 KeyEvent.VK_DOWN -> player.s()
             }
@@ -405,64 +398,19 @@ fun main() = runBlocking {
             super.keyReleased(e)
             when (e?.keyCode) {
                 KeyEvent.VK_M -> map = true
-                //KeyEvent.VK_M -> println(map)
-
             }
         }
     })
 
-    // Obsługa przesunięcia okna
-    frame.addComponentListener(object : java.awt.event.ComponentAdapter() {
-        override fun componentMoved(e: java.awt.event.ComponentEvent?) {
-            // Aktualizuj centerX i centerY, jeśli okno się przesunie
+    frame.addComponentListener(object : ComponentAdapter() {
+        override fun componentMoved(e: ComponentEvent?) {
             centerX = frame.x + frame.width / 2
             centerY = frame.y + frame.height / 2
         }
     })
+
     while (true) {
         delay(65)
-        Robot().mouseMove(MouseInfo.getPointerInfo().location.x,2000)
-        Robot().mouseMove(960,1200)
-        Robot().mouseMove(960,384)
+        Robot().mouseMove(960, 384)
     }
-}
-
-class Map {
-    //wartości: 1-ściana, 0-pusta przestrzeń, 5-początek i koniec labiryntu
-    val grid: Array<IntArray> = arrayOf(
-        intArrayOf(5,5,1,1,1,1,1,1,1,1,1,1,1,1,1,1),
-        intArrayOf(5,0,0,0,0,0,0,0,0,1,0,0,0,0,0,1),
-        intArrayOf(1,0,0,1,1,1,1,1,1,1,1,1,1,0,0,1),
-        intArrayOf(1,0,0,0,0,0,0,0,0,1,0,0,0,0,0,1),
-        intArrayOf(1,1,1,1,1,1,1,0,0,1,0,0,1,1,1,1),
-        intArrayOf(1,0,0,0,0,0,0,0,0,1,0,0,1,0,0,1),
-        intArrayOf(1,0,0,1,0,0,1,1,1,1,0,0,1,0,0,1),
-        intArrayOf(1,0,0,1,0,0,0,0,0,0,0,0,0,0,0,1),
-        intArrayOf(1,1,1,1,1,1,1,0,0,1,0,0,1,0,0,1),
-        intArrayOf(1,0,0,0,0,0,0,0,0,1,0,0,1,0,0,5),
-        intArrayOf(1,1,1,1,1,1,1,1,1,1,1,1,1,1,5,5)
-    )
-}
-
-class Mappingmap : JPanel() {
-    private val map = Map()
-    private val mnoznik = 10
-
-    override fun paintComponent(v: Graphics) {
-        super.paintComponent(v)
-        v.color = Color.gray
-        for (row in map.grid.indices) {
-            for (col in map.grid[row].indices) {
-                if (map.grid[row][col] == 1) {
-                    v.color = Color.gray
-                    v.fillRect(col * mnoznik, row * mnoznik, mnoznik, mnoznik)
-                }
-                if (map.grid[row][col] == 5) {
-                    v.color = Color.YELLOW
-                    v.fillRect(col * mnoznik, row * mnoznik, mnoznik, mnoznik)
-                }
-            }
-        }
-        isOpaque = false
-    }
-}
+} */
