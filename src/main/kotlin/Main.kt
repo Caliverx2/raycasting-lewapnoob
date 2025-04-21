@@ -30,18 +30,18 @@ import kotlin.math.*
 
 
 var map = true
-var positionX = 100.0
-var positionY = 100.0
+var positionX = 75.0
+var positionY = 75.0
 var currentangle = 0
 var shotx = 0.0
 var shoty = 0.0
+var tileSize = 30.0+10 // Rozmiar kafelka na mapie
 
 class Player() {
     private val map = Map()
-    private val tileSize = 30
     private val playerSize = 2
     private val margin = 2
-    private var movementSpeed = 1.5
+    private val movementSpeed = 1.5
     private val rotationSpeed = 2 // Prędkość obrotu (w stopniach na klatkę)
     private val sensitivity = 0.03 // Czułość myszy
 
@@ -51,10 +51,10 @@ class Player() {
         val top = y - playerSize / 2
         val bottom = y + playerSize / 2
 
-        val gridLeft = (left - margin) / tileSize
-        val gridRight = (right + margin) / tileSize
-        val gridTop = (top - margin) / tileSize
-        val gridBottom = (bottom + margin) / tileSize
+        val gridLeft = ((left - margin) / tileSize).toInt()
+        val gridRight = ((right + margin) / tileSize).toInt()
+        val gridTop = ((top - margin) / tileSize).toInt()
+        val gridBottom = ((bottom + margin) / tileSize).toInt()
 
         for (gridY in gridTop..gridBottom) {
             for (gridX in gridLeft..gridRight) {
@@ -66,40 +66,54 @@ class Player() {
         return true
     }
 
-    fun w() {
-        val anglex = (positionX + movementSpeed * cos(Math.toRadians(currentangle.toDouble())))
-        val angley = (positionY + movementSpeed * sin(Math.toRadians(currentangle.toDouble())))
-        if (canMoveTo((anglex).toInt(), (angley).toInt())) {
-            positionX = anglex
-            positionY = angley
+    // Metoda pomocnicza do obsługi ruchu z rozbiciem na osie X i Y
+    private fun tryMove(deltaX: Double, deltaY: Double) {
+        // Najpierw próbujemy ruch w obu osiach
+        val newX = positionX + deltaX
+        val newY = positionY + deltaY
+        if (canMoveTo(newX.toInt(), newY.toInt())) {
+            positionX = newX
+            positionY = newY
+            return
         }
+
+        // Jeśli pełny ruch jest zablokowany, próbujemy ruch tylko w osi X
+        val newXOnly = positionX + deltaX
+        if (canMoveTo(newXOnly.toInt(), positionY.toInt())) {
+            positionX = newXOnly
+            return
+        }
+
+        // Jeśli ruch w osi X jest zablokowany, próbujemy ruch tylko w osi Y
+        val newYOnly = positionY + deltaY
+        if (canMoveTo(positionX.toInt(), newYOnly.toInt())) {
+            positionY = newYOnly
+        }
+        // Jeśli obie osie są zablokowane, nie poruszamy się
+    }
+
+    fun w() {
+        val deltaX = movementSpeed * cos(Math.toRadians(currentangle.toDouble()))
+        val deltaY = movementSpeed * sin(Math.toRadians(currentangle.toDouble()))
+        tryMove(deltaX, deltaY)
     }
 
     fun s() {
-        val anglex = (positionX + (-movementSpeed) * cos(Math.toRadians(currentangle.toDouble())))
-        val angley = (positionY + (-movementSpeed) * sin(Math.toRadians(currentangle.toDouble())))
-        if (canMoveTo(anglex.toInt(), angley.toInt())) {
-            positionX = anglex
-            positionY = angley
-        }
+        val deltaX = -movementSpeed * cos(Math.toRadians(currentangle.toDouble()))
+        val deltaY = -movementSpeed * sin(Math.toRadians(currentangle.toDouble()))
+        tryMove(deltaX, deltaY)
     }
 
     fun a() {
-        val anglex = (positionX + movementSpeed * cos(Math.toRadians(currentangle - 90.0)))
-        val angley = (positionY + movementSpeed * sin(Math.toRadians(currentangle - 90.0)))
-        if (canMoveTo(anglex.toInt(), angley.toInt())) {
-            positionX = anglex
-            positionY = angley
-        }
+        val deltaX = movementSpeed * cos(Math.toRadians(currentangle - 90.0))
+        val deltaY = movementSpeed * sin(Math.toRadians(currentangle - 90.0))
+        tryMove(deltaX, deltaY)
     }
 
     fun d() {
-        val anglex = (positionX + movementSpeed * cos(Math.toRadians(currentangle + 90.0)))
-        val angley = (positionY + movementSpeed * sin(Math.toRadians(currentangle + 90.0)))
-        if (canMoveTo(anglex.toInt(), angley.toInt())) {
-            positionX = anglex
-            positionY = angley
-        }
+        val deltaX = movementSpeed * cos(Math.toRadians(currentangle + 90.0))
+        val deltaY = movementSpeed * sin(Math.toRadians(currentangle + 90.0))
+        tryMove(deltaX, deltaY)
     }
 
     fun anglea() {
@@ -118,71 +132,66 @@ class Player() {
         }
     }
 
-    // Poprawiona metoda update z jawnym typem Map<Int, Boolean>
     fun update(keysPressed: kotlin.collections.Map<Int, Boolean>) {
-        // Ruch
         if (keysPressed.getOrDefault(KeyEvent.VK_W, false) || keysPressed.getOrDefault(KeyEvent.VK_UP, false)) w()
         if (keysPressed.getOrDefault(KeyEvent.VK_S, false) || keysPressed.getOrDefault(KeyEvent.VK_DOWN, false)) s()
         if (keysPressed.getOrDefault(KeyEvent.VK_A, false)) a()
         if (keysPressed.getOrDefault(KeyEvent.VK_D, false)) d()
-
-        // Obrót
         if (keysPressed.getOrDefault(KeyEvent.VK_LEFT, false)) anglea()
         if (keysPressed.getOrDefault(KeyEvent.VK_RIGHT, false)) angled()
     }
 }
 
-class Tlo : JPanel() {
-    init {
-        isOpaque = true
-    }
-    override fun paintComponent(v: Graphics) {
-        super.paintComponent(v)
-        v.color = Color.lightGray
-        v.fillRect(0, 0, 1368*2, 768/2)   //57, 32
-        v.color = Color.darkGray
-        v.fillRect(0, 384, 1368*2, (768/2))   //57, 32
-    }
-}
-
 class RenderCast : JPanel() {
     private val map = Map()
-    private val screenWidth = 1366
-    private val screenHeight = 768
-    private val fov = 90.0 // Pole widzenia w stopniach
-    private val textureSize = 64 // Rozmiar tekstury 64x64
-    private val rayCount = screenWidth // Pełna liczba promieni dla lepszej jakości
-    private val wallHeight = 32.0 // Stała wysokość ściany w przestrzeni gry
-    private val tileSize = 30.0 // Rozmiar kafelka na mapie
+    private val screenWidth = (320*1.5).toInt() // Zachowaj oryginalną szerokość
+    private val screenHeight = (200*1.5).toInt() // Zachowaj oryginalną wysokość
+    private val fov = 90.0
+    private val textureSize = 64
+    private val rayCount = screenWidth
+    private val wallHeight = 32.0
+
     private var textures: Array<BufferedImage> = arrayOf()
-    private val buffer: BufferedImage // Bufor do renderowania sceny
-    private val bufferGraphics: Graphics // Graphics dla bufora
+    private var floorTexture: BufferedImage? = null
+    private var ceilingTexture: BufferedImage? = null
+    private val buffer: BufferedImage
+    private val bufferGraphics: Graphics
 
-    // Parametry cieniowania (proste, oparte tylko na odległości)
-    private val minBrightness = 0.6
+    private val minBrightness = 0.5
     private val maxBrightness = 1.0
-    private val shadeDistanceScale = 5.0
+    private val shadeDistanceScale = 10.0
+    private val fogColor = Color(180, 180, 180)
+    private val fogDensity = 0.02
 
-    // Parametry mgły (wykładniczy model)
-    private val fogColor = Color(180, 180, 180) // Jaśniejszy szary dla subtelniejszego efektu
-    private val fogDensity = 0.04 // Gęstość mgły
-
-    // Bufor dla wartości trygonometrycznych (optymalizacja)
     private val rayCosines = DoubleArray(rayCount)
     private val raySines = DoubleArray(rayCount)
-    private val rayAngles = DoubleArray(rayCount) // Bufor dla kątów promieni
+    private val rayAngles = DoubleArray(rayCount)
+
+    private var lastFrameTime = System.nanoTime()
+    private var frameCount = 0
+    private var fps = 0
 
     init {
-        isOpaque = false
-        textures = arrayOf(
-            ImageIO.read(File("src/main/resources/bricks.png")),
-            createTexture(Color.YELLOW)
-        )
-        // Inicjalizacja bufora
+        isOpaque = true
+        try {
+            floorTexture = ImageIO.read(this::class.java.classLoader.getResource("textures/floor.jpg"))
+            ceilingTexture = ImageIO.read(this::class.java.classLoader.getResource("textures/ceiling.jpg"))
+            textures = arrayOf(
+                ImageIO.read(this::class.java.classLoader.getResource("textures/bricks.jpg")),
+                ImageIO.read(this::class.java.classLoader.getResource("textures/gold.jpg")))
+        }
+        catch (e: Exception) {
+            println("Błąd wczytywania tekstur: ${e.message}")
+            floorTexture = createTexture(Color.RED)
+            ceilingTexture = createTexture(Color.BLUE)
+            textures = arrayOf(
+                createTexture(Color.magenta),
+                createTexture(Color.YELLOW))
+        }
+
         buffer = BufferedImage(screenWidth, screenHeight, BufferedImage.TYPE_INT_RGB)
         bufferGraphics = buffer.createGraphics()
 
-        // Wstępne obliczenie kątów względnych i wartości trygonometrycznych
         val rayAngleStep = fov / (rayCount - 1)
         for (ray in 0 until rayCount) {
             val relativeAngle = -fov / 2 + ray * rayAngleStep
@@ -204,70 +213,79 @@ class RenderCast : JPanel() {
 
     override fun paintComponent(g: Graphics) {
         super.paintComponent(g)
-        // Renderowanie do bufora
         renderWallsToBuffer()
-        // Rysowanie bufora na panelu
-        g.drawImage(buffer, 0, 0, null)
+
+        // Skalowanie obrazu na pełny rozmiar panelu
+        val g2d = g as Graphics2D
+        val scaleX = width.toDouble() / screenWidth
+        val scaleY = height.toDouble() / screenHeight
+        g2d.scale(scaleX, scaleY)
+        g2d.drawImage(buffer, 0, 0, null)
+        g2d.scale(1.0 / scaleX, 1.0 / scaleY) // Przywraca skalę, jeśli inne elementy są rysowane
     }
 
     private fun renderWallsToBuffer() {
-        val playerAngleRad = Math.toRadians(currentangle.toDouble())
+        // Obliczanie FPS
+        val currentTime = System.nanoTime()
+        frameCount++
+        val deltaTime = (currentTime - lastFrameTime) / 1_000_000_000.0 // Czas w sekundach
+        if (deltaTime >= 1.0) {
+            fps = (frameCount / deltaTime).toInt()
+            frameCount = 0
+            lastFrameTime = currentTime
+        }
 
-        // Wyczyść bufor (ustaw tło na ciemnoszary)
-        bufferGraphics.color = Color(50, 50, 50)
+        val playerAngleRad = Math.toRadians(currentangle.toDouble())
+        val playerHeight = wallHeight / 4.0 // Zmniejszona wysokość gracza dla bliższej perspektywy
+        val horizonOffset = 0.0 // Możliwość przesunięcia linii horyzontu (dostosuj, jeśli potrzeba)
+        val playerPosX = positionX / tileSize
+        val playerPosY = positionY / tileSize
+
+        // Wyczyść bufor na czarno dla debugowania
+        bufferGraphics.color = Color.BLACK
         bufferGraphics.fillRect(0, 0, screenWidth, screenHeight)
 
         for (ray in 0 until rayCount) {
-            // Oblicz kąt promienia z uwzględnieniem aktualnego kąta gracza
             val rayAngle = currentangle + rayAngles[ray]
             val rayAngleRad = Math.toRadians(rayAngle)
-
-            // Kierunek promienia (używamy buforowanych wartości)
             val relativeCos = rayCosines[ray]
             val relativeSin = raySines[ray]
-
-            // Obrót kierunku promienia względem kąta gracza
             val cosPlayerAngle = cos(playerAngleRad)
             val sinPlayerAngle = sin(playerAngleRad)
             val rayDirX = relativeCos * cosPlayerAngle - relativeSin * sinPlayerAngle
             val rayDirY = relativeCos * sinPlayerAngle + relativeSin * cosPlayerAngle
 
-            // Pozycja na mapie
-            var mapX = (positionX / tileSize).toInt()
-            var mapY = (positionY / tileSize).toInt()
-
-            // DDA (Digital Differential Analyzer)
+            var mapX = playerPosX.toInt()
+            var mapY = playerPosY.toInt()
             val deltaDistX = if (rayDirX == 0.0) 1e30 else abs(1 / rayDirX)
             val deltaDistY = if (rayDirY == 0.0) 1e30 else abs(1 / rayDirY)
-
             var stepX: Int
             var stepY: Int
             var sideDistX: Double
             var sideDistY: Double
-            var side = 0 // 0 dla X, 1 dla Y
+            var side = 0
 
             if (rayDirX < 0) {
                 stepX = -1
-                sideDistX = (positionX / tileSize - mapX) * deltaDistX
+                sideDistX = (playerPosX - mapX) * deltaDistX
             } else {
                 stepX = 1
-                sideDistX = (mapX + 1.0 - positionX / tileSize) * deltaDistX
+                sideDistX = (mapX + 1.0 - playerPosX) * deltaDistX
             }
             if (rayDirY < 0) {
                 stepY = -1
-                sideDistY = (positionY / tileSize - mapY) * deltaDistY
+                sideDistY = (playerPosY - mapY) * deltaDistY
             } else {
                 stepY = 1
-                sideDistY = (mapY + 1.0 - positionY / tileSize) * deltaDistY
+                sideDistY = (mapY + 1.0 - playerPosY) * deltaDistY
             }
 
             var hitWall = false
             var wallType = 0
-            var distance: Double
-            var hitX: Double
-            var hitY: Double
+            var distance: Double = 0.0
+            var hitX: Double = 0.0
+            var hitY: Double = 0.0
 
-            // Pętla DDA
             while (!hitWall) {
                 if (sideDistX < sideDistY) {
                     sideDistX += deltaDistX
@@ -278,102 +296,133 @@ class RenderCast : JPanel() {
                     mapY += stepY
                     side = 1
                 }
-
-                // Sprawdź, czy jesteśmy w granicach mapy
                 if (mapY !in map.grid.indices || mapX !in map.grid[0].indices) {
                     break
                 }
-
                 if (map.grid[mapY][mapX] == 1 || map.grid[mapY][mapX] == 5) {
                     hitWall = true
                     wallType = map.grid[mapY][mapX]
                 }
             }
 
-            if (!hitWall) continue // Brak trafienia, pomijamy promień
+            if (hitWall) {
+                distance = if (side == 0) {
+                    (mapX - playerPosX + (1 - stepX) / 2.0) / rayDirX
+                } else {
+                    (mapY - playerPosY + (1 - stepY) / 2.0) / rayDirY
+                }
+                if (distance < 0.01) distance = 0.01
+                val angleDiff = abs(playerAngleRad - rayAngleRad)
+                if (angleDiff < PI / 2) {
+                    distance *= cos(angleDiff)
+                } else {
+                    hitWall = false
+                }
+                if (side == 0) {
+                    hitX = mapX.toDouble() + (if (stepX > 0) 0.0 else 1.0)
+                    hitY = playerPosY + (hitX - playerPosX) * (rayDirY / rayDirX)
+                } else {
+                    hitY = mapY.toDouble() + (if (stepY > 0) 0.0 else 1.0)
+                    hitX = playerPosX + (hitY - playerPosY) * (rayDirX / rayDirY)
+                }
+            }
 
-            // Oblicz odległość z korekcją rybiego oka
-            distance = if (side == 0) {
-                (mapX - positionX / tileSize + (1 - stepX) / 2.0) / rayDirX
+            val lineHeight = if (hitWall) {
+                ((wallHeight * screenHeight) / (distance * tileSize)).toInt().coerceIn(0, screenHeight * 2)
             } else {
-                (mapY - positionY / tileSize + (1 - stepY) / 2.0) / rayDirY
+                0
             }
-            if (distance < 0.01) distance = 0.01
+            val drawStart = (-lineHeight / 2 + screenHeight / 2 + horizonOffset).coerceAtLeast(0.0).toInt()
+            val drawEnd = (lineHeight / 2 + screenHeight / 2 + horizonOffset).coerceAtMost(screenHeight.toDouble()).toInt()
 
-            val angleDiff = abs(playerAngleRad - rayAngleRad)
-            if (angleDiff < PI / 2) {
-                distance *= cos(angleDiff)
-            } else {
-                continue
+            if (hitWall) {
+                var textureX = if (side == 0) {
+                    val blockY = mapY.toDouble()
+                    val relativeY = hitY - blockY
+                    relativeY.coerceIn(0.0, 1.0) * textureSize
+                } else {
+                    val blockX = mapX.toDouble()
+                    val relativeX = hitX - blockX
+                    relativeX.coerceIn(0.0, 1.0) * textureSize
+                }
+                if (side == 0 && rayDirX > 0 || side == 1 && rayDirY < 0) {
+                    textureX = textureSize - textureX - 1
+                }
+                val texture = textures[if (wallType == 1) 0 else 1]
+                for (y in drawStart until drawEnd) {
+                    val wallY = (y - (screenHeight / 2.0 + horizonOffset) + lineHeight / 2.0) * wallHeight / lineHeight
+                    val textureY = (wallY * textureSize / wallHeight).toInt().coerceIn(0, textureSize - 1)
+                    val finalTextureX = textureX.toInt().coerceIn(0, textureSize - 1)
+                    val color = texture.getRGB(finalTextureX, textureY)
+                    val shadeFactor = (1.0 - (distance / shadeDistanceScale)).coerceIn(minBrightness, maxBrightness)
+                    val originalColor = Color(color)
+                    val shadedColor = Color(
+                        (originalColor.red * shadeFactor).toInt().coerceIn(0, 255),
+                        (originalColor.green * shadeFactor).toInt().coerceIn(0, 255),
+                        (originalColor.blue * shadeFactor).toInt().coerceIn(0, 255)
+                    )
+                    val fogFactor = 1.0 - exp(-fogDensity * distance)
+                    val finalColor = Color(
+                        ((1.0 - fogFactor) * shadedColor.red + fogFactor * fogColor.red).toInt().coerceIn(0, 255),
+                        ((1.0 - fogFactor) * shadedColor.green + fogFactor * fogColor.green).toInt().coerceIn(0, 255),
+                        ((1.0 - fogFactor) * shadedColor.blue + fogFactor * fogColor.blue).toInt().coerceIn(0, 255)
+                    )
+                    buffer.setRGB(ray, y, finalColor.rgb)
+                }
             }
 
-            // Oblicz pozycję trafienia na podstawie pozycji bloku i proporcji
-            if (side == 0) {
-                hitX = mapX.toDouble() + (if (stepX > 0) 0.0 else 1.0)
-                hitY = positionY / tileSize + (hitX - positionX / tileSize) * (rayDirY / rayDirX)
-            } else {
-                hitY = mapY.toDouble() + (if (stepY > 0) 0.0 else 1.0)
-                hitX = positionX / tileSize + (hitY - positionY / tileSize) * (rayDirX / rayDirY)
-            }
+            // Renderowanie podłogi i sufitu
+            for (y in 0 until screenHeight) {
+                if (hitWall && y in drawStart until drawEnd) continue
 
-            // Mapowanie textureX z wyrównaniem do granic bloku
-            var textureX = if (side == 0) {
-                val blockY = mapY.toDouble()
-                val relativeY = hitY - blockY
-                val adjustedRelativeY = relativeY.coerceIn(0.0, 1.0)
-                adjustedRelativeY * textureSize
-            } else {
-                val blockX = mapX.toDouble()
-                val relativeX = hitX - blockX
-                val adjustedRelativeX = relativeX.coerceIn(0.0, 1.0)
-                adjustedRelativeX * textureSize
-            }
+                val isCeiling = y < (screenHeight / 2 + horizonOffset)
+                val texture = if (isCeiling) ceilingTexture else floorTexture
+                if (texture == null) {
+                    buffer.setRGB(ray, y, Color.GRAY.rgb)
+                    continue
+                }
 
-            // Korekcja orientacji tekstury w zależności od kierunku promienia
-            if (side == 0 && rayDirX > 0 || side == 1 && rayDirY < 0) {
-                textureX = textureSize - textureX - 1
-            }
+                // Oblicz odległość do punktu na podłodze/suficie
+                val rowDistance = if (isCeiling) {
+                    (playerHeight * screenHeight) / (10.0 * ((screenHeight / 2.0 + horizonOffset) - y + 0.5))
+                } else {
+                    (playerHeight * screenHeight) / (10.0 * (y - (screenHeight / 2.0 + horizonOffset) + 0.5))
+                }
+                if (rowDistance < 0.01 || rowDistance > 50.0) continue
 
-            // Oblicz wysokość ściany na ekranie
-            val lineHeight = ((wallHeight * screenHeight) / (distance * tileSize)).toInt().coerceIn(0, screenHeight * 2)
-            val drawStart = (-lineHeight / 2 + screenHeight / 2).coerceAtLeast(0)
-            val drawEnd = (lineHeight / 2 + screenHeight / 2).coerceAtMost(screenHeight)
+                // Oblicz współrzędne na mapie
+                val floorX = playerPosX + rowDistance * rayDirX+100
+                val floorY = playerPosY + rowDistance * rayDirY+100
 
-            // Proste cieniowanie oparte tylko na odległości
-            val shadeFactor = (1.0 - (distance / shadeDistanceScale)).coerceIn(minBrightness, maxBrightness)
+                // Mapowanie tekstury (3-krotne powiększenie, korekta obrotu)
+                val textureScale = 2.0
+                val textureX = ((floorY / textureScale * textureSize) % textureSize).toInt().coerceIn(0, textureSize - 1)
+                val textureY = ((floorX / textureScale * textureSize) % textureSize).toInt().coerceIn(0, textureSize - 1)
 
-            // Wykładniczy model mgły
-            val fogFactor = 1.0 - exp(-fogDensity * distance)
+                // Pobierz kolor
+                val color = texture.getRGB(textureX, textureY)
 
-            // Renderowanie tekstury do bufora
-            val texture = textures[if (wallType == 1) 0 else 1]
-            for (y in drawStart until drawEnd) {
-                val wallY = (y - screenHeight / 2.0 + lineHeight / 2.0) * wallHeight / lineHeight
-                val textureY = (wallY * textureSize / wallHeight).toInt().coerceIn(0, textureSize - 1)
-
-                // Pobieranie koloru z tekstury
-                val finalTextureX = textureX.toInt().coerceIn(0, textureSize - 1)
-                val color = texture.getRGB(finalTextureX, textureY)
-
-                // Cieniowanie
+                // Cieniowanie i mgła
+                val shadeFactor = (1.0 - (rowDistance / shadeDistanceScale)).coerceIn(minBrightness, maxBrightness)
                 val originalColor = Color(color)
                 val shadedColor = Color(
                     (originalColor.red * shadeFactor).toInt().coerceIn(0, 255),
                     (originalColor.green * shadeFactor).toInt().coerceIn(0, 255),
                     (originalColor.blue * shadeFactor).toInt().coerceIn(0, 255)
                 )
-
-                // Mieszanie z mgłą
+                val fogFactor = 1.0 - exp(-fogDensity * rowDistance)
                 val finalColor = Color(
                     ((1.0 - fogFactor) * shadedColor.red + fogFactor * fogColor.red).toInt().coerceIn(0, 255),
                     ((1.0 - fogFactor) * shadedColor.green + fogFactor * fogColor.green).toInt().coerceIn(0, 255),
                     ((1.0 - fogFactor) * shadedColor.blue + fogFactor * fogColor.blue).toInt().coerceIn(0, 255)
                 )
 
-                // Ustawianie piksela w buforze
                 buffer.setRGB(ray, y, finalColor.rgb)
             }
         }
+        bufferGraphics.color = Color.YELLOW // Kolor tekstu
+        bufferGraphics.font = java.awt.Font("Arial", java.awt.Font.BOLD, 16) // Czcionka
+        bufferGraphics.drawString("FPS: $fps", screenWidth - 80, 20)
     }
 
     fun shotgun() {
@@ -397,8 +446,8 @@ class PlayerOnScreen : JPanel() {
         y = positionY
 
         val angleru = Math.toRadians(currentangle.toDouble())
-        xposs = (x/3 + 10 * cos(angleru)).toInt()
-        yposs = (y/3 + 10 * sin(angleru)).toInt()
+        xposs = (x/3 + (tileSize/10) * cos(angleru)).toInt()
+        yposs = (y/3 + (tileSize/10) * sin(angleru)).toInt()
         repaint()
     }
     override fun paintComponent(v: Graphics) {
@@ -417,7 +466,7 @@ fun main() = runBlocking {
     // Podstawa wyświetlania
     val frame = JFrame("rolada z gówna")
     frame.defaultCloseOperation = JFrame.EXIT_ON_CLOSE
-    frame.iconImage = Toolkit.getDefaultToolkit().getImage("src/main/resources/icon/icon.jpg")
+    frame.iconImage = Toolkit.getDefaultToolkit().getImage(this::class.java.classLoader.getResource("icon/icon.jpg")) //src/main/resources/icon/icon.jpg
     frame.isResizable = false
     frame.setSize(1366, 768)
     frame.setLocation(((Toolkit.getDefaultToolkit().screenSize.width - frame.width) / 2), ((Toolkit.getDefaultToolkit().screenSize.height - frame.height) / 2))
@@ -443,12 +492,6 @@ fun main() = runBlocking {
     mapa.setSize(1366, 768)
     mapa.setBounds(0, 0, 1366, 768)
 
-    val ekran = Tlo()
-    ekran.isOpaque = true
-    ekran.layout = null
-    ekran.setSize(1366, 768)
-    ekran.setBounds(0, 0, 1366, 768)
-
     val playerOnScreen = PlayerOnScreen()
     playerOnScreen.isOpaque = false
     playerOnScreen.setSize(1366, 768)
@@ -459,7 +502,7 @@ fun main() = runBlocking {
     renderCast.setSize(1366, 768)
     renderCast.setBounds(0, 0, 1366, 768)
 
-    frame.add(ekran)
+    //frame.add(ekran)
     layeredPane.add(mapa, 3)
     layeredPane.add(playerOnScreen, 4)
     layeredPane.add(renderCast, 6)
@@ -544,23 +587,35 @@ fun main() = runBlocking {
 class Map {
     // Wartości: 1-ściana, 0-pusta przestrzeń, 5-początek i koniec labiryntu
     val grid: Array<IntArray> = arrayOf(
-        intArrayOf(5,5,1,1,1,1,1,1,1,1,1,1,1,1,1,1),
-        intArrayOf(5,0,0,0,0,0,0,0,0,1,0,0,0,0,0,1),
-        intArrayOf(1,0,0,1,1,1,1,1,1,1,1,1,1,0,0,1),
-        intArrayOf(1,0,0,0,0,0,0,0,0,1,0,0,0,0,0,1),
-        intArrayOf(1,1,1,1,1,1,1,0,0,1,0,0,1,1,1,1),
-        intArrayOf(1,0,0,0,0,0,0,0,0,1,0,0,1,0,0,1),
-        intArrayOf(1,0,0,1,0,0,1,1,1,1,0,0,1,0,0,1),
-        intArrayOf(1,0,0,1,0,0,0,0,0,0,0,0,0,0,0,1),
-        intArrayOf(1,1,1,1,1,1,1,0,0,1,0,0,1,0,0,1),
-        intArrayOf(1,0,0,0,0,0,0,0,0,1,0,0,1,0,0,5),
-        intArrayOf(1,1,1,1,1,1,1,1,1,1,1,1,1,1,5,5)
+        intArrayOf(5,5,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1),
+        intArrayOf(5,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0,1),
+        intArrayOf(1,0,1,1,1,0,1,0,1,1,1,1,1,0,1,1,1,1,1,1,1,0,1),
+        intArrayOf(1,0,0,0,1,0,1,0,0,0,1,0,0,0,0,0,1,0,1,0,0,0,1),
+        intArrayOf(1,0,1,1,1,0,1,1,1,0,1,0,1,1,1,1,1,0,1,1,1,0,1),
+        intArrayOf(1,0,0,0,1,0,1,0,0,0,1,0,0,0,1,0,0,0,0,0,0,0,1),
+        intArrayOf(1,1,1,0,1,1,1,1,1,0,1,0,1,0,1,1,1,1,1,1,1,0,1),
+        intArrayOf(1,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,1),
+        intArrayOf(1,0,1,1,1,1,1,0,1,1,1,1,1,1,1,0,1,1,1,1,1,0,1),
+        intArrayOf(1,0,1,0,0,0,0,0,1,0,1,0,1,0,0,0,1,0,1,0,0,0,1),
+        intArrayOf(1,0,1,1,1,0,1,1,1,0,1,0,1,1,1,1,1,0,1,0,1,0,1),
+        intArrayOf(1,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,1,0,1,0,1),
+        intArrayOf(1,1,1,0,1,1,1,0,1,0,1,1,1,0,1,0,1,1,1,0,1,1,1),
+        intArrayOf(1,0,1,0,0,0,0,0,1,0,1,0,0,0,1,0,0,0,0,0,0,0,1),
+        intArrayOf(1,0,1,1,1,1,1,0,1,1,1,1,1,0,1,1,1,0,1,1,1,0,1),
+        intArrayOf(1,0,0,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,1,0,1),
+        intArrayOf(1,1,1,0,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1,0,1,1,1),
+        intArrayOf(1,0,0,0,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0,1,0,1),
+        intArrayOf(1,1,1,1,1,1,1,0,1,1,1,1,1,0,1,0,1,0,1,0,1,0,1),
+        intArrayOf(1,0,0,0,1,0,1,0,0,0,1,0,0,0,0,0,1,0,1,0,1,0,1),
+        intArrayOf(1,0,1,1,1,0,1,1,1,0,1,1,1,0,1,1,1,1,1,1,1,0,1),
+        intArrayOf(1,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,5),
+        intArrayOf(1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,5,5)
     )
 }
 
 class Mappingmap : JPanel() {
     private val map = Map()
-    private val mnoznik = 10
+    private val mnoznik = (tileSize/10).toInt()
 
     override fun paintComponent(v: Graphics) {
         super.paintComponent(v)
