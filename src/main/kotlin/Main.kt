@@ -198,7 +198,7 @@ class RenderCast : JPanel() {
             val rayAngle = Math.toRadians(currentangle + (i * angleIncrement - fov / 2))
             var distance = 0.0
             var hit = false
-            var tileValue = 0
+            var tileValue: Int
 
             while (distance < 300.0 && !hit) {
                 val rayX = positionX + distance * cos(rayAngle)
@@ -297,7 +297,7 @@ class PlayerOnScreen : JPanel() {
         val g2 = v as Graphics2D
         g2.color = Color.yellow
         g2.stroke = BasicStroke(2f)
-        g2.drawLine((x)/3, (y)/3, (xposs).toInt(), (yposs).toInt())
+        g2.drawLine((x)/3, (y)/3, (xposs), (yposs))
     }
 }
 
