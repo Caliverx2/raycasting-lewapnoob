@@ -1,5 +1,5 @@
 package org.example.MainKt
-
+/*
 //./gradlew shadowJar
 
 import kotlinx.coroutines.delay
@@ -580,3 +580,4 @@ class Mappingmap : JPanel() {
         isOpaque = false
     }
 }
+*/
