@@ -370,9 +370,9 @@ class Player(private val renderCast: RenderCast) {
         }
     }
 
-    fun w() {
-        val deltaX = movementSpeed * cos(Math.toRadians(currentangle.toDouble()))
-        val deltaY = movementSpeed * sin(Math.toRadians(currentangle.toDouble()))
+    fun w(offset: Double = movementSpeed) {
+        val deltaX = offset * cos(Math.toRadians(currentangle.toDouble()))
+        val deltaY = offset * sin(Math.toRadians(currentangle.toDouble()))
         tryMove(deltaX, deltaY)
     }
 
@@ -576,9 +576,9 @@ class RenderCast : JPanel() {
 
             var hitWall = false
             var wallType = 0
-            var distance: Double = 0.0
-            var hitX: Double = 0.0
-            var hitY: Double = 0.0
+            var distance = 0.0
+            var hitX = 0.0
+            var hitY = 0.0
 
             while (!hitWall) {
                 if (sideDistX < sideDistY) {
@@ -758,9 +758,9 @@ class RenderCast : JPanel() {
 
             // Draw sprite pixel by pixel
             for (x in drawStartX until drawEndX) {
-                val textureX = ((x - drawStartX) * enemy.texture.width / spriteSize).toInt().coerceIn(0, enemy.texture.width - 1)
+                val textureX = ((x - drawStartX) * enemy.texture.width / spriteSize).coerceIn(0, enemy.texture.width - 1)
                 for (y in drawStartY until drawEndY) {
-                    val textureY = ((y - drawStartY) * enemy.texture.height / spriteSize).toInt().coerceIn(0, enemy.texture.height - 1)
+                    val textureY = ((y - drawStartY) * enemy.texture.height / spriteSize).coerceIn(0, enemy.texture.height - 1)
                     val color = enemy.texture.getRGB(textureX, textureY)
                     buffer.setRGB(x, y, color)
                 }
@@ -768,7 +768,7 @@ class RenderCast : JPanel() {
         }
     }
 
-    fun shotgun() {
+    fun shotgun(player: Player) {
         val shotAngleRad = Math.toRadians(currentangle.toDouble())
         val playerPosX = positionX / tileSize
         val playerPosY = positionY / tileSize
@@ -836,6 +836,7 @@ class RenderCast : JPanel() {
             // Project enemy onto ray direction
             val rayLength = dx * rayDirX + dy * rayDirY
             if (rayLength > 0 && rayLength < wallDistance) { // Enemy in front and before wall
+                player.w(-1.0)
                 val perpendicularDistance = abs(dx * rayDirY - dy * rayDirX)
                 // Check if enemy is within ray path
                 if (perpendicularDistance < (enemy.size*20) / 2 / tileSize) {
@@ -899,7 +900,7 @@ fun main() = runBlocking {
     frame.addMouseListener(object : MouseAdapter() {
         override fun mousePressed(event: MouseEvent) {
             if (event.button == MouseEvent.BUTTON1) {
-                renderCast.shotgun()
+                renderCast.shotgun(player)
             } else {
                 println("Naciśnięto klawisz: ${event.button}")
             }
@@ -922,7 +923,7 @@ fun main() = runBlocking {
         override fun keyPressed(event: KeyEvent) {
             keysPressed[event.keyCode] = true
             when (event.keyCode) {
-                KeyEvent.VK_SPACE -> renderCast.shotgun()
+                KeyEvent.VK_SPACE -> renderCast.shotgun(player)
             }
         }
 
@@ -1053,4 +1054,3 @@ class Mappingmap(private val renderCast: RenderCast) : JPanel() {
         return Dimension(miniMapSize + offsetX * 2, miniMapSize + offsetY * 2)
     }
 }
-
