@@ -1,5 +1,5 @@
 package org.example.MainKt
-
+/*
 //./gradlew shadowJar
 
 import kotlinx.coroutines.delay
@@ -248,7 +248,7 @@ class Enemy(var x: Double, var y: Double, var health: Int = 10, val texture: Buf
         return neighbors
     }
 
-     fun reconstructPath(cameFrom: Map<Node, Node>, current: Node): List<Node> {
+    fun reconstructPath(cameFrom: Map<Node, Node>, current: Node): List<Node> {
         val path = mutableListOf(current)
         var curr = current
         while (cameFrom.containsKey(curr)) {
@@ -1052,4 +1052,4 @@ class Mappingmap(private val renderCast: RenderCast) : JPanel() {
         return Dimension(miniMapSize + offsetX * 2, miniMapSize + offsetY * 2)
     }
 }
-
+*/

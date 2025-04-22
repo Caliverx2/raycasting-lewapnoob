@@ -1,5 +1,5 @@
 package org.example.MainKt
-
+/*
 //./gradlew shadowJar
 
 import kotlinx.coroutines.delay
@@ -27,251 +27,31 @@ import java.awt.image.BufferedImage
 import javax.imageio.ImageIO
 import javax.swing.JLayeredPane
 import kotlin.concurrent.fixedRateTimer
-import kotlin.collections.Map
 import kotlin.math.*
 
 
 var map = true
 var currentangle = 0
+var shotx = 0.0
+var shoty = 0.0
 var tileSize = 40.0 // Rozmiar kafelka na mapie
 val mapa = 0.075
 var fps = 84
 var MouseSupport = false
 
-var positionX = (tileSize*22)-(tileSize/2)//(tileSize*3)-(tileSize/2)  //kafelek*pozycja - (pół kafelka)
-var positionY = (tileSize*22)-(tileSize/2)//(tileSize*2)-(tileSize/2)  //kafelek*pozycja - (pół kafelka)
+var positionX = (tileSize*3)-(tileSize/2)  //kafelek*pozycja - (pół kafelka)
+var positionY = (tileSize*2)-(tileSize/2)  //kafelek*pozycja - (pół kafelka)
 
-
-class Enemy(var x: Double, var y: Double, var health: Int = 10, val texture: BufferedImage, private val renderCast: RenderCast) {
+class Player() {
     private val map = Map()
-    private val speed = 0.5
-    val size = 1.0
-    private val margin = 0.001
-    private var path: List<Node> = emptyList()
-    private var pathUpdateTimer = 0
-    private val pathUpdateInterval = 120
-    private var stuckCounter = 0
-    private val maxStuckFrames = 60
-    var lastMoveX = 0.0 // Track last movement direction
-    var lastMoveY = 0.0
-    var isMoving = false // Track if enemy is actively moving
-
-    // Check if the enemy can move to a position (walls, other enemies, player)
-    fun canMoveTo(newX: Double, newY: Double, exclude: Enemy? = null): Pair<Boolean, Enemy?> {
-        // Wall collision
-        val left = newX - size / 2
-        val right = newX + size / 2
-        val top = newY - size / 2
-        val bottom = newY + size / 2
-
-        val gridLeft = ((left - margin) / tileSize).toInt()
-        val gridRight = ((right + margin) / tileSize).toInt()
-        val gridTop = ((top - margin) / tileSize).toInt()
-        val gridBottom = ((bottom + margin) / tileSize).toInt()
-
-        for (gridY in gridTop..gridBottom) {
-            for (gridX in gridLeft..gridRight) {
-                if (gridY !in map.grid.indices || gridX !in map.grid[gridY].indices || map.grid[gridY][gridX] == 1) {
-                    return Pair(false, null)
-                }
-            }
-        }
-
-        // Enemy-enemy collision
-        renderCast.getEnemies().forEach { otherEnemy ->
-            if (otherEnemy !== this && otherEnemy !== exclude) {
-                val dx = newX - otherEnemy.x
-                val dy = newY - otherEnemy.y
-                val distance = sqrt(dx * dx + dy * dy)
-                if (distance < size) {
-                    return Pair(false, otherEnemy)
-                }
-            }
-        }
-
-        // Enemy-player collision
-        val dx = newX - positionX
-        val dy = newY - positionY
-        val distance = sqrt(dx * dx + dy * dy)
-        if (distance < size + 5.0 / 2) {
-            return Pair(false, null) // Player collision (handled separately)
-        }
-
-        return Pair(true, null)
-    }
-
-    // Try to push another enemy
-    fun tryPush(otherEnemy: Enemy, moveX: Double, moveY: Double): Boolean {
-        if (otherEnemy.isMoving) {
-            // Check if moving in opposite directions
-            val dotProduct = (moveX * otherEnemy.lastMoveX + moveY * otherEnemy.lastMoveY)
-            if (dotProduct < 0) {
-                return false // Moving in opposite directions, no push
-            }
-        }
-        // Push the other enemy
-        val newEnemyX = otherEnemy.x + moveX
-        val newEnemyY = otherEnemy.y + moveY
-        val (canMove, _) = otherEnemy.canMoveTo(newEnemyX, newEnemyY, this)
-        if (canMove) {
-            otherEnemy.x = newEnemyX
-            otherEnemy.y = newEnemyY
-            otherEnemy.lastMoveX = moveX
-            otherEnemy.lastMoveY = moveY
-            otherEnemy.isMoving = true
-            return true
-        }
-        return false
-    }
-
-    fun update() {
-        pathUpdateTimer++
-        if (pathUpdateTimer >= pathUpdateInterval || stuckCounter > maxStuckFrames) {
-            path = findPath()
-            pathUpdateTimer = 0
-            stuckCounter = 0
-        }
-
-        isMoving = path.isNotEmpty() // Update movement state
-        if (path.isNotEmpty()) {
-            val targetNode = path.first()
-            val targetX = (targetNode.x + 0.5) * tileSize
-            val targetY = (targetNode.y + 0.5) * tileSize
-
-            val dx = targetX - x
-            val dy = targetY - y
-            val distance = sqrt(dx * dx + dy * dy)
-
-            if (distance > 0.1) {
-                val moveX = (dx / distance) * speed
-                val moveY = (dy / distance) * speed
-                val newX = x + moveX
-                val newY = y + moveY
-
-                val (canMove, collidedEnemy) = canMoveTo(newX, newY)
-                if (canMove) {
-                    x = newX
-                    y = newY
-                    lastMoveX = moveX
-                    lastMoveY = moveY
-                    stuckCounter = 0
-                } else if (collidedEnemy != null) {
-                    // Try to push the collided enemy
-                    if (tryPush(collidedEnemy, moveX, moveY)) {
-                        x = newX
-                        y = newY
-                        lastMoveX = moveX
-                        lastMoveY = moveY
-                        stuckCounter = 0
-                    } else {
-                        stuckCounter++
-                        val nudgeX = x - (dx / distance) * 0.1
-                        val nudgeY = y - (dy / distance) * 0.1
-                        if (canMoveTo(nudgeX, nudgeY).first) {
-                            x = nudgeX
-                            y = nudgeY
-                        }
-                    }
-                } else {
-                    stuckCounter++
-                    val nudgeX = x - (dx / distance) * 0.1
-                    val nudgeY = y - (dy / distance) * 0.1
-                    if (canMoveTo(nudgeX, nudgeY).first) {
-                        x = nudgeX
-                        y = nudgeY
-                    }
-                }
-            } else {
-                path = path.drop(1)
-                stuckCounter = 0
-                isMoving = path.isNotEmpty()
-            }
-        } else {
-            isMoving = false
-        }
-    }
-
-    fun findPath(): List<Node> {
-        val startX = (x / tileSize).toInt()
-        val startY = (y / tileSize).toInt()
-        val goalX = (positionX / tileSize).toInt()
-        val goalY = (positionY / tileSize).toInt()
-
-        val openSet = mutableListOf(Node(startX, startY))
-        val closedSet = mutableSetOf<Node>()
-        val cameFrom = mutableMapOf<Node, Node>()
-        val gScore = mutableMapOf(Node(startX, startY) to 0.0)
-        val fScore = mutableMapOf(Node(startX, startY) to heuristic(startX, startY, goalX, goalY))
-
-        while (openSet.isNotEmpty()) {
-            val current = openSet.minByOrNull { fScore.getOrDefault(it, Double.MAX_VALUE) }!!
-            if (current.x == goalX && current.y == goalY) {
-                return reconstructPath(cameFrom, current)
-            }
-
-            openSet.remove(current)
-            closedSet.add(current)
-
-            for (neighbor in getNeighbors(current)) {
-                if (closedSet.contains(neighbor)) continue
-
-                val tentativeGScore = gScore.getOrDefault(current, Double.MAX_VALUE) + 1.0
-                if (!openSet.contains(neighbor)) {
-                    openSet.add(neighbor)
-                } else if (tentativeGScore >= gScore.getOrDefault(neighbor, Double.MAX_VALUE)) {
-                    continue
-                }
-
-                cameFrom[neighbor] = current
-                gScore[neighbor] = tentativeGScore
-                fScore[neighbor] = tentativeGScore + heuristic(neighbor.x, neighbor.y, goalX, goalY)
-            }
-        }
-        return emptyList()
-    }
-
-    fun heuristic(x1: Int, y1: Int, x2: Int, y2: Int): Double {
-        return abs(x1 - x2) + abs(y1 - y2).toDouble()
-    }
-
-    fun getNeighbors(node: Node): List<Node> {
-        val neighbors = mutableListOf<Node>()
-        val directions = listOf(
-            Node(node.x + 1, node.y), Node(node.x - 1, node.y),
-            Node(node.x, node.y + 1), Node(node.x, node.y - 1)
-        )
-        for (dir in directions) {
-            if (dir.y in map.grid.indices && dir.x in map.grid[0].indices && map.grid[dir.y][dir.x] != 1) {
-                neighbors.add(dir)
-            }
-        }
-        return neighbors
-    }
-
-     fun reconstructPath(cameFrom: Map<Node, Node>, current: Node): List<Node> {
-        val path = mutableListOf(current)
-        var curr = current
-        while (cameFrom.containsKey(curr)) {
-            curr = cameFrom[curr]!!
-            path.add(curr)
-        }
-        return path.reversed()
-    }
-}
-
-data class Node(val x: Int, val y: Int)
-
-class Player(private val renderCast: RenderCast) {
-    private val map = Map()
-    private val playerSize = 5.0
-    private val margin = 2.0
+    private val playerSize = 5
+    private val margin = 2
     private var movementSpeed = 1.5
-    private val rotationSpeed = 2
-    private val sensitivity = 0.07
+    private val rotationSpeed = 2 // Prędkość obrotu (w stopniach na klatkę)
+    private val sensitivity =  0.07 // Czułość myszy
     var playerHealth = 100
 
-    private fun canMoveTo(x: Double, y: Double, deltaX: Double, deltaY: Double): Pair<Boolean, Enemy?> {
-        // Wall collision
+    private fun canMoveTo(x: Int, y: Int): Boolean {
         val left = x - playerSize / 2
         val right = x + playerSize / 2
         val top = y - playerSize / 2
@@ -284,86 +64,36 @@ class Player(private val renderCast: RenderCast) {
 
         for (gridY in gridTop..gridBottom) {
             for (gridX in gridLeft..gridRight) {
-                if (gridY !in map.grid.indices || gridX !in map.grid[gridY].indices || ((map.grid[gridY][gridX] != 0) && (map.grid[gridY][gridX] != 5))) {
-                    return Pair(false, null)
+                if (gridY !in map.grid.indices || gridX !in map.grid[gridY].indices || ((map.grid[gridY][gridX] != 0) and (map.grid[gridY][gridX] != 5))) {
+                    return false
                 }
             }
         }
-
-        // Player-enemy collision
-        renderCast.getEnemies().forEach { enemy ->
-            val dx = x - enemy.x
-            val dy = y - enemy.y
-            val distance = sqrt(dx * dx + dy * dy)
-            if (distance < playerSize / 2 + 5.0) {
-                return Pair(false, enemy)
-            }
-        }
-
-        return Pair(true, null)
+        return true
     }
 
-    // Try to push an enemy
-    fun tryPushEnemy(enemy: Enemy, deltaX: Double, deltaY: Double): Boolean {
-        if (enemy.isMoving) {
-            // Check if enemy is moving in opposite direction
-            val dotProduct = (deltaX * enemy.lastMoveX + deltaY * enemy.lastMoveY)
-            if (dotProduct < 0) {
-                return false // Opposite direction, no push
-            }
-        }
-        // Push the enemy
-        val newEnemyX = enemy.x + deltaX
-        val newEnemyY = enemy.y + deltaY
-        val (canMove, _) = enemy.canMoveTo(newEnemyX, newEnemyY)
-        if (canMove) {
-            enemy.x = newEnemyX
-            enemy.y = newEnemyY
-            enemy.lastMoveX = deltaX
-            enemy.lastMoveY = deltaY
-            enemy.isMoving = true
-            return true
-        }
-        return false
-    }
-
+    // Metoda pomocnicza do obsługi ruchu z rozbiciem na osie X i Y
     private fun tryMove(deltaX: Double, deltaY: Double) {
+        // Najpierw próbujemy ruch w obu osiach
         val newX = positionX + deltaX
         val newY = positionY + deltaY
-        val (canMove, collidedEnemy) = canMoveTo(newX, newY, deltaX, deltaY)
-        if (canMove) {
+        if (canMoveTo(newX.toInt(), newY.toInt())) {
             positionX = newX
             positionY = newY
             return
-        } else if (collidedEnemy != null) {
-            // Try to push the collided enemy
-            if (tryPushEnemy(collidedEnemy, deltaX, deltaY)) {
-                positionX = newX
-                positionY = newY
-                return
-            }
         }
 
-        // Try moving in X only
+        // Jeśli pełny ruch jest zablokowany, próbujemy ruch tylko w osi X
         val newXOnly = positionX + deltaX
-        val (canMoveX, collidedEnemyX) = canMoveTo(newXOnly, positionY, deltaX, 0.0)
-        if (canMoveX) {
-            movementSpeed = 1.25
-            positionX = newXOnly
-            return
-        } else if (collidedEnemyX != null && tryPushEnemy(collidedEnemyX, deltaX, 0.0)) {
+        if (canMoveTo(newXOnly.toInt(), positionY.toInt())) {
             movementSpeed = 1.25
             positionX = newXOnly
             return
         }
 
-        // Try moving in Y only
+        // Jeśli ruch w osi X jest zablokowany, próbujemy ruch tylko w osi Y
         val newYOnly = positionY + deltaY
-        val (canMoveY, collidedEnemyY) = canMoveTo(positionX, newYOnly, 0.0, deltaY)
-        if (canMoveY) {
-            movementSpeed = 1.25
-            positionY = newYOnly
-        } else if (collidedEnemyY != null && tryPushEnemy(collidedEnemyY, 0.0, deltaY)) {
+        if (canMoveTo(positionX.toInt(), newYOnly.toInt())) {
             movementSpeed = 1.25
             positionY = newYOnly
         }
@@ -402,7 +132,7 @@ class Player(private val renderCast: RenderCast) {
     }
 
     fun updateAngleFromMouse() {
-        if (MouseSupport) {
+        if (MouseSupport == true) {
             currentangle += if (MouseInfo.getPointerInfo().location.x == 960) {
                 0
             } else {
@@ -421,14 +151,14 @@ class Player(private val renderCast: RenderCast) {
     }
 }
 
-class RenderCast : JPanel() {
+class RenderCast : JPanel()     {
     private val map = Map()
-    private val screenWidth = 320 * 2
+    private val screenWidth = 320*2
     private val screenHeight = 200
     private val fov = 90.0
     private val textureSize = 64
     private val rayCount = screenWidth
-    private val wallHeight = 32.0 / 1
+    private val wallHeight = 32.0/1
 
     private var textures: Array<BufferedImage> = arrayOf()
     var enemyTextureId: BufferedImage? = null
@@ -450,34 +180,24 @@ class RenderCast : JPanel() {
     private var lastFrameTime = System.nanoTime()
     private var frameCount = 0
 
-    private var enemies = mutableListOf<Enemy>()
-    private var visibleEnemies = mutableListOf<Triple<Enemy, Int, Double>>() // (Enemy, screenX, distance)
-
-    fun getEnemies(): List<Enemy> = enemies
-
     init {
         isOpaque = true
         try {
-            enemyTextureId = ImageIO.read(this::class.java.classLoader.getResource("textures/boguch.jpg"))
+            enemyTextureId = ImageIO.read(this::class.java.classLoader.getResource("icon/icon.jpg"))
             floorTexture = ImageIO.read(this::class.java.classLoader.getResource("textures/floor.jpg"))
             ceilingTexture = ImageIO.read(this::class.java.classLoader.getResource("textures/ceiling.jpg"))
             textures = arrayOf(
                 ImageIO.read(this::class.java.classLoader.getResource("textures/bricks.jpg")),
-                ImageIO.read(this::class.java.classLoader.getResource("textures/gold.jpg"))
-            )
-        } catch (e: Exception) {
+                ImageIO.read(this::class.java.classLoader.getResource("textures/gold.jpg")))
+        }
+        catch (e: Exception) {
             println("Error loading textures: ${e.message}")
             floorTexture = createTexture(Color.RED)
             ceilingTexture = createTexture(Color.BLUE)
             textures = arrayOf(
                 createTexture(Color.magenta),
-                createTexture(Color.YELLOW)
-            )
-            enemyTextureId = createTexture(Color.GREEN)
+                createTexture(Color.YELLOW))
         }
-        // Enemies in open spaces near player start (21.5, 21.5)
-        enemies.add(Enemy((tileSize * 5) - (tileSize / 2), (tileSize * 10) - (tileSize / 2), 100, enemyTextureId!!, this))
-        enemies.add(Enemy((tileSize * 8) - (tileSize / 2), (tileSize * 8) - (tileSize / 2), 100, enemyTextureId!!, this))
 
         buffer = BufferedImage(screenWidth, screenHeight, BufferedImage.TYPE_INT_RGB)
         bufferGraphics = buffer.createGraphics()
@@ -505,20 +225,20 @@ class RenderCast : JPanel() {
         super.paintComponent(g)
         renderWallsToBuffer()
 
+        // Skalowanie obrazu na pełny rozmiar panelu
         val g2d = g as Graphics2D
         val scaleX = width.toDouble() / screenWidth
         val scaleY = height.toDouble() / screenHeight
         g2d.scale(scaleX, scaleY)
         g2d.drawImage(buffer, 0, 0, null)
-        g2d.scale(1.0 / scaleX, 1.0 / scaleY)
+        g2d.scale(1.0 / scaleX, 1.0 / scaleY) // Przywraca skalę, jeśli inne elementy są rysowane
     }
 
     private fun renderWallsToBuffer() {
-        enemies.forEach { it.update() }
-
+        // Obliczanie FPS
         val currentTime = System.nanoTime()
         frameCount++
-        val deltaTime = (currentTime - lastFrameTime) / 1_000_000_000.0
+        val deltaTime = (currentTime - lastFrameTime) / 1_000_000_000.0 // Czas w sekundach
         if (deltaTime >= 1.0) {
             fps = (frameCount / deltaTime).toInt()
             frameCount = 0
@@ -526,18 +246,15 @@ class RenderCast : JPanel() {
         }
 
         val playerAngleRad = Math.toRadians(currentangle.toDouble())
-        val playerHeight = wallHeight / 4.0
-        val horizonOffset = 0.0
+        val playerHeight = wallHeight / 4.0 // Zmniejszona wysokość gracza dla bliższej perspektywy
+        val horizonOffset = 0.0 // Możliwość przesunięcia linii horyzontu (dostosuj, jeśli potrzeba)
         val playerPosX = positionX / tileSize
         val playerPosY = positionY / tileSize
 
+        // Wyczyść bufor na czarno dla debugowania
         bufferGraphics.color = Color.BLACK
         bufferGraphics.fillRect(0, 0, screenWidth, screenHeight)
 
-        val zBuffer = DoubleArray(rayCount) { Double.MAX_VALUE }
-        visibleEnemies.clear() // Reset visible enemies each frame
-
-        // Wall, floor, ceiling, and enemy visibility check
         for (ray in 0 until rayCount) {
             val rayAngle = currentangle + rayAngles[ray]
             val rayAngleRad = Math.toRadians(rayAngle)
@@ -618,31 +335,6 @@ class RenderCast : JPanel() {
                     hitY = mapY.toDouble() + (if (stepY > 0) 0.0 else 1.0)
                     hitX = playerPosX + (hitY - playerPosY) * (rayDirX / rayDirY)
                 }
-                zBuffer[ray] = distance
-            }
-
-            // Check for enemy intersections with this ray
-            enemies.forEach { enemy ->
-                val dx = enemy.x / tileSize - playerPosX
-                val dy = enemy.y / tileSize - playerPosY
-                // Project enemy onto ray direction
-                val rayLength = dx * rayDirX + dy * rayDirY
-                if (rayLength > 0) { // Enemy is in front of player
-                    val perpendicularDistance = abs(dx * rayDirY - dy * rayDirX)
-                    // Check if enemy is close enough to the ray (within half size)
-                    if (perpendicularDistance < enemy.size / 2 / tileSize) {
-                        // Check if enemy is closer than wall
-                        if (!hitWall || rayLength < distance) {
-                            // Calculate screen X based on ray index
-                            val angleRatio = rayAngles[ray] / (fov / 2)
-                            val screenX = (screenWidth / 2 + angleRatio * screenWidth / 2).toInt()
-                            // Add to visible enemies (avoid duplicates)
-                            if (visibleEnemies.none { it.first === enemy }) {
-                                visibleEnemies.add(Triple(enemy, screenX, rayLength))
-                            }
-                        }
-                    }
-                }
             }
 
             val lineHeight = if (hitWall) {
@@ -689,6 +381,7 @@ class RenderCast : JPanel() {
                 }
             }
 
+            // Renderowanie podłogi i sufitu
             for (y in 0 until screenHeight) {
                 if (hitWall && y in drawStart until drawEnd) continue
 
@@ -699,21 +392,27 @@ class RenderCast : JPanel() {
                     continue
                 }
 
+                // Oblicz odległość do punktu na podłodze/suficie
                 val rowDistance = if (isCeiling) {
-                    (playerHeight * screenHeight / 2) / (10.0 * ((screenHeight / 2.0 + horizonOffset) - y + 0.0))
+                    (playerHeight * screenHeight/2) / (10.0 * ((screenHeight / 2.0 + horizonOffset) - y + 0.0)) //0.5
                 } else {
-                    (playerHeight * screenHeight / 2) / (10.0 * (y - (screenHeight / 2.0 + horizonOffset) + 0.0))
+                    (playerHeight * screenHeight/2) / (10.0 * (y - (screenHeight / 2.0 + horizonOffset) + 0.0)) //0.5
                 }
                 if (rowDistance < 0.01 || rowDistance > 50.0) continue
 
-                val floorX = playerPosX + rowDistance * rayDirX + 100
-                val floorY = playerPosY + rowDistance * rayDirY + 100
+                // Oblicz współrzędne na mapie
+                val floorX = playerPosX + rowDistance * rayDirX+100
+                val floorY = playerPosY + rowDistance * rayDirY+100
 
+                // Mapowanie tekstury (3-krotne powiększenie, korekta obrotu)
                 val textureScale = 2.0
                 val textureX = ((floorY / textureScale * textureSize) % textureSize).toInt().coerceIn(0, textureSize - 1)
                 val textureY = ((floorX / textureScale * textureSize) % textureSize).toInt().coerceIn(0, textureSize - 1)
 
+                // Pobierz kolor
                 val color = texture.getRGB(textureX, textureY)
+
+                // Cieniowanie i mgła
                 val shadeFactor = (1.0 - (rowDistance / shadeDistanceScale)).coerceIn(minBrightness, maxBrightness)
                 val originalColor = Color(color)
                 val shadedColor = Color(
@@ -731,139 +430,28 @@ class RenderCast : JPanel() {
                 buffer.setRGB(ray, y, finalColor.rgb)
             }
         }
-
-        // Render visible enemies as 2D overlays
-        renderEnemies()
-
         repaint()
-    }
-
-    private fun renderEnemies() {
-        visibleEnemies.forEach { (enemy, screenX, distance) ->
-            // Perspective-correct sprite size based on enemy height
-            val enemyHeight = wallHeight / 2 // Enemy height is half the wall height
-            val minSize = 16.0 // Minimum sprite size in pixels
-            val maxSize = 128.0 // Maximum sprite size in pixels
-            val spriteSize = ((enemyHeight * screenHeight) / (distance * tileSize)).coerceIn(minSize, maxSize).toInt()
-
-            // Calculate floor position at this distance
-            val floorY = (screenHeight / 2 + (wallHeight * screenHeight) / (2 * distance * tileSize)).toInt()
-
-            // Position sprite with bottom at floorY
-            val drawStartY = (floorY - spriteSize).coerceIn(0, screenHeight - 1)
-            val drawEndY = floorY.coerceIn(0, screenHeight - 1)
-            val drawStartX = (screenX - spriteSize / 2).coerceIn(0, screenWidth - 1)
-            val drawEndX = (screenX + spriteSize / 2).coerceIn(0, screenWidth - 1)
-
-            // Draw sprite pixel by pixel
-            for (x in drawStartX until drawEndX) {
-                val textureX = ((x - drawStartX) * enemy.texture.width / spriteSize).toInt().coerceIn(0, enemy.texture.width - 1)
-                for (y in drawStartY until drawEndY) {
-                    val textureY = ((y - drawStartY) * enemy.texture.height / spriteSize).toInt().coerceIn(0, enemy.texture.height - 1)
-                    val color = enemy.texture.getRGB(textureX, textureY)
-                    buffer.setRGB(x, y, color)
-                }
-            }
-        }
     }
 
     fun shotgun() {
         val shotAngleRad = Math.toRadians(currentangle.toDouble())
-        val playerPosX = positionX / tileSize
-        val playerPosY = positionY / tileSize
-        val rayDirX = cos(shotAngleRad)
-        val rayDirY = sin(shotAngleRad)
-
-        // Raycasting setup
-        var mapX = playerPosX.toInt()
-        var mapY = playerPosY.toInt()
-        val deltaDistX = if (rayDirX == 0.0) 1e30 else abs(1 / rayDirX)
-        val deltaDistY = if (rayDirY == 0.0) 1e30 else abs(1 / rayDirY)
-        var stepX: Int
-        var stepY: Int
-        var sideDistX: Double
-        var sideDistY: Double
-        var side = 5
-
-        if (rayDirX < 0) {
-            stepX = -1
-            sideDistX = (playerPosX - mapX) * deltaDistX
-        } else {
-            stepX = 1
-            sideDistX = (mapX + 1.0 - playerPosX) * deltaDistX
-        }
-        if (rayDirY < 0) {
-            stepY = -1
-            sideDistY = (playerPosY - mapY) * deltaDistY
-        } else {
-            stepY = 1
-            sideDistY = (mapY + 1.0 - playerPosY) * deltaDistY
-        }
-
-        var hitWall = false
-        var wallDistance = Double.MAX_VALUE
-
-        // Raycasting loop to find wall distance
-        while (!hitWall) {
-            if (sideDistX < sideDistY) {
-                sideDistX += deltaDistX
-                mapX += stepX
-                side = 0
-            } else {
-                sideDistY += deltaDistY
-                mapY += stepY
-                side = 1
-            }
-            if (mapY !in map.grid.indices || mapX !in map.grid[0].indices) {
-                break
-            }
-            if (map.grid[mapY][mapX] == 1 || map.grid[mapY][mapX] == 5) {
-                hitWall = true
-                wallDistance = if (side == 0) {
-                    (mapX - playerPosX + (1 - stepX) / 2.0) / rayDirX
-                } else {
-                    (mapY - playerPosY + (1 - stepY) / 2.0) / rayDirY
-                }
-                if (wallDistance < 0.01) wallDistance = 0.01
-            }
-        }
-
-        // Check for enemy hits
-        enemies.toList().forEach { enemy ->
-            val dx = enemy.x / tileSize - playerPosX
-            val dy = enemy.y / tileSize - playerPosY
-            // Project enemy onto ray direction
-            val rayLength = dx * rayDirX + dy * rayDirY
-            if (rayLength > 0 && rayLength < wallDistance) { // Enemy in front and before wall
-                val perpendicularDistance = abs(dx * rayDirY - dy * rayDirX)
-                // Check if enemy is within ray path
-                if (perpendicularDistance < (enemy.size*10) / 2 / tileSize) {
-                    // Check angle to enemy
-                    val angleToEnemy = atan2(dy, dx)
-                    val angleDiff = abs(angleToEnemy - shotAngleRad)
-                    if (angleDiff < Math.toRadians(45.0)) { // Widened to ±30°
-                        enemy.health -= 25
-                        println("trafiono, enemy health=${enemy.health}")
-                        if (enemy.health <= 0) {
-                            println("leży jeden skibidi")
-                            enemies.remove(enemy)
-                        }
-                    }
-                }
-            }
-        }
+        shotx = positionX + 100 * cos(shotAngleRad)
+        shoty = positionY + 100 * sin(shotAngleRad)
         repaint()
     }
 }
 
 fun main() = runBlocking {
+    // Podstawa wyświetlania
+    //this::class.java.classLoader.getResource(folder/plik)
     val frame = JFrame("rolada z gówna")
     frame.defaultCloseOperation = JFrame.EXIT_ON_CLOSE
-    frame.iconImage = Toolkit.getDefaultToolkit().getImage(this::class.java.classLoader.getResource("icon/icon.jpg"))
+    frame.iconImage = Toolkit.getDefaultToolkit().getImage(this::class.java.classLoader.getResource("icon/icon.jpg")) //src/main/resources/icon/icon.jpg
     frame.isResizable = false
     frame.setSize(1366, 768)
     frame.setLocation(((Toolkit.getDefaultToolkit().screenSize.width - frame.width) / 2), ((Toolkit.getDefaultToolkit().screenSize.height - frame.height) / 2))
 
+    // Ukrycie kursora
     frame.cursor = frame.toolkit.createCustomCursor(
         BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB),
         Point(0, 0),
@@ -872,29 +460,37 @@ fun main() = runBlocking {
 
     frame.isVisible = true
 
+    // Warstwy
     val layeredPane = JLayeredPane()
     layeredPane.setSize(1366, 768)
     layeredPane.setBounds(0, 0, 1366, 768)
     frame.add(layeredPane)
 
-    val renderCast = RenderCast()
-    val mapa = Mappingmap(renderCast)
+    val mapa = Mappingmap()
     mapa.isOpaque = false
     mapa.layout = null
     mapa.setSize(1366, 768)
     mapa.setBounds(0, 0, 1366, 768)
 
+    val renderCast = RenderCast()
     renderCast.isOpaque = false
     renderCast.setSize(1366, 768)
     renderCast.setBounds(0, 0, 1366, 768)
 
+    //frame.add(ekran)
     layeredPane.add(mapa, 1)
     layeredPane.add(renderCast, 2)
 
-    val player = Player(renderCast) // Pass renderCast to Player
+    // Inicjalizacja gracza
+    val player = Player()
+
+    // Śledzenie stanu klawiszy z jawnym typem kotlin.collections.MutableMap<Int, Boolean>
     val keysPressed: MutableMap<Int, Boolean> = mutableMapOf()
+
+    // Środek okna
     var centerX = frame.width / 2
 
+    // Obsługa myszy (strzał)
     frame.addMouseListener(object : MouseAdapter() {
         override fun mousePressed(event: MouseEvent) {
             if (event.button == MouseEvent.BUTTON1) {
@@ -905,6 +501,7 @@ fun main() = runBlocking {
         }
     })
 
+    // Obsługa ruchu myszy
     frame.addMouseMotionListener(object : MouseMotionAdapter() {
         override fun mouseMoved(e: MouseEvent) {
             player.updateAngleFromMouse()
@@ -917,9 +514,11 @@ fun main() = runBlocking {
         }
     })
 
+    // Obsługa klawiatury
     frame.addKeyListener(object : KeyAdapter() {
         override fun keyPressed(event: KeyEvent) {
             keysPressed[event.keyCode] = true
+            // Specjalne akcje (np. strzał, przełączanie mapy) nadal obsługujemy bezpośrednio
             when (event.keyCode) {
                 KeyEvent.VK_SPACE -> renderCast.shotgun()
             }
@@ -933,18 +532,21 @@ fun main() = runBlocking {
         }
     })
 
+    // Obsługa przesunięcia okna
     frame.addComponentListener(object : ComponentAdapter() {
         override fun componentMoved(e: ComponentEvent?) {
             centerX = frame.x + frame.width / 2
         }
     })
 
+    // Pętla czasowa do aktualizacji ruchu gracza
     fixedRateTimer(name = "player-update", initialDelay = 100, period = 16) {
         player.update(keysPressed)
         renderCast.repaint()
-        mapa.repaint()
+        Mappingmap().repaint()
     }
 
+    // Pętla do resetowania pozycji myszy
     while (MouseSupport) {
         delay(75)
         Robot().mouseMove(MouseInfo.getPointerInfo().location.x, 0)
@@ -982,11 +584,11 @@ class Map {
     )
 }
 
-class Mappingmap(private val renderCast: RenderCast) : JPanel() {
+class Mappingmap : JPanel() {
     private val map = Map()
-    private val miniMapSize = 200
-    private val offsetX = 10
-    private val offsetY = 10
+    private val miniMapSize = 200 // Stały rozmiar minimapy (szerokość i wysokość w pikselach)
+    private val offsetX = 10 // Odstęp od lewej krawędzi
+    private val offsetY = 10 // Odstęp od górnej krawędzi
 
     override fun paintComponent(v: Graphics) {
         super.paintComponent(v)
@@ -994,35 +596,29 @@ class Mappingmap(private val renderCast: RenderCast) : JPanel() {
 
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
 
+        // Oblicz skalę na podstawie rozmiaru mapy i minimapy
         val mapWidth = map.grid[0].size
         val mapHeight = map.grid.size
         val tileScale = minOf(miniMapSize.toDouble() / mapWidth, miniMapSize.toDouble() / mapHeight)
 
+        // Rysuj minimapę w stałym obszarze
         for (row in map.grid.indices) {
             for (col in map.grid[row].indices) {
                 val x = (col * tileScale).toInt()
                 val y = (row * tileScale).toInt()
-                val tileSize = tileScale.toInt() + 1
+                val tileSize = tileScale.toInt()+1
 
                 when (map.grid[row][col]) {
                     1 -> {
-                        g2.color = Color(0, 255, 0)
-                        g2.fillRect(x + offsetX, y + offsetY, tileSize, tileSize)
+                        g2.color = Color(0, 255, 0) // Ściana
+                        g2.fillRect(x+offsetX, y+offsetY, tileSize, tileSize)
                     }
                     5 -> {
-                        g2.color = Color.YELLOW
-                        g2.fillRect(x + offsetX, y + offsetY, tileSize, tileSize)
+                        g2.color = Color.YELLOW // Punkt startu/końca
+                        g2.fillRect(x+offsetX, y+offsetY, tileSize, tileSize)
                     }
                 }
             }
-        }
-
-        // Rysuj przeciwników na minimapie
-        renderCast.getEnemies().forEach { enemy ->
-            val enemyX = offsetX + (enemy.x / tileSize * tileScale).toInt()
-            val enemyY = offsetY + (enemy.y / tileSize * tileScale).toInt()
-            g2.color = Color.RED
-            g2.fillRect(enemyX - 3, enemyY - 3, 6, 6)
         }
 
         // Rysuj pozycję gracza na minimapie
@@ -1039,12 +635,10 @@ class Mappingmap(private val renderCast: RenderCast) : JPanel() {
         g2.color = Color.darkGray
         g2.fillRect(playerX - 2, playerY - 2, 5, 5)
 
-        g2.color = Color.white
-        g2.fillRect(683, 384 , 3, 3)
-
+        // Rysuj FPS
         g2.color = Color.YELLOW
         g2.font = java.awt.Font("BOLD", java.awt.Font.BOLD, 17)
-        g2.drawString("FPS: $fps", 1366 - 90, 20)
+        g2.drawString("FPS: $fps", 1366 - 90,  20)
         isOpaque = false
     }
 
@@ -1052,4 +646,4 @@ class Mappingmap(private val renderCast: RenderCast) : JPanel() {
         return Dimension(miniMapSize + offsetX * 2, miniMapSize + offsetY * 2)
     }
 }
-
+*/
