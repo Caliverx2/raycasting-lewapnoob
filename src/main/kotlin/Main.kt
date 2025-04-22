@@ -33,24 +33,23 @@ import kotlin.math.*
 
 
 var map = true
-var currentangle = 0
+var currentangle = 45
 var tileSize = 40.0 // Rozmiar kafelka na mapie
 val mapa = 0.075
 var fps = 84
 var MouseSupport = false
 
-var positionX = (tileSize*22)-(tileSize/2)//(tileSize*3)-(tileSize/2)  //kafelek*pozycja - (pół kafelka)
-var positionY = (tileSize*22)-(tileSize/2)//(tileSize*2)-(tileSize/2)  //kafelek*pozycja - (pół kafelka)
+var positionX = (tileSize*2)-(tileSize/2)  //kafelek*pozycja - (pół kafelka)
+var positionY = (tileSize*2)-(tileSize/2)  //kafelek*pozycja - (pół kafelka)
 
-
-class Enemy(var x: Double, var y: Double, var health: Int = 10, val texture: BufferedImage, private val renderCast: RenderCast) {
+class Enemy(var x: Double, var y: Double, var health: Int = 10, var texture: BufferedImage, private val renderCast: RenderCast) {
     private val map = Map()
     private val speed = 0.5
-    val size = 1.0
-    private val margin = 0.001
+    val size = 2.0
+    private val margin = 0.15
     private var path: List<Node> = emptyList()
     private var pathUpdateTimer = 0
-    private val pathUpdateInterval = 120
+    private val pathUpdateInterval = 120*2
     private var stuckCounter = 0
     private val maxStuckFrames = 60
     var lastMoveX = 0.0 // Track last movement direction
@@ -72,7 +71,7 @@ class Enemy(var x: Double, var y: Double, var health: Int = 10, val texture: Buf
 
         for (gridY in gridTop..gridBottom) {
             for (gridX in gridLeft..gridRight) {
-                if (gridY !in map.grid.indices || gridX !in map.grid[gridY].indices || map.grid[gridY][gridX] == 1) {
+                if (gridY !in map.grid.indices || gridX !in map.grid[gridY].indices || map.grid[gridY][gridX] != 0) {
                     return Pair(false, null)
                 }
             }
@@ -90,13 +89,6 @@ class Enemy(var x: Double, var y: Double, var health: Int = 10, val texture: Buf
             }
         }
 
-        // Enemy-player collision
-        val dx = newX - positionX
-        val dy = newY - positionY
-        val distance = sqrt(dx * dx + dy * dy)
-        if (distance < size + 5.0 / 2) {
-            return Pair(false, null) // Player collision (handled separately)
-        }
 
         return Pair(true, null)
     }
@@ -126,6 +118,28 @@ class Enemy(var x: Double, var y: Double, var health: Int = 10, val texture: Buf
     }
 
     fun update() {
+        if ((stuckCounter > maxStuckFrames) and (health > 0)) {
+            // Wygeneruj nową ścieżkę, próbując ominąć gracza
+            path = findPath()
+            pathUpdateTimer = 0
+            stuckCounter = 0
+            return
+        }
+        else {
+            if (health > 0) {
+                stuckCounter++
+                // Próba lekkiego losowego przesunięcia
+                val randomDirection = listOf(-1.0, 1.0).random()
+                val nudgeX = x + randomDirection * 0.2
+                val nudgeY = y + randomDirection * 0.2
+                if (canMoveTo(nudgeX, nudgeY).first) {
+                    x = nudgeX
+                    y = nudgeY
+                }
+            }
+        }
+
+
         pathUpdateTimer++
         if (pathUpdateTimer >= pathUpdateInterval || stuckCounter > maxStuckFrames) {
             path = findPath()
@@ -134,7 +148,7 @@ class Enemy(var x: Double, var y: Double, var health: Int = 10, val texture: Buf
         }
 
         isMoving = path.isNotEmpty() // Update movement state
-        if (path.isNotEmpty()) {
+        if (path.isNotEmpty() and (health > 0)) {
             val targetNode = path.first()
             val targetX = (targetNode.x + 0.5) * tileSize
             val targetY = (targetNode.y + 0.5) * tileSize
@@ -206,6 +220,11 @@ class Enemy(var x: Double, var y: Double, var health: Int = 10, val texture: Buf
 
         while (openSet.isNotEmpty()) {
             val current = openSet.minByOrNull { fScore.getOrDefault(it, Double.MAX_VALUE) }!!
+
+            if (abs(startX - goalX) + abs(startY - goalY) <= 1) {
+                return emptyList()
+            }
+
             if (current.x == goalX && current.y == goalY) {
                 return reconstructPath(cameFrom, current)
             }
@@ -242,14 +261,19 @@ class Enemy(var x: Double, var y: Double, var health: Int = 10, val texture: Buf
             Node(node.x, node.y + 1), Node(node.x, node.y - 1)
         )
         for (dir in directions) {
-            if (dir.y in map.grid.indices && dir.x in map.grid[0].indices && map.grid[dir.y][dir.x] != 1) {
+            if (dir.y in map.grid.indices &&
+                dir.x in map.grid[0].indices &&
+                map.grid[dir.y][dir.x] != 1 &&
+                renderCast.getEnemies().none { other -> other.x.toInt() == dir.x && other.y.toInt() == dir.y }
+            ) {
                 neighbors.add(dir)
             }
+
         }
         return neighbors
     }
 
-     fun reconstructPath(cameFrom: Map<Node, Node>, current: Node): List<Node> {
+    fun reconstructPath(cameFrom: Map<Node, Node>, current: Node): List<Node> {
         val path = mutableListOf(current)
         var curr = current
         while (cameFrom.containsKey(curr)) {
@@ -396,10 +420,22 @@ class Player(private val renderCast: RenderCast) {
 
     fun anglea() {
         currentangle -= rotationSpeed
+        if ((currentangle > 360)) {
+            currentangle = 0
+        }
+        if ((currentangle < 0)) {
+            currentangle = 360
+        }
     }
 
     fun angled() {
         currentangle += rotationSpeed
+        if ((currentangle > 360)) {
+            currentangle = 0
+        }
+        if ((currentangle < 0)) {
+            currentangle = 360
+        }
     }
 
     fun updateAngleFromMouse() {
@@ -424,12 +460,12 @@ class Player(private val renderCast: RenderCast) {
 
 class RenderCast : JPanel() {
     private val map = Map()
-    private val screenWidth = 320 * 2
+    private val screenWidth = 320
     private val screenHeight = 200
     private val fov = 90.0
     private val textureSize = 64
     private val rayCount = screenWidth
-    private val wallHeight = 32.0 / 1
+    private val wallHeight = 32.0
 
     private var textures: Array<BufferedImage> = arrayOf()
     var enemyTextureId: BufferedImage? = null
@@ -454,6 +490,9 @@ class RenderCast : JPanel() {
     private var enemies = mutableListOf<Enemy>()
     private var visibleEnemies = mutableListOf<Triple<Enemy, Int, Double>>() // (Enemy, screenX, distance)
 
+    // Declare zBuffer as a class-level property
+    private val zBuffer = DoubleArray(rayCount) { Double.MAX_VALUE }
+
     fun getEnemies(): List<Enemy> = enemies
 
     init {
@@ -468,16 +507,16 @@ class RenderCast : JPanel() {
             )
         } catch (e: Exception) {
             println("Error loading textures: ${e.message}")
-            floorTexture = createTexture(Color.RED)
-            ceilingTexture = createTexture(Color.BLUE)
+            floorTexture = createTexture(Color.darkGray)
+            ceilingTexture = createTexture(Color.lightGray)
             textures = arrayOf(
-                createTexture(Color.magenta),
-                createTexture(Color.YELLOW)
+                createTexture(Color(90, 39, 15)),
+                createTexture(Color(255, 215, 0))
             )
-            enemyTextureId = createTexture(Color.GREEN)
+            enemyTextureId = createTexture(Color(255, 68, 68))
         }
         // Enemies in open spaces near player start (21.5, 21.5)
-        enemies.add(Enemy((tileSize * 5) - (tileSize / 2), (tileSize * 10) - (tileSize / 2), 100, enemyTextureId!!, this))
+        enemies.add(Enemy((tileSize * 6) - (tileSize / 2), (tileSize * 12) - (tileSize / 2), 100, enemyTextureId!!, this))
         enemies.add(Enemy((tileSize * 8) - (tileSize / 2), (tileSize * 8) - (tileSize / 2), 100, enemyTextureId!!, this))
 
         buffer = BufferedImage(screenWidth, screenHeight, BufferedImage.TYPE_INT_RGB)
@@ -535,7 +574,8 @@ class RenderCast : JPanel() {
         bufferGraphics.color = Color.BLACK
         bufferGraphics.fillRect(0, 0, screenWidth, screenHeight)
 
-        val zBuffer = DoubleArray(rayCount) { Double.MAX_VALUE }
+        // Reset zBuffer for this frame
+        zBuffer.fill(Double.MAX_VALUE)
         visibleEnemies.clear() // Reset visible enemies each frame
 
         // Wall, floor, ceiling, and enemy visibility check
@@ -631,9 +671,9 @@ class RenderCast : JPanel() {
                 if (rayLength > 0) { // Enemy is in front of player
                     val perpendicularDistance = abs(dx * rayDirY - dy * rayDirX)
                     // Check if enemy is close enough to the ray (within half size)
-                    if (perpendicularDistance < enemy.size / 2 / tileSize) {
+                    if (perpendicularDistance < enemy.size / 2 / tileSize+0.01) {
                         // Check if enemy is closer than wall
-                        if (!hitWall || rayLength < distance) {
+                        if (!hitWall || rayLength < 500) {
                             // Calculate screen X based on ray index
                             val angleRatio = rayAngles[ray] / (fov / 2)
                             val screenX = (screenWidth / 2 + angleRatio * screenWidth / 2).toInt()
@@ -740,6 +780,9 @@ class RenderCast : JPanel() {
     }
 
     private fun renderEnemies() {
+        // Sort enemies by distance (farthest to nearest) to ensure correct rendering order
+        visibleEnemies.sortByDescending { it.third }
+
         visibleEnemies.forEach { (enemy, screenX, distance) ->
             // Perspective-correct sprite size based on enemy height
             val enemyHeight = wallHeight / 2 // Enemy height is half the wall height
@@ -756,13 +799,22 @@ class RenderCast : JPanel() {
             val drawStartX = (screenX - spriteSize / 2).coerceIn(0, screenWidth - 1)
             val drawEndX = (screenX + spriteSize / 2).coerceIn(0, screenWidth - 1)
 
-            // Draw sprite pixel by pixel
+            // Draw sprite pixel by pixel, checking z-buffer for occlusion
             for (x in drawStartX until drawEndX) {
-                val textureX = ((x - drawStartX) * enemy.texture.width / spriteSize).coerceIn(0, enemy.texture.width - 1)
-                for (y in drawStartY until drawEndY) {
-                    val textureY = ((y - drawStartY) * enemy.texture.height / spriteSize).coerceIn(0, enemy.texture.height - 1)
-                    val color = enemy.texture.getRGB(textureX, textureY)
-                    buffer.setRGB(x, y, color)
+                // Ensure x is within zBuffer bounds
+                if (x < 0 || x >= zBuffer.size) continue
+
+                // Check if enemy is closer than the wall at this column
+                if (distance < zBuffer[x]) {
+                    val textureX = ((x - drawStartX) * enemy.texture.width / spriteSize).coerceIn(0, enemy.texture.width - 1)
+                    for (y in drawStartY until drawEndY) {
+                        val textureY = ((y - drawStartY) * enemy.texture.height / spriteSize).coerceIn(0, enemy.texture.height - 1)
+                        val color = enemy.texture.getRGB(textureX, textureY)
+                        // Only draw if pixel is not transparent (optional, if texture has alpha)
+                        if ((color and 0xFF000000.toInt()) != 0) {
+                            buffer.setRGB(x, y, color)
+                        }
+                    }
                 }
             }
         }
@@ -836,19 +888,24 @@ class RenderCast : JPanel() {
             // Project enemy onto ray direction
             val rayLength = dx * rayDirX + dy * rayDirY
             if (rayLength > 0 && rayLength < wallDistance) { // Enemy in front and before wall
-                player.w(-1.0)
+                //player.w(-1.0)
                 val perpendicularDistance = abs(dx * rayDirY - dy * rayDirX)
                 // Check if enemy is within ray path
-                if (perpendicularDistance < (enemy.size*20) / 2 / tileSize) {
+                if ((perpendicularDistance < (enemy.size*200) / 2 / tileSize) and (enemy.health > 0)) {
                     // Check angle to enemy
                     val angleToEnemy = atan2(dy, dx)
                     val angleDiff = abs(angleToEnemy - shotAngleRad)
                     if (angleDiff < Math.toRadians(15.0)) { // Widened to ±30°
                         enemy.health -= 25
-                        println("trafiono, enemy health=${enemy.health}")
+                        println("trafiono, enemy health=${enemy.health}, enemy=${enemy}")
                         if (enemy.health <= 0) {
-                            println("leży jeden skibidi")
-                            enemies.remove(enemy)
+                            //enemies.remove(enemy)
+                            try {
+                                enemy.texture = ImageIO.read(this::class.java.classLoader.getResource("textures/boguch_bochen_chlepa.jpg"))
+                            }
+                            catch (e: Exception) {
+                                enemy.texture = createTexture(Color.black)
+                            }
                         }
                     }
                 }
@@ -958,29 +1015,37 @@ fun main() = runBlocking {
 class Map {
     // Wartości: 1-ściana, 0-pusta przestrzeń, 5-początek i koniec labiryntu
     val grid: Array<IntArray> = arrayOf(
-        intArrayOf(5,5,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1),
-        intArrayOf(5,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,1),
-        intArrayOf(1,0,1,1,1,0,1,1,1,0,1,0,1,1,1,1,1,1,1,0,1,0,1),
-        intArrayOf(1,0,1,0,0,0,0,0,1,0,1,0,0,0,0,0,0,0,1,0,1,0,1),
-        intArrayOf(1,1,1,1,1,0,1,0,1,0,1,0,1,0,1,1,1,1,1,1,1,0,1),
-        intArrayOf(1,0,0,0,0,0,1,0,1,0,1,0,1,0,1,0,0,0,0,0,0,0,1),
-        intArrayOf(1,0,1,0,1,0,1,1,1,1,1,1,1,1,1,0,1,0,1,1,1,0,1),
-        intArrayOf(1,0,1,0,1,0,1,0,1,0,0,0,1,0,0,0,1,0,1,0,0,0,1),
-        intArrayOf(1,0,1,0,1,1,1,0,1,1,1,0,1,0,1,1,1,0,1,1,1,0,1),
-        intArrayOf(1,0,1,0,0,0,1,0,0,0,0,0,0,0,0,0,1,0,1,0,1,0,1),
-        intArrayOf(1,0,1,1,1,0,1,0,1,0,1,1,1,0,1,1,1,0,1,0,1,0,1),
-        intArrayOf(1,0,0,0,1,0,1,0,1,0,0,0,1,0,1,0,1,0,0,0,1,0,1),
-        intArrayOf(1,1,1,0,1,1,1,1,1,1,1,0,1,1,1,0,1,0,1,1,1,0,1),
-        intArrayOf(1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,1,0,1),
-        intArrayOf(1,0,1,1,1,1,1,1,1,1,1,0,1,0,1,1,1,0,1,1,1,1,1),
-        intArrayOf(1,0,0,0,1,0,1,0,1,0,0,0,1,0,1,0,0,0,0,0,1,0,1),
-        intArrayOf(1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,1,1,1,1,1,1,0,1),
-        intArrayOf(1,0,1,0,1,0,0,0,0,0,1,0,1,0,1,0,0,0,0,0,0,0,1),
-        intArrayOf(1,1,1,1,1,0,1,1,1,0,1,1,1,1,1,1,1,1,1,0,1,0,1),
-        intArrayOf(1,0,1,0,1,0,1,0,1,0,0,0,1,0,1,0,1,0,0,0,1,0,1),
-        intArrayOf(1,0,1,0,1,1,1,0,1,1,1,0,1,0,1,0,1,1,1,1,1,0,1),
-        intArrayOf(1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5),
-        intArrayOf(1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,5,5)
+        intArrayOf(5,5,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1),
+        intArrayOf(5,0,0,0,0,0,0,0,1,0,1,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1),
+        intArrayOf(1,1,1,0,1,1,1,1,1,0,1,0,1,1,1,0,1,1,1,0,1,1,1,1,1,0,1,0,1,1,1),
+        intArrayOf(1,0,1,0,1,0,0,0,1,0,0,0,0,0,0,0,1,0,1,0,1,0,0,0,1,0,1,0,0,0,1),
+        intArrayOf(1,0,1,0,1,0,1,1,1,0,1,1,1,1,1,0,1,0,1,1,1,1,1,0,1,1,1,1,1,0,1),
+        intArrayOf(1,0,0,0,0,0,0,0,0,0,1,0,0,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,1),
+        intArrayOf(1,1,1,1,1,0,1,1,1,1,1,0,1,0,1,1,1,0,1,1,1,0,1,1,1,0,1,1,1,1,1),
+        intArrayOf(1,0,0,0,0,0,0,0,1,0,0,0,1,0,1,0,1,0,1,0,1,0,0,0,1,0,0,0,0,0,1),
+        intArrayOf(1,1,1,1,1,0,1,0,1,0,1,0,1,1,1,0,1,1,1,0,1,0,1,0,1,0,1,1,1,0,1),
+        intArrayOf(1,0,0,0,1,0,1,0,1,0,1,0,0,0,1,0,1,0,0,0,0,0,1,0,1,0,1,0,1,0,1),
+        intArrayOf(1,1,1,0,1,1,1,0,1,0,1,0,1,1,1,0,1,0,1,0,1,1,1,0,1,1,1,0,1,0,1),
+        intArrayOf(1,0,1,0,0,0,0,0,1,0,1,0,0,0,0,0,1,0,1,0,0,0,1,0,1,0,0,0,1,0,1),
+        intArrayOf(1,0,1,0,1,0,1,0,1,0,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1,0,1,1,1),
+        intArrayOf(1,0,1,0,1,0,1,0,1,0,0,0,0,0,1,0,0,0,0,0,1,0,1,0,0,0,1,0,0,0,1),
+        intArrayOf(1,0,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1,0,1,0,1,1,1,0,1,0,1,1,1),
+        intArrayOf(1,0,0,0,1,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1),
+        intArrayOf(1,0,1,1,1,0,1,1,1,1,1,0,1,1,1,0,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1),
+        intArrayOf(1,0,1,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0,0,0,1,0,1,0,1,0,1,0,1,0,1),
+        intArrayOf(1,0,1,0,1,1,1,0,1,1,1,0,1,0,1,1,1,1,1,0,1,0,1,1,1,0,1,0,1,0,1),
+        intArrayOf(1,0,1,0,1,0,0,0,0,0,0,0,0,0,1,0,1,0,1,0,0,0,1,0,0,0,0,0,0,0,1),
+        intArrayOf(1,0,1,1,1,0,1,1,1,1,1,1,1,1,1,0,1,0,1,0,1,0,1,0,1,1,1,1,1,0,1),
+        intArrayOf(1,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,1,0,0,0,0,0,1,0,1),
+        intArrayOf(1,0,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1,1,1,0,1,0,1,0,1,1,1,0,1,0,1),
+        intArrayOf(1,0,0,0,1,0,0,0,0,0,0,0,1,0,1,0,0,0,1,0,1,0,0,0,0,0,1,0,1,0,1),
+        intArrayOf(1,0,1,1,1,1,1,0,1,0,1,1,1,0,1,0,1,1,1,1,1,1,1,0,1,1,1,1,1,0,1),
+        intArrayOf(1,0,0,0,0,0,0,0,1,0,1,0,1,0,0,0,1,0,0,0,1,0,0,0,0,0,1,0,1,0,1),
+        intArrayOf(1,0,1,1,1,1,1,1,1,0,1,0,1,0,1,0,1,1,1,0,1,1,1,1,1,0,1,0,1,1,1),
+        intArrayOf(1,0,1,0,1,0,0,0,1,0,0,0,1,0,1,0,1,0,1,0,0,0,1,0,1,0,0,0,0,0,1),
+        intArrayOf(1,0,1,0,1,0,1,0,1,0,1,0,1,1,1,0,1,0,1,0,1,0,1,0,1,1,1,1,1,0,1),
+        intArrayOf(1,0,0,0,0,0,1,0,1,0,1,0,0,0,0,0,0,0,0,0,1,0,1,0,0,0,0,0,0,0,5),
+        intArrayOf(1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,5,5)
     )
 }
 
