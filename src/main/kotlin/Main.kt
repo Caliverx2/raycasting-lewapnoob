@@ -11,6 +11,7 @@ import java.awt.event.KeyEvent
 import javax.swing.JPanel
 import java.awt.Color
 import java.awt.Dimension
+import java.awt.Font
 import java.awt.Graphics
 import java.awt.Graphics2D
 import java.awt.MouseInfo
@@ -411,7 +412,7 @@ class Player(private val renderCast: RenderCast) {
         }
     }
 
-    fun update(keysPressed: kotlin.collections.Map<Int, Boolean>) {
+    fun update(keysPressed: Map<Int, Boolean>) {
         if (keysPressed.getOrDefault(KeyEvent.VK_W, false) || keysPressed.getOrDefault(KeyEvent.VK_UP, false)) w()
         if (keysPressed.getOrDefault(KeyEvent.VK_S, false) || keysPressed.getOrDefault(KeyEvent.VK_DOWN, false)) s()
         if (keysPressed.getOrDefault(KeyEvent.VK_A, false)) a()
@@ -783,7 +784,7 @@ class RenderCast : JPanel() {
         var stepY: Int
         var sideDistX: Double
         var sideDistY: Double
-        var side = 5
+        var side = 10
 
         if (rayDirX < 0) {
             stepX = -1
@@ -837,11 +838,11 @@ class RenderCast : JPanel() {
             if (rayLength > 0 && rayLength < wallDistance) { // Enemy in front and before wall
                 val perpendicularDistance = abs(dx * rayDirY - dy * rayDirX)
                 // Check if enemy is within ray path
-                if (perpendicularDistance < (enemy.size*10) / 2 / tileSize) {
+                if (perpendicularDistance < (enemy.size*20) / 2 / tileSize) {
                     // Check angle to enemy
                     val angleToEnemy = atan2(dy, dx)
                     val angleDiff = abs(angleToEnemy - shotAngleRad)
-                    if (angleDiff < Math.toRadians(45.0)) { // Widened to ±30°
+                    if (angleDiff < Math.toRadians(15.0)) { // Widened to ±30°
                         enemy.health -= 25
                         println("trafiono, enemy health=${enemy.health}")
                         if (enemy.health <= 0) {
@@ -1043,7 +1044,7 @@ class Mappingmap(private val renderCast: RenderCast) : JPanel() {
         g2.fillRect(683, 384 , 3, 3)
 
         g2.color = Color.YELLOW
-        g2.font = java.awt.Font("BOLD", java.awt.Font.BOLD, 17)
+        g2.font = Font("BOLD", Font.BOLD, 17)
         g2.drawString("FPS: $fps", 1366 - 90, 20)
         isOpaque = false
     }
