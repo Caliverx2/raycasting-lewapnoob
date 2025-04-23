@@ -329,8 +329,8 @@ class RenderCast : JPanel() {
         visibleEnemies.forEach { (enemy, screenX, distance) ->
             // Perspective-correct sprite size based on enemy height
             val enemyHeight = wallHeight / 2 // Enemy height is half the wall height
-            val minSize = 0.5 // Minimum sprite size in pixels
-            val maxSize = 128.0 // Maximum sprite size in pixels
+            val minSize = 0.1 // Minimum sprite size in pixels
+            val maxSize = 128.0*2 // Maximum sprite size in pixels
             val spriteSize = ((enemyHeight * screenHeight) / (distance * tileSize)).coerceIn(minSize, maxSize).toInt()
 
             // Calculate floor position at this distance
@@ -339,20 +339,20 @@ class RenderCast : JPanel() {
             // Position sprite with bottom at floorY
             val drawStartY = (floorY - spriteSize).coerceIn(0, screenHeight - 1)
             val drawEndY = floorY.coerceIn(0, screenHeight - 1)
-            val drawStartX = (screenX - spriteSize / 2).coerceIn(0, screenWidth - 1)
-            val drawEndX = (screenX + spriteSize / 2).coerceIn(0, screenWidth - 1)
+            val drawStartX = ((screenX) - (spriteSize / 2.0)).coerceIn(0.0, screenWidth - 1.0)
+            val drawEndX = ((screenX) + (spriteSize / 2.0)).coerceIn(0.0, screenWidth - 1.0)
 
             // Draw sprite pixel by pixel, checking z-buffer for occlusion
-            for (x in drawStartX until drawEndX) {
+            for (x in drawStartX.toInt() until drawEndX.toInt()) {
                 // Ensure x is within zBuffer bounds
                 if (x < 0 || x >= zBuffer.size) continue
 
                 // Check if enemy is closer than the wall at this column
                 if (distance < zBuffer[x]) {
-                    val textureX = ((x - drawStartX) * enemy.texture.width / spriteSize).coerceIn(0, enemy.texture.width - 1)
+                    val textureX = ((x - drawStartX) * enemy.texture.width / spriteSize).coerceIn(0.0, enemy.texture.width - 1.0)
                     for (y in drawStartY until drawEndY) {
-                        val textureY = ((y - drawStartY) * enemy.texture.height / spriteSize).coerceIn(0, enemy.texture.height - 1)
-                        val color = enemy.texture.getRGB(textureX, textureY)
+                        val textureY = ((y-drawStartY).toDouble() * enemy.texture.height.toDouble() / spriteSize.toDouble()).coerceIn(0.0, enemy.texture.height - 1.0)
+                        val color = enemy.texture.getRGB(textureX.toInt(), textureY.toInt())
                         // Only draw if pixel is not transparent (optional, if texture has alpha)
                         if ((color and 0xFF000000.toInt()) != 0) {
                             buffer.setRGB(x, y, color)
