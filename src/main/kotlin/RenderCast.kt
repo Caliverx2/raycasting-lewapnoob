@@ -42,7 +42,6 @@ class RenderCast : JPanel() {
     private var enemies = mutableListOf<Enemy>()
     private var visibleEnemies = mutableListOf<Triple<Enemy, Int, Double>>() // (Enemy, screenX, distance)
 
-    // Declare zBuffer as a class-level property
     private val zBuffer = DoubleArray(rayCount) { Double.MAX_VALUE }
 
     fun getEnemies(): List<Enemy> = enemies
@@ -67,7 +66,6 @@ class RenderCast : JPanel() {
             )
             enemyTextureId = createTexture(Color(255, 68, 68))
         }
-        // Enemies in open spaces near player start (21.5, 21.5)
         enemies.add(Enemy((tileSize * 6) - (tileSize / 2), (tileSize * 12) - (tileSize / 2), 100, enemyTextureId!!, this, speed = (0.5 * ((12..19).random()/10.0))))
         enemies.add(Enemy((tileSize * 8) - (tileSize / 2), (tileSize * 8 ) - (tileSize / 2), 100, enemyTextureId!!, this, speed = (0.5 * ((12..19).random()/10.0))))
         println(enemies.get(1).speed)
@@ -119,11 +117,9 @@ class RenderCast : JPanel() {
         bufferGraphics.color = Color.BLACK
         bufferGraphics.fillRect(0, 0, screenWidth, screenHeight)
 
-        // Reset zBuffer for this frame
         zBuffer.fill(Double.MAX_VALUE)
-        visibleEnemies.clear() // Reset visible enemies each frame
+        visibleEnemies.clear()
 
-        // Wall, floor, ceiling, and enemy visibility check
         for (ray in 0 until rayCount) {
             val rayAngle = currentangle + rayAngles[ray]
             val rayAngleRad = Math.toRadians(rayAngle)
@@ -161,7 +157,7 @@ class RenderCast : JPanel() {
 
             var hitWall = false
             var wallType = 0
-            var distance = 0.0
+            var distance = Double.MAX_VALUE // Initialize to max for no wall
             var hitX = 0.0
             var hitY = 0.0
 
@@ -196,6 +192,7 @@ class RenderCast : JPanel() {
                     distance *= cos(angleDiff)
                 } else {
                     hitWall = false
+                    distance = Double.MAX_VALUE
                 }
                 if (side == 0) {
                     hitX = mapX.toDouble() + (if (stepX > 0) 0.0 else 1.0)
@@ -207,23 +204,40 @@ class RenderCast : JPanel() {
                 zBuffer[ray] = distance
             }
 
-            // Check for enemy intersections with this ray
+            // Check for enemy intersections, accounting for full sprite width
             enemies.forEach { enemy ->
-                val dx = enemy.x / tileSize - playerPosX
-                val dy = enemy.y / tileSize - playerPosY
-                // Project enemy onto ray direction
+                // Define enemy's bounding box
+                val halfSize = enemy.size * tileSize / 2 / tileSize // In world units
+                val enemyLeft = enemy.x / tileSize - halfSize
+                val enemyRight = enemy.x / tileSize + halfSize
+                val enemyTop = enemy.y / tileSize - halfSize
+                val enemyBottom = enemy.y / tileSize + halfSize
+
+                // Calculate the closest point on the enemy's bounding box to the ray
+                val closestX = clamp(enemy.x / tileSize, enemyLeft, enemyRight)
+                val closestY = clamp(enemy.y / tileSize, enemyTop, enemyBottom)
+                val dx = closestX - playerPosX
+                val dy = closestY - playerPosY
+
+                // Project the closest point onto the ray
                 val rayLength = dx * rayDirX + dy * rayDirY
                 if (rayLength > 0) { // Enemy is in front of player
+                    // Calculate perpendicular distance to the ray
                     val perpendicularDistance = abs(dx * rayDirY - dy * rayDirX)
-                    // Check if enemy is close enough to the ray (within half size)
-                    if (perpendicularDistance < enemy.size / 2 / tileSize+0.01) {
-                        // Check if enemy is closer than wall
-                        if (!hitWall || rayLength < 500) {
-                            // Calculate screen X based on ray index
-                            val angleRatio = rayAngles[ray] / (fov / 2)
+                    // Check if ray intersects the enemy's bounding box
+                    if (perpendicularDistance < halfSize + 0.05) {
+                        // Calculate the angle to the enemy's center for screenX
+                        val centerDx = enemy.x / tileSize - playerPosX
+                        val centerDy = enemy.y / tileSize - playerPosY
+                        val angleToEnemy = atan2(centerDy, centerDx)
+                        val relativeAngle = normalizeAngle(Math.toDegrees(angleToEnemy) - currentangle)
+                        // Ensure the enemy is within FOV (with buffer for sprite width)
+                        if (abs(relativeAngle) <= fov / 2 + 10) {
+                            val angleRatio = relativeAngle / (fov / 2)
                             val screenX = (screenWidth / 2 + angleRatio * screenWidth / 2).toInt()
-                            // Add to visible enemies (avoid duplicates)
+                            // Add to visible enemies if not occluded or partially visible
                             if (visibleEnemies.none { it.first === enemy }) {
+                                // Use rayLength for distance, but allow rendering if any part is visible
                                 visibleEnemies.add(Triple(enemy, screenX, rayLength))
                             }
                         }
@@ -318,42 +332,35 @@ class RenderCast : JPanel() {
             }
         }
 
-        // Render visible enemies as 2D overlays
         renderEnemies()
     }
 
     private fun renderEnemies() {
-        // Sort enemies by distance (farthest to nearest) to ensure correct rendering order
         visibleEnemies.sortByDescending { it.third }
 
         visibleEnemies.forEach { (enemy, screenX, distance) ->
-            // Perspective-correct sprite size based on enemy height
-            val enemyHeight = wallHeight / 2 // Enemy height is half the wall height
-            val minSize = 0.1 // Minimum sprite size in pixels
-            val maxSize = 128.0*2 // Maximum sprite size in pixels
+            val enemyHeight = wallHeight / 2
+            val minSize = 0.1
+            val maxSize = 128.0 * 2
             val spriteSize = ((enemyHeight * screenHeight) / (distance * tileSize)).coerceIn(minSize, maxSize).toInt()
 
-            // Calculate floor position at this distance
             val floorY = (screenHeight / 2 + (wallHeight * screenHeight) / (2 * distance * tileSize)).toInt()
-
-            // Position sprite with bottom at floorY
             val drawStartY = (floorY - spriteSize).coerceIn(0, screenHeight - 1)
             val drawEndY = floorY.coerceIn(0, screenHeight - 1)
-            val drawStartX = ((screenX) - (spriteSize / 2.0)).coerceIn(0.0, screenWidth - 1.0)
-            val drawEndX = ((screenX) + (spriteSize / 2.0)).coerceIn(0.0, screenWidth - 1.0)
 
-            // Draw sprite pixel by pixel, checking z-buffer for occlusion
-            for (x in drawStartX.toInt() until drawEndX.toInt()) {
-                // Ensure x is within zBuffer bounds
+            val fullSpriteLeftX = screenX - spriteSize / 2.0
+            val fullSpriteRightX = screenX + spriteSize / 2.0
+            val drawStartX = fullSpriteLeftX.coerceAtLeast(0.0).toInt()
+            val drawEndX = fullSpriteRightX.coerceAtMost(screenWidth - 1.0).toInt()
+
+            for (x in drawStartX until drawEndX) {
                 if (x < 0 || x >= zBuffer.size) continue
-
-                // Check if enemy is closer than the wall at this column
                 if (distance < zBuffer[x]) {
-                    val textureX = ((x - drawStartX) * enemy.texture.width / spriteSize).coerceIn(0.0, enemy.texture.width - 1.0)
+                    val textureFraction = (x - fullSpriteLeftX) / (fullSpriteRightX - fullSpriteLeftX)
+                    val textureX = (textureFraction * enemy.texture.width).coerceIn(0.0, enemy.texture.width - 1.0)
                     for (y in drawStartY until drawEndY) {
-                        val textureY = ((y-drawStartY).toDouble() * enemy.texture.height.toDouble() / spriteSize.toDouble()).coerceIn(0.0, enemy.texture.height - 1.0)
+                        val textureY = ((y - drawStartY).toDouble() * enemy.texture.height / spriteSize).coerceIn(0.0, enemy.texture.height - 1.0)
                         val color = enemy.texture.getRGB(textureX.toInt(), textureY.toInt())
-                        // Only draw if pixel is not transparent (optional, if texture has alpha)
                         if ((color and 0xFF000000.toInt()) != 0) {
                             buffer.setRGB(x, y, color)
                         }
@@ -370,7 +377,6 @@ class RenderCast : JPanel() {
         val rayDirX = cos(shotAngleRad)
         val rayDirY = sin(shotAngleRad)
 
-        // Raycasting setup
         var mapX = playerPosX.toInt()
         var mapY = playerPosY.toInt()
         val deltaDistX = if (rayDirX == 0.0) 1e30 else abs(1 / rayDirX)
@@ -399,7 +405,6 @@ class RenderCast : JPanel() {
         var hitWall = false
         var wallDistance = Double.MAX_VALUE
 
-        // Raycasting loop to find wall distance
         while (!hitWall) {
             if (sideDistX < sideDistY) {
                 sideDistX += deltaDistX
@@ -424,29 +429,22 @@ class RenderCast : JPanel() {
             }
         }
 
-        // Check for enemy hits
         enemies.toList().forEach { enemy ->
             val dx = enemy.x / tileSize - playerPosX
             val dy = enemy.y / tileSize - playerPosY
-            // Project enemy onto ray direction
             val rayLength = dx * rayDirX + dy * rayDirY
-            if (rayLength > 0 && rayLength < wallDistance) { // Enemy in front and before wall
-                //player.w(-1.0)
+            if (rayLength > 0 && rayLength < wallDistance) {
                 val perpendicularDistance = abs(dx * rayDirY - dy * rayDirX)
-                // Check if enemy is within ray path
-                if ((perpendicularDistance < (enemy.size*200) / 2 / tileSize) and (enemy.health > 0)) {
-                    // Check angle to enemy
+                if ((perpendicularDistance < (enemy.size * 200) / 2 / tileSize) && (enemy.health > 0)) {
                     val angleToEnemy = atan2(dy, dx)
                     val angleDiff = abs(angleToEnemy - shotAngleRad)
-                    if (angleDiff < Math.toRadians(15.0)) { // Widened to ±30°
+                    if (angleDiff < Math.toRadians(15.0)) {
                         enemy.health -= 25
                         println("trafiono, enemy health=${enemy.health}, enemy=${enemy}")
                         if (enemy.health <= 0) {
-                            //enemies.remove(enemy)
                             try {
                                 enemy.texture = ImageIO.read(this::class.java.classLoader.getResource("textures/boguch_bochen_chlepa.jpg"))
-                            }
-                            catch (e: Exception) {
+                            } catch (e: Exception) {
                                 enemy.texture = createTexture(Color.black)
                             }
                         }
@@ -454,5 +452,18 @@ class RenderCast : JPanel() {
                 }
             }
         }
+    }
+
+    // Helper function to normalize angles to [-180, 180]
+    private fun normalizeAngle(angle: Double): Double {
+        var normalized = angle % 360.0
+        if (normalized > 180.0) normalized -= 360.0
+        if (normalized < -180.0) normalized += 360.0
+        return normalized
+    }
+
+    // Helper function to clamp a value within a range
+    private fun clamp(value: Double, min: Double, max: Double): Double {
+        return maxOf(min, minOf(max, value))
     }
 }
