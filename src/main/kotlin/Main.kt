@@ -36,44 +36,62 @@ val mapa = 0.5//0.075
 var fps = 84
 var MouseSupport = false
 
-var droga: List<Enemy.Node> = emptyList()
-var droga2: List<Enemy.Node> = emptyList()
-
-val TARGET_FPS = 70
+val TARGET_FPS = 90
 val FRAME_TIME_NS = 1_000_000_000 / TARGET_FPS
 var deltaTime = 1.0 / TARGET_FPS
 
 var positionX = (tileSize*2)-(tileSize/2)  //kafelek*pozycja - (pół kafelka)
 var positionY = (tileSize*2)-(tileSize/2)  //kafelek*pozycja - (pół kafelka)
+var enemies = mutableListOf<Enemy>()
+var lightSources = mutableListOf<LightSource>() // Lista źródeł światła
+
+class LightSource(
+    var x: Double, // Pozycja X w jednostkach mapy (tileSize)
+    var y: Double, // Pozycja Y w jednostkach mapy (tileSize)
+    var color: Color, // Kolor światła
+    val intensity: Double, // Intensywność (np. 1.0 dla normalnego światła)
+    val range: Double, // Zasięg w jednostkach mapy (tileSize)
+    var owner: String = ""
+)
 
 class Enemy(var x: Double, var y: Double, var health: Int = 10, var texture: BufferedImage, private val renderCast: RenderCast, var speed: Double = 0.9) {
     private val map = Map()
-    var path: List<Enemy.Node> = emptyList() // Aktualna ścieżka
-    val size = 1.0 // Rozmiar przeciwnika
-    private val margin = 10 // Margines dla kolizji
-    private var pathUpdateTimer = 30//60//15*2 // Licznik do aktualizacji ścieżki
-    private val pathUpdateInterval = 120//120 // Aktualizacja co 120 klatek
-    private var stuckCounter = 0 // Licznik zablokowania
-    private val maxStuckFrames = 60 // Maksymalna liczba klatek zablokowania
-    var lastMoveX = 0.0 // Ostatni ruch w osi X
-    var lastMoveY = 0.0 // Ostatni ruch w osi Y
-    var isMoving = false // Czy przeciwnik się porusza
-    private var smoothedMoveX = 5.0 // Wygładzony ruch w osi X
-    private var smoothedMoveY = 5.0 // Wygładzony ruch w osi Y
-    private val smoothingFactor = 0.05 // Współczynnik wygładzania
-    private val MIN_PLAYER_DISTANCE = 2.0 * tileSize // Minimalna odległość od gracza
-    private var lastPlayerX = 0.0 // Ostatnia pozycja gracza
-    private var lastPlayerY = 0.0 // Ostatnia pozycja gracza
+    var path: List<Node> = emptyList()
+    val size = 1.0
+    private val margin = 10
+    private var pathUpdateTimer = 30
+    private val pathUpdateInterval = 120
+    private var stuckCounter = 0
+    private val maxStuckFrames = 60
+    var lastMoveX = 0.0
+    var lastMoveY = 0.0
+    var isMoving = false
+    private var smoothedMoveX = 0.0
+    private var smoothedMoveY = 0.0
+    private val smoothingFactor = 0.05
+    private val MIN_PLAYER_DISTANCE = 2.0 * tileSize
+    private var lastPlayerX = 0.0
+    private var lastPlayerY = 0.0
+
+    // Zmienne dla bezruchu i losowych ruchów
+    private var idleTimer = 0 // Licznik klatek bez ruchu
+    private val idleThreshold = (1.5 * TARGET_FPS).toInt() // 1,5 sekundy (135 klatek przy 90 FPS)
+    private var randomMoveTimer = 0 // Licznik do losowych ruchów
+    private val randomMoveInterval = 300 // Losowy ruch co ~3,33 sekundy przy 90 FPS
+    private val randomMoveDistance = tileSize * 0.5 // Odległość losowego ruchu
+    private val moveThreshold = tileSize * 1.5 // Próg ruchu: pół kafelka
+    private var lastX = x // Pozycja X w poprzedniej klatce
+    private var lastY = y // Pozycja Y w poprzedniej klatce
+    private var accumulatedDistance = 0.0 // Akumulacja przemieszczenia
 
     companion object {
-        const val MIN_WALL_DISTANCE = 0.5 // Minimalna odległość od ściany
-        const val DIRECT_MOVE_THRESHOLD = 3.0 // Próg dla bezpośredniego ruchu
-        var PLAYER_MOVE_THRESHOLD = tileSize // Próg ruchu gracza
-        private var globalChaseTimer = 0 // Współdzielony licznik pościgu
-        private val pathCache = mutableMapOf<Pair<Node, Node>, List<Node>>() // Współdzielony cache ścieżek
-        private val wallDistanceMap: Array<Array<Double>> = precomputeWallDistances() // Współdzielona mapa odległości
+        const val MIN_WALL_DISTANCE = 0.1
+        const val DIRECT_MOVE_THRESHOLD = 3.0
+        var PLAYER_MOVE_THRESHOLD = tileSize
+        private var globalChaseTimer = 0
+        private val pathCache = mutableMapOf<Pair<Node, Node>, List<Node>>()
+        private val wallDistanceMap: Array<Array<Double>> = precomputeWallDistances()
 
-        // Prekomputacja odległości od ścian
         private fun precomputeWallDistances(): Array<Array<Double>> {
             val map = Map()
             val height = map.grid.size
@@ -100,24 +118,19 @@ class Enemy(var x: Double, var y: Double, var health: Int = 10, var texture: Buf
             return distances
         }
 
-        // Aktualizacja globalnego timera
         fun updateGlobalChaseTimer() {
             globalChaseTimer++
         }
 
-        // Reset globalnego timera
         fun resetGlobalChaseTimer() {
             globalChaseTimer = 0
         }
 
-        // Pobierz globalny timer
         fun getGlobalChaseTimer(): Int = globalChaseTimer
     }
 
-    // Struktura węzła dla ścieżki
     data class Node(val x: Int, val y: Int)
 
-    // Sprawdzenie, czy można się poruszyć na daną pozycję
     fun canMoveTo(newX: Double, newY: Double, exclude: Enemy? = null): Pair<Boolean, Enemy?> {
         val left = newX - size / 2
         val right = newX + size / 2
@@ -159,7 +172,6 @@ class Enemy(var x: Double, var y: Double, var health: Int = 10, var texture: Buf
         return Pair(true, null)
     }
 
-    // Próba przepchnięcia innego przeciwnika
     fun tryPush(otherEnemy: Enemy, moveX: Double, moveY: Double): Boolean {
         if (otherEnemy.isMoving) {
             val dotProduct = (moveX * otherEnemy.lastMoveX + moveY * otherEnemy.lastMoveY)
@@ -167,7 +179,7 @@ class Enemy(var x: Double, var y: Double, var health: Int = 10, var texture: Buf
                 return false
             }
         }
-        val newEnemyX = otherEnemy.x + moveX * 0.5 // Mniejsza siła przepychania
+        val newEnemyX = otherEnemy.x + moveX * 0.5
         val newEnemyY = otherEnemy.y + moveY * 0.5
         val (canMove, _) = otherEnemy.canMoveTo(newEnemyX, newEnemyY, this)
         if (canMove) {
@@ -181,9 +193,8 @@ class Enemy(var x: Double, var y: Double, var health: Int = 10, var texture: Buf
         return false
     }
 
-    // Zoptymalizowany algorytm BFS
     fun findPath(): List<Node> {
-        if (health <= 0) return emptyList() // Nie szukaj ścieżki, jeśli przeciwnik jest martwy
+        if (health <= 0) return emptyList()
 
         val startX = (x / tileSize).toInt()
         val startY = (y / tileSize).toInt()
@@ -196,7 +207,6 @@ class Enemy(var x: Double, var y: Double, var health: Int = 10, var texture: Buf
             return emptyList()
         }
 
-        // Wczesne przerywanie, jeśli cel jest blisko
         val dxToGoal = (goalX - startX).toDouble()
         val dyToGoal = (goalY - startY).toDouble()
         val distanceToGoal = sqrt(dxToGoal * dxToGoal + dyToGoal * dyToGoal)
@@ -207,7 +217,6 @@ class Enemy(var x: Double, var y: Double, var health: Int = 10, var texture: Buf
             }
         }
 
-        // Sprawdzenie cache
         val cacheKey = Pair(Node(startX, startY), Node(goalX, goalY))
         pathCache[cacheKey]?.let { return it }
 
@@ -242,7 +251,6 @@ class Enemy(var x: Double, var y: Double, var health: Int = 10, var texture: Buf
         return emptyList()
     }
 
-    // Pobieranie sąsiadów
     fun getNeighbors(node: Node): List<Node> {
         val neighbors = mutableListOf<Node>()
         val directions = listOf(
@@ -262,37 +270,54 @@ class Enemy(var x: Double, var y: Double, var health: Int = 10, var texture: Buf
         return neighbors
     }
 
-    // Metoda aktualizacji przeciwnika
     fun update() {
         if (health <= 0) {
             path = emptyList()
             isMoving = false
-            return // Nie aktualizuj martwego przeciwnika
+            idleTimer = 0
+            randomMoveTimer = 0
+            accumulatedDistance = 0.0
+            lastX = x
+            lastY = y
+            return
         }
 
         val deltaTime = 1.0 / TARGET_FPS
+
+        // Oblicz przemieszczenie od ostatniej klatki
+        val dx = x - lastX
+        val dy = y - lastY
+        val distanceMoved = sqrt(dx * dx + dy * dy)
+        accumulatedDistance += distanceMoved
+        lastX = x
+        lastY = y
+
+        // Resetuj idleTimer, jeśli przemieszczenie przekroczy próg
+        if (accumulatedDistance >= moveThreshold) {
+            idleTimer = 0
+            accumulatedDistance = 0.0
+        } else {
+            idleTimer++ // Zwiększ timer bezruchu, jeśli przemieszczenie jest małe
+        }
 
         val dxToPlayer = x - positionX
         val dyToPlayer = y - positionY
         val distanceToPlayer = sqrt(dxToPlayer * dxToPlayer + dyToPlayer * dyToPlayer)
 
-        // Sprawdź, czy gracz zmienił pozycję
         val playerMoved = sqrt((positionX - lastPlayerX) * (positionX - lastPlayerX) + (positionY - lastPlayerY) * (positionY - lastPlayerY)) > PLAYER_MOVE_THRESHOLD
         lastPlayerX = positionX
         lastPlayerY = positionY
 
-        // Aktualizacja ścieżki dla wszystkich przeciwników w tej samej klatce
-        if ((getGlobalChaseTimer() >= TARGET_FPS || playerMoved) && health > 0) {
+        if ((getGlobalChaseTimer() >= TARGET_FPS || playerMoved)) {
             path = findPath()
             pathUpdateTimer = 0
             stuckCounter = 0
             smoothedMoveX = 0.0
             smoothedMoveY = 0.0
-            resetGlobalChaseTimer() // Reset timera dla wszystkich przeciwników
+            resetGlobalChaseTimer()
         }
 
-        // Ruch oddalający, jeśli zbyt blisko gracza
-        if (distanceToPlayer < MIN_PLAYER_DISTANCE && path.isEmpty() && health > 0) {
+        if (distanceToPlayer < MIN_PLAYER_DISTANCE && path.isEmpty()) {
             val moveSpeed = speed * deltaTime * TARGET_FPS
             val rawMoveX = if (distanceToPlayer > 0) (dxToPlayer / distanceToPlayer) * moveSpeed else 0.0
             val rawMoveY = if (distanceToPlayer > 0) (dyToPlayer / distanceToPlayer) * moveSpeed else 0.0
@@ -325,14 +350,14 @@ class Enemy(var x: Double, var y: Double, var health: Int = 10, var texture: Buf
         }
 
         pathUpdateTimer++
-        if ((pathUpdateTimer >= pathUpdateInterval || stuckCounter > maxStuckFrames) && health > 0) {
+        if (pathUpdateTimer >= pathUpdateInterval || stuckCounter > maxStuckFrames) {
             path = findPath()
             pathUpdateTimer = 0
             stuckCounter = 0
         }
 
         isMoving = path.isNotEmpty()
-        if (path.isNotEmpty() && health > 0) {
+        if (path.isNotEmpty()) {
             val targetNode = path.first()
             val targetX = (targetNode.x + 0.5) * tileSize
             val targetY = (targetNode.y + 0.5) * tileSize
@@ -389,8 +414,33 @@ class Enemy(var x: Double, var y: Double, var health: Int = 10, var texture: Buf
                 stuckCounter = 0
                 isMoving = path.isNotEmpty()
             }
-        } else {
-            isMoving = false
+        }
+
+        // Losowe ruchy, gdy przeciwnik stoi
+        randomMoveTimer++
+        if (idleTimer >= idleThreshold && randomMoveTimer >= randomMoveInterval) {
+            val directions = listOf(
+                Pair(1.0, 0.0),  // prawo
+                Pair(-1.0, 0.0), // lewo
+                Pair(0.0, 1.0),  // dół
+                Pair(0.0, -1.0)  // góra
+            )
+            val (moveX, moveY) = directions.random()
+            val newX = x + moveX * randomMoveDistance
+            val newY = y + moveY * randomMoveDistance
+
+            val (canMove, _) = canMoveTo(newX, newY)
+            if (canMove) {
+                x = newX
+                y = newY
+                lastMoveX = moveX * randomMoveDistance
+                lastMoveY = moveY * randomMoveDistance
+                path = findPath()
+                isMoving = true
+                idleTimer = 0
+                randomMoveTimer = 0
+                accumulatedDistance = 0.0
+            }
         }
     }
 }
@@ -590,16 +640,23 @@ class Mappingmap(private val renderCast: RenderCast) : JPanel() {
         }
 
         // Rysuj punkty ścieżki na minimapie
-        droga.forEach { node ->
+        enemies.get(0).path.forEach { node ->
             val pointX = offsetX + (node.x * tileScale).toInt()
             val pointY = offsetY + (node.y * tileScale).toInt()
-            g2.color = Color(255, 128 ,0, 255)
-            g2.fillOval(pointX - 3, pointY - 3, 6, 6)
+            g2.color = Color(255, 0 ,0, 144)
+            g2.fillOval(pointX - 3, pointY - 3, 5, 5)
         }
-        droga2.forEach { node ->
+        enemies.get(1).path.forEach { node ->
             val pointX = offsetX + (node.x * tileScale).toInt()
             val pointY = offsetY + (node.y * tileScale).toInt()
-            g2.color = Color(255, 255 ,0, 255)
+            g2.color = Color(255, 255 ,0, 144)
+            g2.fillOval(pointX - 3, pointY - 3, 5, 5)
+        }
+
+        (enemies.get(2).path).forEach { node ->
+            val pointX = offsetX + (node.x * tileScale).toInt()
+            val pointY = offsetY + (node.y * tileScale).toInt()
+            g2.color = Color(255, 0 ,255, 144)
             g2.fillOval(pointX - 3, pointY - 3, 5, 5)
         }
 
@@ -607,8 +664,13 @@ class Mappingmap(private val renderCast: RenderCast) : JPanel() {
         renderCast.getEnemies().forEach { enemy ->
             val enemyX = offsetX + (enemy.x / tileSize * tileScale).toInt()
             val enemyY = offsetY + (enemy.y / tileSize * tileScale).toInt()
-            g2.color = Color.RED
-            g2.fillRect(enemyX - 3, enemyY - 3, 6, 6)
+            if (enemy.health > 0) {
+                g2.color = Color.RED
+                g2.fillRect(enemyX - 3, enemyY - 3, 9, 9)
+            } else{
+                g2.color = Color(0, 197 ,197, 200)
+                g2.fillRect(enemyX - 3, enemyY - 3, 7, 7)
+            }
         }
 
         // Rysuj pozycję gracza na minimapie

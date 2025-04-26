@@ -93,11 +93,11 @@ class Player(private val renderCast: RenderCast) {
         val newXOnly = positionX + deltaX
         val (canMoveX, collidedEnemyX) = canMoveTo(newXOnly, positionY, deltaX, 0.0)
         if (canMoveX) {
-            movementSpeed = 1.25
+            movementSpeed = 1.00
             positionX = newXOnly
             return
         } else if (collidedEnemyX != null && tryPushEnemy(collidedEnemyX, deltaX, 0.0)) {
-            movementSpeed = 1.25
+            movementSpeed = 1.00
             positionX = newXOnly
             return
         }
@@ -106,10 +106,10 @@ class Player(private val renderCast: RenderCast) {
         val newYOnly = positionY + deltaY
         val (canMoveY, collidedEnemyY) = canMoveTo(positionX, newYOnly, 0.0, deltaY)
         if (canMoveY) {
-            movementSpeed = 1.25
+            movementSpeed = 1.00
             positionY = newYOnly
         } else if (collidedEnemyY != null && tryPushEnemy(collidedEnemyY, 0.0, deltaY)) {
-            movementSpeed = 1.25
+            movementSpeed = 1.00
             positionY = newYOnly
         }
     }

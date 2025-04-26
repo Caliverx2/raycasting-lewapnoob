@@ -1,5 +1,6 @@
 package org.example.MainKt
 
+import kotlinx.coroutines.delay
 import java.awt.Color
 import java.awt.Graphics
 import java.awt.Graphics2D
@@ -13,15 +14,6 @@ import kotlin.math.cos
 import kotlin.math.exp
 import kotlin.math.sin
 import kotlin.math.sqrt
-
-data class LightSource(
-    var x: Double, // Pozycja X w jednostkach mapy (tileSize)
-    var y: Double, // Pozycja Y w jednostkach mapy (tileSize)
-    val color: Color, // Kolor światła
-    val intensity: Double, // Intensywność (np. 1.0 dla normalnego światła)
-    val range: Double // Zasięg w jednostkach mapy (tileSize)
-)
-
 
 class RenderCast : JPanel() {
     private val map = Map()
@@ -49,9 +41,7 @@ class RenderCast : JPanel() {
     private val raySines = DoubleArray(rayCount)
     private val rayAngles = DoubleArray(rayCount)
 
-    private var enemies = mutableListOf<Enemy>()
     private var visibleEnemies = mutableListOf<Triple<Enemy, Int, Double>>() // (Enemy, screenX, distance)
-    private var lightSources = mutableListOf<LightSource>() // Lista źródeł światła
 
     private val zBuffer = DoubleArray(rayCount) { Double.MAX_VALUE }
 
@@ -80,34 +70,22 @@ class RenderCast : JPanel() {
 
         // Inicjalizacja przeciwników
         enemies.add(Enemy((tileSize * 6) - (tileSize / 2), (tileSize * 12) - (tileSize / 2), 100, enemyTextureId!!, this, speed = (2.0 * ((10..19).random()/10.0))))
-        enemies.add(Enemy((tileSize * 8) - (tileSize / 2), (tileSize * 8) - (tileSize / 2), 100, enemyTextureId!!, this, speed = (2.0 * ((10..19).random()/10.0))))
-        enemies.add(Enemy((tileSize * 15) - (tileSize / 2), (tileSize * 12) - (tileSize / 2), 100, enemyTextureId!!, this, speed = (2.0 * ((10..19).random()/10.0))))
+        enemies.add(Enemy((tileSize * 16) - (tileSize / 2), (tileSize * 18) - (tileSize / 2), 100, enemyTextureId!!, this, speed = (2.0 * ((10..19).random()/10.0))))
+        enemies.add(Enemy((tileSize * 2) - (tileSize / 2), (tileSize * 22) - (tileSize / 2), 100, enemyTextureId!!, this, speed = (2.0 * ((10..19).random()/10.0))))
         println(enemies.get(0).speed)
         println(enemies.get(1).speed)
         println(enemies.get(2).speed)
 
-        // Dodanie dynamicznych źródeł światła na pozycjach przeciwników
-        enemies.forEach { enemy ->
-            lightSources.add(
-                LightSource(
-                    x = enemy.x / tileSize,
-                    y = enemy.y / tileSize,
-                    color = Color(255, 0,0),//Color(255, 200, 150), // Ciepłe białe światło
-                    intensity = 0.2,
-                    range = 15.0 // Zasięg 5 jednostek mapy
-                )
-            )
-        }
-        // Opcjonalnie: Dodanie źródła światła na pozycji gracza
-        lightSources.add(
-            LightSource(
-                x = positionX / tileSize,
-                y = positionY / tileSize,
-                color = Color(255, 255, 200), // Jasne białe światło
-                intensity = 0.1,
-                range = 7.0 // Większy zasięg dla gracza
-            )
-        )
+        lightSources.add(LightSource(x = (enemies.get(0).x/tileSize), y = enemies.get(0).y/tileSize, color = Color(255, 20,20), intensity = 0.4, range = 3.0, owner = "${enemies.get(0)}"))
+        lightSources.add(LightSource(x = (enemies.get(1).x/tileSize), y = enemies.get(1).y/tileSize, color = Color(255, 255,20), intensity = 0.4, range = 3.0, owner = "${enemies.get(1)}"))
+        lightSources.add(LightSource(x = (enemies.get(2).x/tileSize), y = enemies.get(2).y/tileSize, color = Color(255, 20,255), intensity = 0.3, range = 2.0, owner = "${enemies.get(2)}"))
+        println(lightSources.get(0).owner.toString() + " " +enemies.get(0).toString())
+        println(lightSources.get(1).owner.toString() + " " +enemies.get(1).toString())
+        println(lightSources.get(2).owner.toString() + " " +enemies.get(2).toString())
+
+        //lightSources.add(LightSource(x = (positionX/tileSize), y = positionY/tileSize, color = Color(20, 20,20), intensity = 0.2, range = 2.0, owner = "nic"))
+
+
 
         buffer = BufferedImage(screenWidth, screenHeight, BufferedImage.TYPE_INT_RGB)
         bufferGraphics = buffer.createGraphics()
@@ -141,8 +119,6 @@ class RenderCast : JPanel() {
         g2d.scale(scaleX, scaleY)
         g2d.drawImage(buffer, 0, 0, null)
         g2d.scale(1.0 / scaleX, 1.0 / scaleY)
-        droga = enemies.get(0).path
-        droga2 = enemies.get(1).path
     }
 
     // Funkcja obliczająca wpływ światła na piksel
@@ -159,7 +135,7 @@ class RenderCast : JPanel() {
 
             if (distance < light.range) {
                 // Model zanikania światła: odwrotność kwadratu odległości
-                val attenuation = light.intensity * (1.0 / (1.0 + distance * distance))
+                val attenuation = light.intensity * (0.75 / (1.0 + distance * distance))
                 // Skaluj kolor światła
                 totalRed += light.color.red * attenuation
                 totalGreen += light.color.green * attenuation
@@ -180,12 +156,29 @@ class RenderCast : JPanel() {
 
         // Aktualizuj pozycje źródeł światła dla przeciwników
         for (i in enemies.indices) {
-            lightSources[i].x = enemies[i].x / tileSize
-            lightSources[i].y = enemies[i].y / tileSize
+            try {
+                lightSources.get(0).x = enemies.get(0).x / tileSize
+                lightSources.get(0).y = enemies.get(0).y / tileSize
+
+                lightSources.get(1).x = enemies.get(1).x / tileSize
+                lightSources.get(1).y = enemies.get(1).y / tileSize
+
+                lightSources.get(2).x = enemies.get(2).x / tileSize
+                lightSources.get(2).y = enemies.get(2).y / tileSize
+
+                if (currentangle > 360) {
+                    currentangle = 0
+                }
+                if (currentangle < 0) {
+                    currentangle = 360
+                }
+                continue
+            } catch (e: Exception)
+            {
+                continue
+            }
+
         }
-        // Aktualizuj źródło światła gracza
-        lightSources[lightSources.size - 1].x = positionX / tileSize
-        lightSources[lightSources.size - 1].y = positionY / tileSize
 
         val playerAngleRad = Math.toRadians(currentangle.toDouble())
         val playerHeight = wallHeight / 4.0
@@ -522,27 +515,36 @@ class RenderCast : JPanel() {
             }
         }
 
+        val enemiesToRemove = mutableListOf<Enemy>()
         enemies.toList().forEach { enemy ->
-            val dx = enemy.x / tileSize - playerPosX
-            val dy = enemy.y / tileSize - playerPosY
-            val rayLength = dx * rayDirX + dy * rayDirY
+            lightSources.toList().forEach { LightSource ->
+                val dx = enemy.x / tileSize - playerPosX
+                val dy = enemy.y / tileSize - playerPosY
+                val rayLength = dx * rayDirX + dy * rayDirY
 
-            if (rayLength > 0 && rayLength < wallDistance) {
-                println("ray")
-                val perpendicularDistance = abs(dx * rayDirY - dy * rayDirX)
-                if ((perpendicularDistance < (enemy.size * 20) / 2 / tileSize) && (enemy.health > 0)) {
-                    val angleToEnemy = atan2(dy, dx)
-                    val angleDiff = abs(angleToEnemy - shotAngleRad)
-                    println("toenemy")
-                    if (angleDiff < Math.toRadians(15.0)) {
-                        enemy.health -= 10
-                        println("trafiono, enemy health=${enemy.health}, enemy=${enemy}")
-                        if (enemy.health <= 0) {
-                            println("collision")
-                            try {
-                                enemy.texture = ImageIO.read(this::class.java.classLoader.getResource("textures/boguch_bochen_chlepa.jpg"))
-                            } catch (e: Exception) {
-                                enemy.texture = createTexture(Color.black)
+                if (rayLength > 0 && rayLength < wallDistance) {
+                    val perpendicularDistance = abs(dx * rayDirY - dy * rayDirX)
+                    if ((perpendicularDistance < (enemy.size * 20) / 2 / tileSize) and (enemy.health >= 1)) {
+                        val angleToEnemy = atan2(dy, dx)
+                        val angleDiff = abs(angleToEnemy - shotAngleRad)
+                        println("")
+                        println("toenemy, enemy=${enemy}")
+                        println("angleDiff: ${angleDiff}, Radians: ${Math.toRadians(15.0)}, currentAngle: ${currentangle}")
+
+                        if (angleDiff < Math.toRadians(35.0)) {
+                            enemy.health -= 10
+                            println("")
+                            println("trafiono, enemy health=${enemy.health}, enemy=${enemy}")
+                            if (enemy.health <= 0) {
+                                try {
+                                    lightSources.find { it.owner == "${enemy}" }?.let {
+                                        println("owner:${it.owner}  enemy:${enemy}")
+                                        lightSources.get(index = lightSources.indexOf(it)).color = Color(0,0,0)
+                                    }
+                                    enemy.texture = ImageIO.read(this::class.java.classLoader.getResource("textures/boguch_bochen_chlepa.jpg"))
+                                } catch (e: Exception) {
+                                    enemy.texture = createTexture(Color.black)
+                                }
                             }
                         }
                     }
