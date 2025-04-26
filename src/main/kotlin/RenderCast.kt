@@ -1,6 +1,6 @@
 package org.example.MainKt
 
-import kotlinx.coroutines.delay
+
 import java.awt.Color
 import java.awt.Graphics
 import java.awt.Graphics2D
@@ -72,16 +72,16 @@ class RenderCast : JPanel() {
         enemies.add(Enemy((tileSize * 6) - (tileSize / 2), (tileSize * 12) - (tileSize / 2), 100, enemyTextureId!!, this, speed = (2.0 * ((10..19).random()/10.0))))
         enemies.add(Enemy((tileSize * 16) - (tileSize / 2), (tileSize * 18) - (tileSize / 2), 100, enemyTextureId!!, this, speed = (2.0 * ((10..19).random()/10.0))))
         enemies.add(Enemy((tileSize * 2) - (tileSize / 2), (tileSize * 22) - (tileSize / 2), 100, enemyTextureId!!, this, speed = (2.0 * ((10..19).random()/10.0))))
-        println(enemies.get(0).speed)
-        println(enemies.get(1).speed)
-        println(enemies.get(2).speed)
+        println(enemies[0].speed)
+        println(enemies[1].speed)
+        println(enemies[2].speed)
 
-        lightSources.add(LightSource(x = (enemies.get(0).x/tileSize), y = enemies.get(0).y/tileSize, color = Color(255, 20,20), intensity = 0.4, range = 3.0, owner = "${enemies.get(0)}"))
-        lightSources.add(LightSource(x = (enemies.get(1).x/tileSize), y = enemies.get(1).y/tileSize, color = Color(255, 255,20), intensity = 0.4, range = 3.0, owner = "${enemies.get(1)}"))
-        lightSources.add(LightSource(x = (enemies.get(2).x/tileSize), y = enemies.get(2).y/tileSize, color = Color(255, 20,255), intensity = 0.3, range = 2.0, owner = "${enemies.get(2)}"))
-        println(lightSources.get(0).owner.toString() + " " +enemies.get(0).toString())
-        println(lightSources.get(1).owner.toString() + " " +enemies.get(1).toString())
-        println(lightSources.get(2).owner.toString() + " " +enemies.get(2).toString())
+        lightSources.add(LightSource(x = (enemies[0].x/tileSize), y = enemies[0].y/tileSize, color = Color(255, 20,20), intensity = 0.4, range = 3.0, owner = "${enemies[0]}"))
+        lightSources.add(LightSource(x = (enemies[1].x/tileSize), y = enemies[1].y/tileSize, color = Color(255, 255,20), intensity = 0.4, range = 3.0, owner = "${enemies[1]}"))
+        lightSources.add(LightSource(x = (enemies[2].x/tileSize), y = enemies[2].y/tileSize, color = Color(255, 20,255), intensity = 0.3, range = 2.0, owner = "${enemies[2]}"))
+        println(lightSources[0].owner + " " +enemies[0])
+        println(lightSources[1].owner + " " +enemies[1])
+        println(lightSources[2].owner + " " +enemies[2])
 
         //lightSources.add(LightSource(x = (positionX/tileSize), y = positionY/tileSize, color = Color(20, 20,20), intensity = 0.2, range = 2.0, owner = "nic"))
 
@@ -143,7 +143,6 @@ class RenderCast : JPanel() {
             }
         }
 
-        // Ogranicz wartości do zakresu [0, 255]
         return Color(
             totalRed.toInt().coerceIn(0, 255),
             totalGreen.toInt().coerceIn(0, 255),
@@ -155,16 +154,16 @@ class RenderCast : JPanel() {
         enemies.forEach { it.update() }
 
         // Aktualizuj pozycje źródeł światła dla przeciwników
-        for (i in enemies.indices) {
+        for (i in 1..2) {
             try {
-                lightSources.get(0).x = enemies.get(0).x / tileSize
-                lightSources.get(0).y = enemies.get(0).y / tileSize
+                lightSources[0].x = enemies[0].x / tileSize
+                lightSources[0].y = enemies[0].y / tileSize
 
-                lightSources.get(1).x = enemies.get(1).x / tileSize
-                lightSources.get(1).y = enemies.get(1).y / tileSize
+                lightSources[1].x = enemies[1].x / tileSize
+                lightSources[1].y = enemies[1].y / tileSize
 
-                lightSources.get(2).x = enemies.get(2).x / tileSize
-                lightSources.get(2).y = enemies.get(2).y / tileSize
+                lightSources[2].x = enemies[2].x / tileSize
+                lightSources[2].y = enemies[2].y / tileSize
 
                 if (currentangle > 360) {
                     currentangle = 0
@@ -456,7 +455,7 @@ class RenderCast : JPanel() {
         }
     }
 
-    fun shotgun(player: Player) {
+    fun shotgun() {
         val shotAngleRad = Math.toRadians(currentangle.toDouble())
         val playerPosX = positionX / tileSize
         val playerPosY = positionY / tileSize
@@ -471,7 +470,7 @@ class RenderCast : JPanel() {
         var stepY: Int
         var sideDistX: Double
         var sideDistY: Double
-        var side = 10
+        var side: Int
 
         if (rayDirX < 0) {
             stepX = -1
@@ -515,7 +514,6 @@ class RenderCast : JPanel() {
             }
         }
 
-        val enemiesToRemove = mutableListOf<Enemy>()
         enemies.toList().forEach { enemy ->
             lightSources.toList().forEach { LightSource ->
                 val dx = enemy.x / tileSize - playerPosX

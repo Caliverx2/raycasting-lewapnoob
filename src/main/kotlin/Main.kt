@@ -489,7 +489,7 @@ fun main() = runBlocking {
     frame.addMouseListener(object : MouseAdapter() {
         override fun mousePressed(event: MouseEvent) {
             if (event.button == MouseEvent.BUTTON1) {
-                renderCast.shotgun(player)
+                renderCast.shotgun()
             } else {
                 println("Naciśnięto klawisz: ${event.button}")
             }
@@ -512,7 +512,7 @@ fun main() = runBlocking {
         override fun keyPressed(event: KeyEvent) {
             keysPressed[event.keyCode] = true
             when (event.keyCode) {
-                KeyEvent.VK_SPACE -> renderCast.shotgun(player)
+                KeyEvent.VK_SPACE -> renderCast.shotgun()
             }
         }
 
