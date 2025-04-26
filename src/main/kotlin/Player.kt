@@ -48,7 +48,7 @@ class Player(private val renderCast: RenderCast) {
         return Pair(true, null)
     }
 
-    // Try to push an enemy
+    // próba przepchnięcia przeciwnika
     fun tryPushEnemy(enemy: Enemy, deltaX: Double, deltaY: Double): Boolean {
         if (enemy.isMoving) {
             // Sprawdzenie, czy przeciwnik porusza się w przeciwnym kierunku
@@ -81,7 +81,7 @@ class Player(private val renderCast: RenderCast) {
             positionY = newY
             return
         } else if (collidedEnemy != null) {
-            // Try to push the collided enemy
+            // Spróbuj odepchnąć zderzonego wroga
             if (tryPushEnemy(collidedEnemy, deltaX, deltaY)) {
                 positionX = newX
                 positionY = newY
@@ -163,5 +163,10 @@ class Player(private val renderCast: RenderCast) {
         if (keysPressed.getOrDefault(KeyEvent.VK_D, false)) d()
         if (keysPressed.getOrDefault(KeyEvent.VK_LEFT, false)) anglea()
         if (keysPressed.getOrDefault(KeyEvent.VK_RIGHT, false)) angled()
+        if (((keysPressed.getOrDefault(KeyEvent.VK_W, false)) and (keysPressed.getOrDefault(KeyEvent.VK_SHIFT, false)))) {
+            movementSpeed = 2.5
+        } else {
+            movementSpeed = 1.5
+        }
     }
 }
