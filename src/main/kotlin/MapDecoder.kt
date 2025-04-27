@@ -61,7 +61,7 @@ fun main() {
     val map = parseMap(input)
 
     // Wypisz wynik w formacie intArrayOf
-    println("val grid: Array<IntArray> = arrayOf(")
+    println("var grid: Array<IntArray> = arrayOf(")
     map.forEachIndexed { index, row ->
         print("    intArrayOf(${row.joinToString(",")})")
         if (index < map.size - 1) print(",")

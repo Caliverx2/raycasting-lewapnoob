@@ -44,12 +44,13 @@ var positionX = (tileSize*2)-(tileSize/2)  //kafelek*pozycja - (pół kafelka)
 var positionY = (tileSize*2)-(tileSize/2)  //kafelek*pozycja - (pół kafelka)
 var enemies = mutableListOf<Enemy>()
 var lightSources = mutableListOf<LightSource>() // Lista źródeł światła
+var isShooting = false // Flaga stanu klawisza strzału
 
 class LightSource(
     var x: Double, // Pozycja X w jednostkach mapy (tileSize)
     var y: Double, // Pozycja Y w jednostkach mapy (tileSize)
     var color: Color, // Kolor światła
-    val intensity: Double, // Intensywność (np. 1.0 dla normalnego światła)
+    var intensity: Double, // Intensywność (np. 1.0 dla normalnego światła)
     val range: Double, // Zasięg w jednostkach mapy (tileSize)
     var owner: String = ""
 )
@@ -69,7 +70,7 @@ class Enemy(var x: Double, var y: Double, var health: Int = 10, var texture: Buf
     private var smoothedMoveX = 0.0
     private var smoothedMoveY = 0.0
     private val smoothingFactor = 0.05
-    private val MIN_PLAYER_DISTANCE = 2.0 * tileSize
+    private val MIN_PLAYER_DISTANCE = 1.0 * tileSize
     private var lastPlayerX = 0.0
     private var lastPlayerY = 0.0
 
@@ -482,7 +483,7 @@ fun main() = runBlocking {
     layeredPane.add(mapa, 1)
     layeredPane.add(renderCast, 2)
 
-    val player = Player(renderCast) // Pass renderCast to Player
+    val player = Player(renderCast)
     val keysPressed: MutableMap<Int, Boolean> = mutableMapOf()
     var centerX = frame.width / 2
 
@@ -490,8 +491,12 @@ fun main() = runBlocking {
         override fun mousePressed(event: MouseEvent) {
             if (event.button == MouseEvent.BUTTON1) {
                 renderCast.shotgun()
-            } else {
-                println("Naciśnięto klawisz: ${event.button}")
+            }
+        }
+
+        override fun mouseReleased(event: MouseEvent) {
+            if (event.button == MouseEvent.BUTTON1) {
+                isShooting = false // Reset flagi po zwolnieniu przycisku myszy
             }
         }
     })
@@ -512,13 +517,20 @@ fun main() = runBlocking {
         override fun keyPressed(event: KeyEvent) {
             keysPressed[event.keyCode] = true
             when (event.keyCode) {
-                KeyEvent.VK_SPACE -> renderCast.shotgun()
+                KeyEvent.VK_SPACE -> {
+                    if (!isShooting) { // Wywołaj strzał tylko, jeśli klawisz nie był wcześniej wciśnięty
+                        renderCast.shotgun()
+                    }
+                }
             }
         }
 
         override fun keyReleased(event: KeyEvent) {
             keysPressed[event.keyCode] = false
             when (event.keyCode) {
+                KeyEvent.VK_SPACE -> {
+                    isShooting = false // Reset flagi po zwolnieniu spacji
+                }
                 KeyEvent.VK_M -> map = true
             }
         }
@@ -530,16 +542,14 @@ fun main() = runBlocking {
         }
     })
 
-
     var lastFrameTime = System.nanoTime()
     var frameCount = 0
     var lastFpsUpdate = System.nanoTime()
 
     while (true) {
         val currentTime = System.nanoTime()
-        val elapsedTime = currentTime - lastFrameTime // Poprawiona linia
+        val elapsedTime = currentTime - lastFrameTime
 
-        // Aktualizuj grę tylko, jeśli minął odpowiedni czas (dla TARGET_FPS)
         if (elapsedTime >= FRAME_TIME_NS) {
             player.update(keysPressed)
             renderCast.repaint()
@@ -548,8 +558,7 @@ fun main() = runBlocking {
             frameCount++
             lastFrameTime = currentTime
 
-            // Oblicz FPS co sekundę
-            if (currentTime - lastFpsUpdate >= 1_000_000_000) { // 1 sekunda
+            if (currentTime - lastFpsUpdate >= 1_000_000_000) {
                 fps = frameCount
                 frameCount = 0
                 lastFpsUpdate = currentTime
@@ -557,19 +566,11 @@ fun main() = runBlocking {
         }
         delay(10)
     }
-
-    /*
-    while (MouseSupport) {
-        delay(75)
-        Robot().mouseMove(MouseInfo.getPointerInfo().location.x, 0)
-        Robot().mouseMove(960, 0)
-        Robot().mouseMove(960, 384)
-    } */
 }
 
 class Map {
     // Wartości: 1-ściana, 0-pusta przestrzeń, 5-początek i koniec labiryntu
-    val grid: Array<IntArray> = arrayOf(
+    var grid: Array<IntArray> = arrayOf(
         intArrayOf(5,5,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1),
         intArrayOf(5,0,0,0,0,0,0,0,1,0,1,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1),
         intArrayOf(1,1,1,0,1,1,1,1,1,0,1,0,1,1,1,0,1,1,1,0,1,1,1,1,1,0,1,0,1,1,1),

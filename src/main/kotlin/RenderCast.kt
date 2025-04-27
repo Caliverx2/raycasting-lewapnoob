@@ -1,6 +1,5 @@
 package org.example.MainKt
 
-
 import java.awt.Color
 import java.awt.Graphics
 import java.awt.Graphics2D
@@ -14,6 +13,10 @@ import kotlin.math.cos
 import kotlin.math.exp
 import kotlin.math.sin
 import kotlin.math.sqrt
+import kotlin.random.Random
+import javax.print.attribute.standard.Media
+import javax.sound.sampled.AudioSystem
+import javax.sound.sampled.FloatControl
 
 class RenderCast : JPanel() {
     private val map = Map()
@@ -44,6 +47,13 @@ class RenderCast : JPanel() {
     private var visibleEnemies = mutableListOf<Triple<Enemy, Int, Double>>() // (Enemy, screenX, distance)
 
     private val zBuffer = DoubleArray(rayCount) { Double.MAX_VALUE }
+
+    private var lastShotTime = 0L // Czas ostatniego strzału w nanosekundach
+    private val SHOT_COOLDOWN = 500_000_000L // 1 sekunda w nanosekundach
+    private var lastLightMoveTime = 0L // Czas ostatniego ruchu lightSources[3]
+    private val LIGHT_MOVE_INTERVAL = 250_000_000L/4 // 0,25 sekundy w nanosekundach
+    private var lightMoveDirection = 0.0 // Kąt ruchu lightSources[3] (w stopniach)
+    private var isLightMoving = false
 
     fun getEnemies(): List<Enemy> = enemies
 
@@ -83,8 +93,9 @@ class RenderCast : JPanel() {
         println(lightSources[1].owner + " " +enemies[1])
         println(lightSources[2].owner + " " +enemies[2])
 
-        //lightSources.add(LightSource(x = (positionX/tileSize), y = positionY/tileSize, color = Color(20, 20,20), intensity = 0.2, range = 2.0, owner = "nic"))
-
+        lightSources.add(LightSource(x = (1/tileSize), y = 1/tileSize, color = Color(200, 200,100), intensity = 0.4, range = 0.15, owner = "nic"))
+        lightSources.add(LightSource(x = (1/tileSize), y = 1/tileSize, color = Color(200, 200,100), intensity = 0.4, range = 0.15, owner = "nic"))
+        lightSources.add(LightSource(x = (1/tileSize), y = 1/tileSize, color = Color(200, 200,100), intensity = 0.4, range = 0.15, owner = "nic"))
 
 
         buffer = BufferedImage(screenWidth, screenHeight, BufferedImage.TYPE_INT_RGB)
@@ -109,7 +120,7 @@ class RenderCast : JPanel() {
         return texture
     }
 
-    override fun paintComponent(g: Graphics) {
+    override fun paintComponent(g: Graphics){
         super.paintComponent(g)
         renderWallsToBuffer()
 
@@ -154,29 +165,36 @@ class RenderCast : JPanel() {
         enemies.forEach { it.update() }
 
         // Aktualizuj pozycje źródeł światła dla przeciwników
-        for (i in 1..2) {
+        for (i in 0..2) {
             try {
-                lightSources[0].x = enemies[0].x / tileSize
-                lightSources[0].y = enemies[0].y / tileSize
-
-                lightSources[1].x = enemies[1].x / tileSize
-                lightSources[1].y = enemies[1].y / tileSize
-
-                lightSources[2].x = enemies[2].x / tileSize
-                lightSources[2].y = enemies[2].y / tileSize
-
-                if (currentangle > 360) {
-                    currentangle = 0
-                }
-                if (currentangle < 0) {
-                    currentangle = 360
-                }
-                continue
-            } catch (e: Exception)
-            {
+                lightSources[i].x = enemies[i].x / tileSize
+                lightSources[i].y = enemies[i].y / tileSize
+            } catch (e: Exception) {
                 continue
             }
+        }
 
+        // Aktualizuj pozycję lightSources[3] z kolizją
+        val currentTime = System.nanoTime()
+        if (isLightMoving && currentTime - lastLightMoveTime >= LIGHT_MOVE_INTERVAL) {
+            lastLightMoveTime = currentTime
+            val angleRad = Math.toRadians(lightMoveDirection)
+            val moveDistance = tileSize / 2.0 / tileSize // Pół tileSize w jednostkach mapy
+            val newX = lightSources[3].x + moveDistance * cos(angleRad)
+            val newY = lightSources[3].y + moveDistance * sin(angleRad)
+
+            // Sprawdź kolizję z mapą
+            val mapX = newX.toInt()
+            val mapY = newY.toInt()
+            if (mapY in map.grid.indices && mapX in map.grid[0].indices && map.grid[mapY][mapX] != 1) {
+                // Brak kolizji, zaktualizuj pozycję
+                lightSources[3].x = newX
+                lightSources[3].y = newY
+            } else {
+                // Kolizja ze ścianą, zatrzymaj ruch
+                lightSources[3].intensity = 0.0
+                isLightMoving = false
+            }
         }
 
         val playerAngleRad = Math.toRadians(currentangle.toDouble())
@@ -455,93 +473,149 @@ class RenderCast : JPanel() {
         }
     }
 
-    fun shotgun() {
-        val shotAngleRad = Math.toRadians(currentangle.toDouble())
-        val playerPosX = positionX / tileSize
-        val playerPosY = positionY / tileSize
-        val rayDirX = cos(shotAngleRad)
-        val rayDirY = sin(shotAngleRad)
+    // Funkcja do odtwarzania pliku MP3 z regulacją głośności
+    fun playSound(soundFile: String, volume: Float = 0.5f) {
+        try {
+            val resource = RenderCast::class.java.classLoader.getResource("audio/$soundFile")
+                ?: throw IllegalArgumentException("Nie znaleziono pliku dźwiękowego: $soundFile")
+            val clip = AudioSystem.getClip()
 
-        var mapX = playerPosX.toInt()
-        var mapY = playerPosY.toInt()
-        val deltaDistX = if (rayDirX == 0.0) 1e30 else abs(1 / rayDirX)
-        val deltaDistY = if (rayDirY == 0.0) 1e30 else abs(1 / rayDirY)
-        var stepX: Int
-        var stepY: Int
-        var sideDistX: Double
-        var sideDistY: Double
-        var side: Int
+            // Otwórz strumień audio w osobnym wątku
+            Thread {
+                try {
+                    clip.open(AudioSystem.getAudioInputStream(resource))
 
-        if (rayDirX < 0) {
-            stepX = -1
-            sideDistX = (playerPosX - mapX) * deltaDistX
-        } else {
-            stepX = 1
-            sideDistX = (mapX + 1.0 - playerPosX) * deltaDistX
-        }
-        if (rayDirY < 0) {
-            stepY = -1
-            sideDistY = (playerPosY - mapY) * deltaDistY
-        } else {
-            stepY = 1
-            sideDistY = (mapY + 1.0 - playerPosY) * deltaDistY
-        }
+                    // Regulacja głośności (w decybelach)
+                    val gainControl = clip.getControl(FloatControl.Type.MASTER_GAIN) as FloatControl
+                    val maxGain = gainControl.maximum
+                    val minGain = gainControl.minimum
+                    // Przelicz liniową wartość volume (0.0 - 1.0) na skalę decybelową
+                    val gainRange = maxGain - minGain
+                    val gain = minGain + (gainRange * volume.coerceIn(0.0f, 1.0f))
+                    gainControl.value = gain
 
-        var hitWall = false
-        var wallDistance = Double.MAX_VALUE
-
-        while (!hitWall) {
-            if (sideDistX < sideDistY) {
-                sideDistX += deltaDistX
-                mapX += stepX
-                side = 0
-            } else {
-                sideDistY += deltaDistY
-                mapY += stepY
-                side = 1
-            }
-            if (mapY !in map.grid.indices || mapX !in map.grid[0].indices) {
-                break
-            }
-            if (map.grid[mapY][mapX] == 1 || map.grid[mapY][mapX] == 5) {
-                hitWall = true
-                wallDistance = if (side == 0) {
-                    (mapX - playerPosX + (1 - stepX) / 2.0) / rayDirX
-                } else {
-                    (mapY - playerPosY + (1 - stepY) / 2.0) / rayDirY
+                    clip.start()
+                    clip.drain()
+                } catch (e: Exception) {
+                    println("Błąd podczas odtwarzania dźwięku $soundFile: ${e.message}")
+                } finally {
                 }
-                if (wallDistance < 0.01) wallDistance = 0.01
-            }
+            }.start()
+        } catch (e: Exception) {
+            println("Błąd podczas ładowania dźwięku $soundFile: ${e.message}")
         }
+    }
 
-        enemies.toList().forEach { enemy ->
-            lightSources.toList().forEach { LightSource ->
-                val dx = enemy.x / tileSize - playerPosX
-                val dy = enemy.y / tileSize - playerPosY
-                val rayLength = dx * rayDirX + dy * rayDirY
+    fun shotgun() {
+        val currentTime = System.nanoTime()
+        if (currentTime - lastShotTime >= SHOT_COOLDOWN && !isShooting) {
+            lastShotTime = currentTime
+            isShooting = true
 
-                if (rayLength > 0 && rayLength < wallDistance) {
-                    val perpendicularDistance = abs(dx * rayDirY - dy * rayDirX)
-                    if ((perpendicularDistance < (enemy.size * 20) / 2 / tileSize) and (enemy.health >= 1)) {
-                        val angleToEnemy = atan2(dy, dx)
-                        val angleDiff = abs(angleToEnemy - shotAngleRad)
-                        println("")
-                        println("toenemy, enemy=${enemy}")
-                        println("angleDiff: ${angleDiff}, Radians: ${Math.toRadians(15.0)}, currentAngle: ${currentangle}")
+            val random = Random.nextFloat()
+            val soundFile = when {
 
-                        if (angleDiff < Math.toRadians(35.0)) {
-                            enemy.health -= 10
+                random < 0.33f -> "shot1.wav"
+                random < 0.66f -> "shot2.wav"
+                else -> "shot3.wav"
+            }
+
+            val shotAngleRad = Math.toRadians(currentangle.toDouble())
+            val playerPosX = positionX / tileSize
+            val playerPosY = positionY / tileSize
+            val rayDirX = cos(shotAngleRad)
+            val rayDirY = sin(shotAngleRad)
+
+            var mapX = playerPosX.toInt()
+            var mapY = playerPosY.toInt()
+            val deltaDistX = if (rayDirX == 0.0) 1e30 else abs(1 / rayDirX)
+            val deltaDistY = if (rayDirY == 0.0) 1e30 else abs(1 / rayDirY)
+            var stepX: Int
+            var stepY: Int
+            var sideDistX: Double
+            var sideDistY: Double
+            var side: Int
+
+            if (rayDirX < 0) {
+                stepX = -1
+                sideDistX = (playerPosX - mapX) * deltaDistX
+            } else {
+                stepX = 1
+                sideDistX = (mapX + 1.0 - playerPosX) * deltaDistX
+            }
+            if (rayDirY < 0) {
+                stepY = -1
+                sideDistY = (playerPosY - mapY) * deltaDistY
+            } else {
+                stepY = 1
+                sideDistY = (mapY + 1.0 - playerPosY) * deltaDistY
+            }
+
+            var hitWall = false
+            var wallDistance = Double.MAX_VALUE
+
+            while (!hitWall) {
+                if (sideDistX < sideDistY) {
+                    sideDistX += deltaDistX
+                    mapX += stepX
+                    side = 0
+                } else {
+                    sideDistY += deltaDistY
+                    mapY += stepY
+                    side = 1
+                }
+                if (mapY !in map.grid.indices || mapX !in map.grid[0].indices) {
+                    break
+                }
+                if (map.grid[mapY][mapX] == 1 || map.grid[mapY][mapX] == 5) {
+                    hitWall = true
+                    wallDistance = if (side == 0) {
+                        (mapX - playerPosX + (1 - stepX) / 2.0) / rayDirX
+                    } else {
+                        (mapY - playerPosY + (1 - stepY) / 2.0) / rayDirY
+                    }
+                    if (wallDistance < 0.01) wallDistance = 0.01
+                }
+            }
+
+            playSound(soundFile, volume = 0.65f)
+
+            lightSources[3].x = positionX / tileSize
+            lightSources[3].y = positionY / tileSize
+            lightMoveDirection = currentangle.toDouble()
+            lightSources[3].intensity = 0.4
+            lastLightMoveTime = currentTime
+            isLightMoving = true
+
+            enemies.toList().forEach { enemy ->
+                lightSources.toList().forEach { LightSource ->
+                    val dx = enemy.x / tileSize - playerPosX
+                    val dy = enemy.y / tileSize - playerPosY
+                    val rayLength = dx * rayDirX + dy * rayDirY
+
+                    if (rayLength > 0 && rayLength < wallDistance) {
+                        val perpendicularDistance = abs(dx * rayDirY - dy * rayDirX)
+                        if ((perpendicularDistance < (enemy.size * 20) / 2 / tileSize) and (enemy.health >= 1)) {
+                            val angleToEnemy = atan2(dy, dx)
+                            val angleDiff = abs(angleToEnemy - shotAngleRad)
                             println("")
-                            println("trafiono, enemy health=${enemy.health}, enemy=${enemy}")
-                            if (enemy.health <= 0) {
-                                try {
-                                    lightSources.find { it.owner == "${enemy}" }?.let {
-                                        println("owner:${it.owner}  enemy:${enemy}")
-                                        lightSources.get(index = lightSources.indexOf(it)).color = Color(0,0,0)
+                            println("toenemy, enemy=${enemy}")
+                            println("angleDiff: ${angleDiff}, Radians: ${Math.toRadians(15.0)}, currentAngle: ${currentangle}")
+
+                            if (angleDiff < Math.toRadians(35.0)) {
+                                enemy.health -= 10
+                                println("")
+                                println("trafiono, enemy health=${enemy.health}, enemy=${enemy}")
+                                if (enemy.health <= 0) {
+                                    try {
+                                        lightSources.find { it.owner == "${enemy}" }?.let {
+                                            println("owner:${it.owner}  enemy:${enemy}")
+                                            lightSources.get(index = lightSources.indexOf(it)).color = Color(0,0,0)
+                                        }
+                                        enemy.texture = ImageIO.read(this::class.java.classLoader.getResource("textures/boguch_bochen_chlepa.jpg"))
+                                    } catch (e: Exception) {
+                                        enemy.texture = createTexture(Color.black)
                                     }
-                                    enemy.texture = ImageIO.read(this::class.java.classLoader.getResource("textures/boguch_bochen_chlepa.jpg"))
-                                } catch (e: Exception) {
-                                    enemy.texture = createTexture(Color.black)
                                 }
                             }
                         }
