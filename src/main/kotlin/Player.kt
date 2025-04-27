@@ -7,7 +7,7 @@ import kotlin.math.sin
 import kotlin.math.sqrt
 
 class Player(private val renderCast: RenderCast) {
-    private val map = Map()
+    private var map = Map()
     private val playerSize = 5.0
     private val margin = 2.0
     private var movementSpeed = 1.5
@@ -29,7 +29,7 @@ class Player(private val renderCast: RenderCast) {
 
         for (gridY in gridTop..gridBottom) {
             for (gridX in gridLeft..gridRight) {
-                if (gridY !in map.grid.indices || gridX !in map.grid[gridY].indices || ((map.grid[gridY][gridX] != 0) && (map.grid[gridY][gridX] != 5))) {
+                if (gridY !in map.grid.indices || gridX !in map.grid[gridY].indices || ((map.grid[gridY][gridX] == 1) or (map.grid[gridY][gridX] == 3))) {
                     return Pair(false, null)
                 }
             }

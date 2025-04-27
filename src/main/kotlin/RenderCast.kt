@@ -14,12 +14,11 @@ import kotlin.math.exp
 import kotlin.math.sin
 import kotlin.math.sqrt
 import kotlin.random.Random
-import javax.print.attribute.standard.Media
 import javax.sound.sampled.AudioSystem
 import javax.sound.sampled.FloatControl
 
 class RenderCast : JPanel() {
-    private val map = Map()
+    private var map = Map()
     private val screenWidth = 320
     private val screenHeight = 200
     private val fov = 90.0
@@ -130,6 +129,11 @@ class RenderCast : JPanel() {
         g2d.scale(scaleX, scaleY)
         g2d.drawImage(buffer, 0, 0, null)
         g2d.scale(1.0 / scaleX, 1.0 / scaleY)
+        if (currentangle <= -1) {
+            currentangle = 360
+        } else if (currentangle > 361) {
+            currentangle = 0
+        }
     }
 
     // Funkcja obliczająca wpływ światła na piksel
@@ -192,6 +196,13 @@ class RenderCast : JPanel() {
                 lightSources[3].y = newY
             } else {
                 // Kolizja ze ścianą, zatrzymaj ruch
+                /*
+                if (map.grid[mapY][mapX] == 1) {
+                    println((map.grid[mapY][mapX]))
+                    map.grid[mapY][mapX] = 0
+                    println("X: ${mapX},Y: ${mapY}")
+                    println((map.grid[mapY][mapX]))
+                }/*
                 lightSources[3].intensity = 0.0
                 isLightMoving = false
             }
@@ -607,6 +618,14 @@ class RenderCast : JPanel() {
                                 println("")
                                 println("trafiono, enemy health=${enemy.health}, enemy=${enemy}")
                                 if (enemy.health <= 0) {
+                                    playSound(when {
+                                        random < 0.16f -> "scream1.wav"
+                                        random < 0.32f -> "scream2.wav"
+                                        random < 0.48f -> "scream3.wav"
+                                        random < 0.64f -> "scream4.wav"
+                                        random < 0.80f -> "scream5.wav"
+                                        else -> "scream6.wav"
+                                    }, volume = 0.65f)
                                     try {
                                         lightSources.find { it.owner == "${enemy}" }?.let {
                                             println("owner:${it.owner}  enemy:${enemy}")

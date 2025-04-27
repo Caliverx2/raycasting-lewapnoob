@@ -37,7 +37,7 @@ var fps = 84
 var MouseSupport = false
 
 val TARGET_FPS = 90
-val FRAME_TIME_NS = 1_000_000_000 / TARGET_FPS
+val FRAME_TIME_NS = 1_000_000_000 / (90*1)
 var deltaTime = 1.0 / TARGET_FPS
 
 var positionX = (tileSize*2)-(tileSize/2)  //kafelek*pozycja - (pół kafelka)
@@ -550,21 +550,29 @@ fun main() = runBlocking {
         val currentTime = System.nanoTime()
         val elapsedTime = currentTime - lastFrameTime
 
-        if (elapsedTime >= FRAME_TIME_NS) {
+        if (elapsedTime >= (1_000_000_000 / 120)) {
+            // Aktualizacja gry
             player.update(keysPressed)
             renderCast.repaint()
             mapa.repaint()
 
+            // Liczenie klatek
             frameCount++
             lastFrameTime = currentTime
 
-            if (currentTime - lastFpsUpdate >= 1_000_000_000) {
+            // Aktualizacja FPS co sekundę
+            if (currentTime - lastFpsUpdate >= 1_000_000_000L) {
                 fps = frameCount
                 frameCount = 0
                 lastFpsUpdate = currentTime
             }
         }
-        delay(10)
+
+        // Dynamiczne opóźnienie, aby nie zużywać za dużo CPU
+        val timeToNextFrame = FRAME_TIME_NS - (System.nanoTime() - lastFrameTime)
+        if (timeToNextFrame > 0) {
+            delay((timeToNextFrame / 1_000_000)) // Konwersja ns na ms
+        }
     }
 }
 
@@ -572,7 +580,7 @@ class Map {
     // Wartości: 1-ściana, 0-pusta przestrzeń, 5-początek i koniec labiryntu
     var grid: Array<IntArray> = arrayOf(
         intArrayOf(5,5,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1),
-        intArrayOf(5,0,0,0,0,0,0,0,1,0,1,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1),
+        intArrayOf(5,0,0,0,0,0,0,3,1,0,1,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1),
         intArrayOf(1,1,1,0,1,1,1,1,1,0,1,0,1,1,1,0,1,1,1,0,1,1,1,1,1,0,1,0,1,1,1),
         intArrayOf(1,0,1,0,1,0,0,0,1,0,0,0,0,0,0,0,1,0,1,0,1,0,0,0,1,0,1,0,0,0,1),
         intArrayOf(1,0,1,0,1,0,1,1,1,0,1,1,1,1,1,0,1,0,1,1,1,1,1,0,1,1,1,1,1,0,1),
@@ -606,7 +614,7 @@ class Map {
 }
 
 class Mappingmap(private val renderCast: RenderCast) : JPanel() {
-    private val map = Map()
+    private var map = Map()
     private val miniMapSize = 200
     private val offsetX = 10
     private val offsetY = 10
