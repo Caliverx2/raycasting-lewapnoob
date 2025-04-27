@@ -202,7 +202,7 @@ class RenderCast : JPanel() {
                     map.grid[mapY][mapX] = 0
                     println("X: ${mapX},Y: ${mapY}")
                     println((map.grid[mapY][mapX]))
-                }/*
+                }*/
                 lightSources[3].intensity = 0.0
                 isLightMoving = false
             }
