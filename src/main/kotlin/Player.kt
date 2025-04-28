@@ -6,8 +6,7 @@ import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.math.sqrt
 
-class Player(private val renderCast: RenderCast) {
-    private var map = Map()
+class Player(private val renderCast: RenderCast, private val map: Map) {
     private val playerSize = 5.0
     private val margin = 2.0
     private var movementSpeed = 1.5
@@ -16,7 +15,6 @@ class Player(private val renderCast: RenderCast) {
     var playerHealth = 100
 
     private fun canMoveTo(x: Double, y: Double, deltaX: Double, deltaY: Double): Pair<Boolean, Enemy?> {
-        // Wall collision
         val left = x - playerSize / 2
         val right = x + playerSize / 2
         val top = y - playerSize / 2
@@ -29,7 +27,7 @@ class Player(private val renderCast: RenderCast) {
 
         for (gridY in gridTop..gridBottom) {
             for (gridX in gridLeft..gridRight) {
-                if (gridY !in map.grid.indices || gridX !in map.grid[gridY].indices || ((map.grid[gridY][gridX] == 1) or (map.grid[gridY][gridX] == 3))) {
+                if (gridY !in map.grid.indices || gridX !in map.grid[0].indices || map.grid[gridY][gridX] == 1) {
                     return Pair(false, null)
                 }
             }
@@ -48,16 +46,15 @@ class Player(private val renderCast: RenderCast) {
         return Pair(true, null)
     }
 
-    // próba przepchnięcia przeciwnika
     fun tryPushEnemy(enemy: Enemy, deltaX: Double, deltaY: Double): Boolean {
         if (enemy.isMoving) {
             // Sprawdzenie, czy przeciwnik porusza się w przeciwnym kierunku
             val dotProduct = deltaX * enemy.lastMoveX + deltaY * enemy.lastMoveY
             if (dotProduct < 0.0) {
-                return false // Przeciwny kierunek, brak przepychania
+                return false // opposite direction = no push
             }
         }
-        // Przepchnij przeciwnika
+        // push enemy
         val newEnemyX = enemy.x + deltaX
         val newEnemyY = enemy.y + deltaY
         val (canMove, _) = enemy.canMoveTo(newEnemyX, newEnemyY) // Użycie Pair<Boolean, Enemy?>
@@ -81,7 +78,7 @@ class Player(private val renderCast: RenderCast) {
             positionY = newY
             return
         } else if (collidedEnemy != null) {
-            // Spróbuj odepchnąć zderzonego wroga
+            // Try to push back a colliding enemy
             if (tryPushEnemy(collidedEnemy, deltaX, deltaY)) {
                 positionX = newX
                 positionY = newY

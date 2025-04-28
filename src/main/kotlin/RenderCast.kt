@@ -17,10 +17,9 @@ import kotlin.random.Random
 import javax.sound.sampled.AudioSystem
 import javax.sound.sampled.FloatControl
 import kotlin.math.floor
-import kotlin.math.round
+import kotlin.math.min
 
-class RenderCast : JPanel() {
-    private var map = Map()
+class RenderCast(private val map: Map) : JPanel() {
     private val screenWidth = 320
     private val screenHeight = 200
     private val fov = 90.0
@@ -46,14 +45,13 @@ class RenderCast : JPanel() {
     private val rayAngles = DoubleArray(rayCount)
 
     private var visibleEnemies = mutableListOf<Triple<Enemy, Int, Double>>() // (Enemy, screenX, distance)
-
     private val zBuffer = DoubleArray(rayCount) { Double.MAX_VALUE }
 
-    private var lastShotTime = 0L // Czas ostatniego strzału w nanosekundach
-    private val SHOT_COOLDOWN = 500_000_000L // 1 sekunda w nanosekundach
-    private var lastLightMoveTime = 0L // Czas ostatniego ruchu lightSources[3]
-    private val LIGHT_MOVE_INTERVAL = 250_000_000L/4 // 0,25 sekundy w nanosekundach
-    private var lightMoveDirection = 0.0 // Kąt ruchu lightSources[3] (w stopniach)
+    private var lastShotTime = 0L
+    private val SHOT_COOLDOWN = 500_000_000L
+    private var lastLightMoveTime = 0L
+    private val LIGHT_MOVE_INTERVAL = 250_000_000L / 4
+    private var lightMoveDirection = 0.0
     private var isLightMoving = false
 
     fun getEnemies(): List<Enemy> = enemies
@@ -79,22 +77,15 @@ class RenderCast : JPanel() {
             enemyTextureId = createTexture(Color(255, 68, 68))
         }
 
-        // Inicjalizacja przeciwników
-        enemies.add(Enemy((tileSize * 2) - (tileSize / 2), (tileSize * 6) - (tileSize / 2), 100, enemyTextureId!!, this, speed = (2.0 * ((10..19).random()/10.0))))
-        enemies.add(Enemy((tileSize * 16) - (tileSize / 2), (tileSize * 18) - (tileSize / 2), 100, enemyTextureId!!, this, speed = (2.0 * ((10..19).random()/10.0))))
-        enemies.add(Enemy((tileSize * 2) - (tileSize / 2), (tileSize * 22) - (tileSize / 2), 100, enemyTextureId!!, this, speed = (2.0 * ((10..19).random()/10.0))))
-        println(enemies[0].speed)
-        println(enemies[1].speed)
-        println(enemies[2].speed)
+        // Initialization of opponents
+        enemies.add(Enemy((tileSize * 2) - (tileSize / 2), (tileSize * 6) - (tileSize / 2), 100, enemyTextureId!!, this, map, speed = (2.0 * ((10..19).random() / 10.0))))
+        enemies.add(Enemy((tileSize * 16) - (tileSize / 2), (tileSize * 18) - (tileSize / 2), 100, enemyTextureId!!, this, map, speed = (2.0 * ((10..19).random() / 10.0))))
+        enemies.add(Enemy((tileSize * 2) - (tileSize / 2), (tileSize * 22) - (tileSize / 2), 100, enemyTextureId!!, this, map, speed = (2.0 * ((10..19).random() / 10.0))))
 
-        lightSources.add(LightSource(x = (enemies[0].x/tileSize), y = enemies[0].y/tileSize, color = Color(20, 255,20), intensity = 0.75, range = 3.0, owner = "${enemies[0]}"))
-        lightSources.add(LightSource(x = (enemies[1].x/tileSize), y = enemies[1].y/tileSize, color = Color(255, 22,20), intensity = 0.75, range = 3.0, owner = "${enemies[1]}"))
-        lightSources.add(LightSource(x = (enemies[2].x/tileSize), y = enemies[2].y/tileSize, color = Color(22, 20,255), intensity = 0.75, range = 3.0, owner = "${enemies[2]}"))
-        println(lightSources[0].owner + " " +enemies[0])
-        println(lightSources[1].owner + " " +enemies[1])
-        println(lightSources[2].owner + " " +enemies[2])
-
-        lightSources.add(LightSource(x = (1/tileSize), y = 1/tileSize, color = Color(200, 200,100), intensity = 0.4, range = 0.15, owner = "player"))
+        lightSources.add(LightSource(x = (enemies[0].x / tileSize), y = enemies[0].y / tileSize, color = Color(20, 255, 20), intensity = 0.75, range = 3.0, owner = "${enemies[0]}"))
+        lightSources.add(LightSource(x = (enemies[1].x / tileSize), y = enemies[1].y / tileSize, color = Color(255, 22, 20), intensity = 0.75, range = 3.0, owner = "${enemies[1]}"))
+        lightSources.add(LightSource(x = (enemies[2].x / tileSize), y = enemies[2].y / tileSize, color = Color(22, 20, 255), intensity = 0.75, range = 3.0, owner = "${enemies[2]}"))
+        lightSources.add(LightSource(x = (1 / tileSize), y = 1 / tileSize, color = Color(200, 200, 100), intensity = 0.4, range = 0.15, owner = "player"))
 
         buffer = BufferedImage(screenWidth, screenHeight, BufferedImage.TYPE_INT_RGB)
         bufferGraphics = buffer.createGraphics()
@@ -118,24 +109,17 @@ class RenderCast : JPanel() {
         return texture
     }
 
-    override fun paintComponent(g: Graphics){
+    override fun paintComponent(g: Graphics) {
         super.paintComponent(g)
         renderWallsToBuffer()
-
         val g2d = g as Graphics2D
         val scaleX = width.toDouble() / screenWidth
         val scaleY = height.toDouble() / screenHeight
         g2d.scale(scaleX, scaleY)
         g2d.drawImage(buffer, 0, 0, null)
         g2d.scale(1.0 / scaleX, 1.0 / scaleY)
-        if (currentangle <= -1) {
-            currentangle = 360
-        } else if (currentangle > 361) {
-            currentangle = 0
-        }
     }
 
-    // Funkcja obliczająca wpływ światła na piksel
     private fun calculateLightContribution(worldX: Double, worldY: Double, baseColor: Color): Color {
         var totalRed = baseColor.red.toDouble()
         var totalGreen = baseColor.green.toDouble()
@@ -164,231 +148,69 @@ class RenderCast : JPanel() {
     private fun isLightVisible(light: LightSource, targetX: Double, targetY: Double): Boolean {
         val startX = light.x
         val startY = light.y
-
-        // Oblicz odległość i kierunek do punktu docelowego
         val dx = targetX - startX
         val dy = targetY - startY
         val distance = sqrt(dx * dx + dy * dy)
 
-        // Jeśli punkt jest poza zasięgiem lub zbyt blisko, zwróć false
         if (distance > light.range || distance < 0.001) return false
 
-        // Sprawdź, czy punkt jest w tej samej komórce
-        val startMapX = floor(startX).toInt()
-        val startMapY = floor(startY).toInt()
-        val targetMapX = floor(targetX).toInt()
-        val targetMapY = floor(targetY).toInt()
-
-        if (startMapX == targetMapX && startMapY == targetMapY) return true
         val stepSize = 0.25
-
-        // Sprawdź punkty na granicach (np. x=0.0, x=1.0, y=1.0, y=2.0)
-        val isOnBoundary = abs(targetX - round(targetX)) < 1e-6 || abs(targetY - round(targetY)) < 1e-6
-        if (isOnBoundary) {
-            // Określ możliwe komórki dla punktu na granicy
-            val possibleCells = mutableListOf<Pair<Int, Int>>()
-            if (abs(targetX - round(targetX)) < 1e-6) {
-                val x = round(targetX).toInt()
-                possibleCells.add(Pair(x, targetMapY))
-                possibleCells.add(Pair(x - 1, targetMapY))
-            } else {
-                possibleCells.add(Pair(targetMapX, targetMapY))
-            }
-            if (abs(targetY - round(targetY)) < 1e-6) {
-                val y = round(targetY).toInt()
-                possibleCells.add(Pair(targetMapX, y))
-                possibleCells.add(Pair(targetMapX, y - 1))
-            } else {
-                possibleCells.add(Pair(targetMapX, targetMapY))
-            }
-
-            // Sprawdź, czy punkt jest powierzchnią ściany widoczną z wolnej komórki
-            for ((mapX, mapY) in possibleCells.distinct()) {
-                if (mapX < 0 || mapX >= map.grid[0].size || mapY < 0 || mapY >= map.grid.size) continue
-                // Jeśli komórka jest wolna, sprawdź ścieżkę
-                if (map.grid[mapY][mapX] != 1 && map.grid[mapY][mapX] != 5) {
-                    val stepX = dx / distance
-                    val stepY = dy / distance
-                    val steps = (distance / stepSize).toInt().coerceAtLeast(1)
-
-                    var currentX = startX
-                    var currentY = startY
-
-                    for (i in 1..steps) {
-                        currentX = startX + stepX * stepSize * i
-                        currentY = startY + stepY * stepSize * i
-
-                        val currMapX = if (abs(currentX - round(currentX)) < 1e-6) round(currentX).toInt() else floor(currentX).toInt()
-                        val currMapY = if (abs(currentY - round(currentY)) < 1e-6) round(currentY).toInt() else floor(currentY).toInt()
-
-                        if (currMapX < 0 || currMapX >= map.grid[0].size || currMapY < 0 || currMapY >= map.grid.size) {
-                            return false
-                        }
-
-                        if (map.grid[currMapY][currMapX] == 1 || map.grid[currMapY][currMapX] == 5) {
-                            return false
-                        }
-
-                        if (currMapX == mapX && currMapY == mapY) {
-                            return true
-                        }
-                    }
-                    return abs(currentX - targetX) < stepSize && abs(currentY - targetY) < stepSize
-                }
-                // Jeśli komórka jest ścianą, sprawdź, czy punkt jest jej powierzchnią widoczną
-                if (map.grid[mapY][mapX] == 1 || map.grid[mapY][mapX] == 5) {
-                    // Określ, która powierzchnia ściany została trafiona
-                    val isLeftWall = abs(targetX - mapX) < 1e-6
-                    val isRightWall = abs(targetX - (mapX + 1)) < 1e-6
-                    val isTopWall = abs(targetY - mapY) < 1e-6
-                    val isBottomWall = abs(targetY - (mapY + 1)) < 1e-6
-
-                    // Sprawdź kierunek promienia, aby potwierdzić trafienie w odpowiednią powierzchnię
-                    val hitValid = when {
-                        isLeftWall -> dx > 0 // Promień z prawej strony (np. z (1,1) do x=0.0)
-                        isRightWall -> dx < 0 // Promień z lewej strony (np. z (1,1) do x=1.0)
-                        isTopWall -> dy > 0 // Promień z dołu (np. z (1,1) do y=1.0)
-                        isBottomWall -> dy < 0 // Promień z góry (np. z (1,2) do y=2.0)
-                        else -> false
-                    }
-
-                    if (hitValid) {
-                        // Sprawdź sąsiednie komórki, czy są wolne
-                        val neighbors = listOf(
-                            Pair(mapX + 1, mapY), Pair(mapX - 1, mapY),
-                            Pair(mapX, mapY + 1), Pair(mapX, mapY - 1)
-                        )
-                        for ((nX, nY) in neighbors) {
-                            if (nX < 0 || nX >= map.grid[0].size || nY < 0 || nY >= map.grid.size) continue
-                            if (map.grid[nY][nX] != 1 && map.grid[nY][nX] != 5) {
-                                // Sprawdź, czy sąsiednia komórka odpowiada kierunkowi promienia
-                                val neighborValid = when {
-                                    isLeftWall -> nX == mapX + 1 // Wolna komórka po prawej
-                                    isRightWall -> nX == mapX - 1 // Wolna komórka po lewej
-                                    isTopWall -> nY == mapY + 1 // Wolna komórka poniżej
-                                    isBottomWall -> nY == mapY - 1 // Wolna komórka powyżej
-                                    else -> false
-                                }
-                                if (neighborValid) {
-                                    // Sprawdź ścieżkę do punktu na powierzchni ściany
-                                    val stepX = dx / distance
-                                    val stepY = dy / distance
-                                    val steps = (distance / stepSize).toInt().coerceAtLeast(1)
-
-                                    var currentX = startX
-                                    var currentY = startY
-
-                                    for (i in 1..steps) {
-                                        currentX = startX + stepX * stepSize * i
-                                        currentY = startY + stepY * stepSize * i
-
-                                        val currMapX = if (abs(currentX - round(currentX)) < 1e-6) round(currentX).toInt() else floor(currentX).toInt()
-                                        val currMapY = if (abs(currentY - round(currentY)) < 1e-6) round(currentY).toInt() else floor(currentY).toInt()
-
-                                        if (currMapX < 0 || currMapX >= map.grid[0].size || currMapY < 0 || currMapY >= map.grid.size) {
-                                            return false
-                                        }
-
-                                        if (map.grid[currMapY][currMapX] == 1 || map.grid[currMapY][currMapX] == 5) {
-                                            return false
-                                        }
-
-                                        if (abs(currentX - targetX) < 1e-6 && abs(currentY - targetY) < 1e-6) {
-                                            return true
-                                        }
-                                    }
-                                    return abs(currentX - targetX) < stepSize && abs(currentY - targetY) < stepSize
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            return false // Punkt nie jest widoczny
-        }
-
-        // Normalizuj kierunek
         val stepX = dx / distance
         val stepY = dy / distance
-
-        // Użyj małego kroku dla precyzji
         val steps = (distance / stepSize).toInt().coerceAtLeast(1)
 
-        // Iteruj wzdłuż linii
         var currentX = startX
         var currentY = startY
 
         for (i in 1..steps) {
-            // Oblicz aktualną pozycję
             currentX = startX + stepX * stepSize * i
             currentY = startY + stepY * stepSize * i
 
-            // Pobierz komórkę mapy z dokładnym przypisaniem granic
-            val mapX = if (abs(currentX - round(currentX)) < 1e-6) round(currentX).toInt() else floor(currentX).toInt()
-            val mapY = if (abs(currentY - round(currentY)) < 1e-6) round(currentY).toInt() else floor(currentY).toInt()
+            val mapX = floor(currentX).toInt()
+            val mapY = floor(currentY).toInt()
 
-            // Sprawdź granice mapy
             if (mapX < 0 || mapX >= map.grid[0].size || mapY < 0 || mapY >= map.grid.size) {
                 return false
             }
 
-            // Sprawdź, czy napotkano ścianę
             if (map.grid[mapY][mapX] == 1 || map.grid[mapY][mapX] == 5) {
                 return false
             }
 
-            // Jeśli dotarliśmy do komórki docelowej
-            if (mapX == targetMapX && mapY == targetMapY) {
+            if (abs(currentX - targetX) < stepSize && abs(currentY - targetY) < stepSize) {
                 return true
             }
-        }
-
-        // Jeśli jesteśmy blisko celu, sprawdź komórkę
-        if (abs(currentX - targetX) < stepSize && abs(currentY - targetY) < stepSize) {
-            return map.grid[targetMapY][targetMapX] != 1 && map.grid[targetMapY][targetMapX] != 5
         }
 
         return false
     }
 
-    private fun renderWallsToBuffer() {
+    fun renderWallsToBuffer() {
         enemies.forEach { it.update() }
 
-        // Aktualizuj pozycje źródeł światła dla przeciwników
-        for (i in 0..2) {
-            try {
-                lightSources[i].x = enemies[i].x / tileSize
-                lightSources[i].y = enemies[i].y / tileSize
-            } catch (e: Exception) {
-                continue
-            }
+        for (i in 0 until minOf(3, enemies.size)) {
+            lightSources[i].x = enemies[i].x / tileSize
+            lightSources[i].y = enemies[i].y / tileSize
         }
 
-        // Aktualizuj pozycję lightSources[3] z kolizją
         val currentTime = System.nanoTime()
         if (isLightMoving && currentTime - lastLightMoveTime >= LIGHT_MOVE_INTERVAL) {
             lastLightMoveTime = currentTime
             val angleRad = Math.toRadians(lightMoveDirection)
-            val moveDistance = tileSize / 2.0 / tileSize // Pół tileSize w jednostkach mapy
+            val moveDistance = tileSize / 2.0 / tileSize
             val newX = lightSources[3].x + moveDistance * cos(angleRad)
             val newY = lightSources[3].y + moveDistance * sin(angleRad)
 
-            // Sprawdź kolizję z mapą
             val mapX = newX.toInt()
             val mapY = newY.toInt()
             if (mapY in map.grid.indices && mapX in map.grid[0].indices && map.grid[mapY][mapX] != 1) {
-                // Brak kolizji, zaktualizuj pozycję
                 lightSources[3].x = newX
                 lightSources[3].y = newY
             } else {
-                // Kolizja ze ścianą, zatrzymaj ruch
-                /*
-                if (map.grid[mapY][mapX] == 1) {
-                    println((map.grid[mapY][mapX]))
+                if (mapY in map.grid.indices && mapX in map.grid[0].indices && map.grid[mapY][mapX] == 1) {
                     map.grid[mapY][mapX] = 0
-                    println("X: ${mapX},Y: ${mapY}")
-                    println((map.grid[mapY][mapX]))
-                }*/
+                    map.updateWallDistances() // Odśwież cache odległości
+                }
                 lightSources[3].intensity = 0.0
                 isLightMoving = false
             }
@@ -490,7 +312,6 @@ class RenderCast : JPanel() {
                 zBuffer[ray] = distance
             }
 
-            // Check for enemy intersections
             enemies.forEach { enemy ->
                 val halfSize = enemy.size * tileSize / 2 / tileSize
                 val enemyLeft = enemy.x / tileSize - halfSize
@@ -556,11 +377,9 @@ class RenderCast : JPanel() {
                         (originalColor.green * shadeFactor).toInt().coerceIn(0, 255),
                         (originalColor.blue * shadeFactor).toInt().coerceIn(0, 255)
                     )
-                    // Dodaj wpływ dynamicznych źródeł światła
                     val worldX = hitX
                     val worldY = hitY
                     val litColor = calculateLightContribution(worldX, worldY, shadedColor)
-                    // Zastosuj mgłę
                     val fogFactor = 1.0 - exp(-fogDensity * distance)
                     val finalColor = Color(
                         ((1.0 - fogFactor) * litColor.red + fogFactor * fogColor.red).toInt().coerceIn(0, 255),
@@ -571,7 +390,6 @@ class RenderCast : JPanel() {
                 }
             }
 
-            // Renderowanie podłogi i sufitu
             for (y in 0 until screenHeight) {
                 if (hitWall && y in drawStart until drawEnd) continue
 
@@ -604,11 +422,9 @@ class RenderCast : JPanel() {
                     (originalColor.green * shadeFactor).toInt().coerceIn(0, 255),
                     (originalColor.blue * shadeFactor).toInt().coerceIn(0, 255)
                 )
-                // Dodaj wpływ dynamicznych źródeł światła
                 val worldX = playerPosX + rowDistance * rayDirX
                 val worldY = playerPosY + rowDistance * rayDirY
                 val litColor = calculateLightContribution(worldX, worldY, shadedColor)
-                // Zastosuj mgłę
                 val fogFactor = 1.0 - exp(-fogDensity * rowDistance)
                 val finalColor = Color(
                     ((1.0 - fogFactor) * litColor.red + fogFactor * fogColor.red).toInt().coerceIn(0, 255),
@@ -651,11 +467,9 @@ class RenderCast : JPanel() {
                         val color = enemy.texture.getRGB(textureX.toInt(), textureY.toInt())
                         if ((color and 0xFF000000.toInt()) != 0) {
                             val originalColor = Color(color)
-                            // Dodaj wpływ dynamicznych źródeł światła
                             val worldX = enemy.x / tileSize
                             val worldY = enemy.y / tileSize
                             val litColor = calculateLightContribution(worldX, worldY, originalColor)
-                            // Zastosuj mgłę
                             val fogFactor = 1.0 - exp(-fogDensity * distance)
                             val finalColor = Color(
                                 ((1.0 - fogFactor) * litColor.red + fogFactor * fogColor.red).toInt().coerceIn(0, 255),
@@ -670,23 +484,18 @@ class RenderCast : JPanel() {
         }
     }
 
-    // Funkcja do odtwarzania pliku MP3 z regulacją głośności
     fun playSound(soundFile: String, volume: Float = 0.5f) {
         try {
             val resource = RenderCast::class.java.classLoader.getResource("audio/$soundFile")
-                ?: throw IllegalArgumentException("Nie znaleziono pliku dźwiękowego: $soundFile")
+                ?: throw IllegalArgumentException("No sound file found: $soundFile")
             val clip = AudioSystem.getClip()
 
-            // Otwórz strumień audio w osobnym wątku
             Thread {
                 try {
                     clip.open(AudioSystem.getAudioInputStream(resource))
-
-                    // Regulacja głośności (w decybelach)
                     val gainControl = clip.getControl(FloatControl.Type.MASTER_GAIN) as FloatControl
                     val maxGain = gainControl.maximum
                     val minGain = gainControl.minimum
-                    // Przelicz liniową wartość volume (0.0 - 1.0) na skalę decybelową
                     val gainRange = maxGain - minGain
                     val gain = minGain + (gainRange * volume.coerceIn(0.0f, 1.0f))
                     gainControl.value = gain
@@ -694,12 +503,11 @@ class RenderCast : JPanel() {
                     clip.start()
                     clip.drain()
                 } catch (e: Exception) {
-                    println("Błąd podczas odtwarzania dźwięku $soundFile: ${e.message}")
-                } finally {
+                    println("Error playing audio $soundFile: ${e.message}")
                 }
             }.start()
         } catch (e: Exception) {
-            println("Błąd podczas ładowania dźwięku $soundFile: ${e.message}")
+            println("Error loading audio $soundFile: ${e.message}")
         }
     }
 
@@ -711,7 +519,6 @@ class RenderCast : JPanel() {
 
             val random = Random.nextFloat()
             val soundFile = when {
-
                 random < 0.33f -> "shot1.wav"
                 random < 0.66f -> "shot2.wav"
                 else -> "shot3.wav"
@@ -794,15 +601,11 @@ class RenderCast : JPanel() {
                         val perpendicularDistance = abs(dx * rayDirY - dy * rayDirX)
                         if ((perpendicularDistance < (enemy.size * 20) / 2 / tileSize) and (enemy.health >= 1)) {
                             val angleToEnemy = atan2(dy, dx)
-                            val angleDiff = abs(angleToEnemy - shotAngleRad)
-                            println("")
-                            println("toenemy, enemy=${enemy}")
-                            println("angleDiff: ${angleDiff}, Radians: ${Math.toRadians(15.0)}, currentAngle: ${currentangle}")
+                            var angleDiff = abs(angleToEnemy - shotAngleRad)
+                            angleDiff = min(angleDiff, 2 * Math.PI - angleDiff)
 
                             if (angleDiff < Math.toRadians(35.0)) {
                                 enemy.health -= 10
-                                println("")
-                                println("trafiono, enemy health=${enemy.health}, enemy=${enemy}")
                                 if (enemy.health <= 0) {
                                     playSound(when {
                                         random < 0.16f -> "scream1.wav"
@@ -814,8 +617,7 @@ class RenderCast : JPanel() {
                                     }, volume = 0.65f)
                                     try {
                                         lightSources.find { it.owner == "${enemy}" }?.let {
-                                            println("owner:${it.owner}  enemy:${enemy}")
-                                            lightSources.get(index = lightSources.indexOf(it)).color = Color(0,0,0)
+                                            lightSources[lightSources.indexOf(it)].color = Color(0, 0, 0)
                                         }
                                         enemy.texture = ImageIO.read(this::class.java.classLoader.getResource("textures/boguch_bochen_chlepa.jpg"))
                                     } catch (e: Exception) {

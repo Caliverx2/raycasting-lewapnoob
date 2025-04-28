@@ -14,14 +14,12 @@ import java.awt.Dimension
 import java.awt.Font
 import java.awt.Graphics
 import java.awt.Graphics2D
-import java.awt.MouseInfo
 import java.awt.Point
 import java.awt.RenderingHints
 import java.awt.Toolkit
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import java.awt.event.MouseMotionAdapter
-import java.awt.Robot
 import java.awt.event.ComponentAdapter
 import java.awt.event.ComponentEvent
 import java.awt.image.BufferedImage
@@ -31,8 +29,8 @@ import kotlin.math.*
 
 var map = true
 var currentangle = 45
-var tileSize = 40.0 // Rozmiar kafelka na mapie
-val mapa = 0.5//0.075
+var tileSize = 40.0
+val mapa = 0.5
 var fps = 84
 var MouseSupport = false
 
@@ -40,23 +38,23 @@ val TARGET_FPS = 90
 val FRAME_TIME_NS = 1_000_000_000 / (90*1)
 var deltaTime = 1.0 / TARGET_FPS
 
-var positionX = (tileSize*2)-(tileSize/2)  //kafelek*pozycja - (pół kafelka)
-var positionY = (tileSize*2)-(tileSize/2)  //kafelek*pozycja - (pół kafelka)
+var positionX = (tileSize*2)-(tileSize/2)  //tile*positon - (half tile)
+var positionY = (tileSize*2)-(tileSize/2)  //tile*positon - (half tile)
 var enemies = mutableListOf<Enemy>()
-var lightSources = mutableListOf<LightSource>() // Lista źródeł światła
-var isShooting = false // Flaga stanu klawisza strzału
+var lightSources = mutableListOf<LightSource>()
+var isShooting = false
 
 class LightSource(
-    var x: Double, // Pozycja X w jednostkach mapy (tileSize)
-    var y: Double, // Pozycja Y w jednostkach mapy (tileSize)
-    var color: Color, // Kolor światła
-    var intensity: Double, // Intensywność (np. 1.0 dla normalnego światła)
-    val range: Double, // Zasięg w jednostkach mapy (tileSize)
+    var x: Double,
+    var y: Double,
+    var color: Color,
+    var intensity: Double,
+    val range: Double,
     var owner: String = ""
 )
 
-class Enemy(var x: Double, var y: Double, var health: Int = 10, var texture: BufferedImage, private val renderCast: RenderCast, var speed: Double = 0.9) {
-    private val map = Map()
+
+class Enemy(var x: Double, var y: Double, var health: Int = 10, var texture: BufferedImage, private val renderCast: RenderCast, private val map: Map, var speed: Double = 0.9) {
     var path: List<Node> = emptyList()
     val size = 1.0
     private val margin = 10
@@ -74,16 +72,15 @@ class Enemy(var x: Double, var y: Double, var health: Int = 10, var texture: Buf
     private var lastPlayerX = 0.0
     private var lastPlayerY = 0.0
 
-    // Zmienne dla bezruchu i losowych ruchów
-    private var idleTimer = 0 // Licznik klatek bez ruchu
-    private val idleThreshold = (1.5 * TARGET_FPS).toInt() // 1,5 sekundy (135 klatek przy 90 FPS)
-    private var randomMoveTimer = 0 // Licznik do losowych ruchów
-    private val randomMoveInterval = 300 // Losowy ruch co ~3,33 sekundy przy 90 FPS
-    private val randomMoveDistance = tileSize * 0.5 // Odległość losowego ruchu
-    private val moveThreshold = tileSize * 1.5 // Próg ruchu: pół kafelka
-    private var lastX = x // Pozycja X w poprzedniej klatce
-    private var lastY = y // Pozycja Y w poprzedniej klatce
-    private var accumulatedDistance = 0.0 // Akumulacja przemieszczenia
+    private var idleTimer = 0
+    private val idleThreshold = (1.5 * TARGET_FPS).toInt()
+    private var randomMoveTimer = 0
+    private val randomMoveInterval = 300
+    private val randomMoveDistance = tileSize * 0.5
+    private val moveThreshold = tileSize * 1.5
+    private var lastX = x
+    private var lastY = y
+    private var accumulatedDistance = 0.0
 
     companion object {
         const val MIN_WALL_DISTANCE = 0.1
@@ -91,33 +88,6 @@ class Enemy(var x: Double, var y: Double, var health: Int = 10, var texture: Buf
         var PLAYER_MOVE_THRESHOLD = tileSize
         private var globalChaseTimer = 0
         private val pathCache = mutableMapOf<Pair<Node, Node>, List<Node>>()
-        private val wallDistanceMap: Array<Array<Double>> = precomputeWallDistances()
-
-        private fun precomputeWallDistances(): Array<Array<Double>> {
-            val map = Map()
-            val height = map.grid.size
-            val width = map.grid[0].size
-            val distances = Array(height) { Array(width) { Double.MAX_VALUE } }
-
-            for (y in 0 until height) {
-                for (x in 0 until width) {
-                    if (map.grid[y][x] == 1) continue
-                    var minDistance = Double.MAX_VALUE
-                    for (dy in -2..2) {
-                        for (dx in -2..2) {
-                            val checkX = x + dx
-                            val checkY = y + dy
-                            if (checkY in map.grid.indices && checkX in map.grid[0].indices && map.grid[checkY][checkX] == 1) {
-                                val distance = sqrt((dx * dx + dy * dy).toDouble())
-                                minDistance = minOf(minDistance, distance)
-                            }
-                        }
-                    }
-                    distances[y][x] = minDistance
-                }
-            }
-            return distances
-        }
 
         fun updateGlobalChaseTimer() {
             globalChaseTimer++
@@ -204,7 +174,8 @@ class Enemy(var x: Double, var y: Double, var health: Int = 10, var texture: Buf
 
         if (startY !in map.grid.indices || startX !in map.grid[0].indices ||
             goalY !in map.grid.indices || goalX !in map.grid[0].indices ||
-            map.grid[goalY][goalX] == 1) {
+            map.grid[goalY][goalX] == 1
+        ) {
             return emptyList()
         }
 
@@ -264,7 +235,8 @@ class Enemy(var x: Double, var y: Double, var health: Int = 10, var texture: Buf
         for (dir in directions) {
             if (dir.y in map.grid.indices && dir.x in map.grid[0].indices &&
                 map.grid[dir.y][dir.x] != 1 &&
-                wallDistanceMap[dir.y][dir.x] >= MIN_WALL_DISTANCE) {
+                map.getWallDistances()[dir.y][dir.x] >= MIN_WALL_DISTANCE
+            ) {
                 neighbors.add(dir)
             }
         }
@@ -285,7 +257,6 @@ class Enemy(var x: Double, var y: Double, var health: Int = 10, var texture: Buf
 
         val deltaTime = 1.0 / TARGET_FPS
 
-        // Oblicz przemieszczenie od ostatniej klatki
         val dx = x - lastX
         val dy = y - lastY
         val distanceMoved = sqrt(dx * dx + dy * dy)
@@ -293,19 +264,19 @@ class Enemy(var x: Double, var y: Double, var health: Int = 10, var texture: Buf
         lastX = x
         lastY = y
 
-        // Resetuj idleTimer, jeśli przemieszczenie przekroczy próg
         if (accumulatedDistance >= moveThreshold) {
             idleTimer = 0
             accumulatedDistance = 0.0
         } else {
-            idleTimer++ // Zwiększ timer bezruchu, jeśli przemieszczenie jest małe
+            idleTimer++
         }
 
         val dxToPlayer = x - positionX
         val dyToPlayer = y - positionY
         val distanceToPlayer = sqrt(dxToPlayer * dxToPlayer + dyToPlayer * dyToPlayer)
 
-        val playerMoved = sqrt((positionX - lastPlayerX) * (positionX - lastPlayerX) + (positionY - lastPlayerY) * (positionY - lastPlayerY)) > PLAYER_MOVE_THRESHOLD
+        val playerMoved =
+            sqrt((positionX - lastPlayerX) * (positionX - lastPlayerX) + (positionY - lastPlayerY) * (positionY - lastPlayerY)) > PLAYER_MOVE_THRESHOLD
         lastPlayerX = positionX
         lastPlayerY = positionY
 
@@ -417,14 +388,13 @@ class Enemy(var x: Double, var y: Double, var health: Int = 10, var texture: Buf
             }
         }
 
-        // Losowe ruchy, gdy przeciwnik stoi
         randomMoveTimer++
         if (idleTimer >= idleThreshold && randomMoveTimer >= randomMoveInterval) {
             val directions = listOf(
-                Pair(1.0, 0.0),  // prawo
-                Pair(-1.0, 0.0), // lewo
-                Pair(0.0, 1.0),  // dół
-                Pair(0.0, -1.0)  // góra
+                Pair(1.0, 0.0),
+                Pair(-1.0, 0.0),
+                Pair(0.0, 1.0),
+                Pair(0.0, -1.0)
             )
             val (moveX, moveY) = directions.random()
             val newX = x + moveX * randomMoveDistance
@@ -464,13 +434,16 @@ fun main() = runBlocking {
 
     frame.isVisible = true
 
+    val map = Map()
+    val renderCast = RenderCast(map)
+    val player = Player(renderCast, map)
+
     val layeredPane = JLayeredPane()
     layeredPane.setSize(1366, 768)
     layeredPane.setBounds(0, 0, 1366, 768)
     frame.add(layeredPane)
 
-    val renderCast = RenderCast()
-    val mapa = Mappingmap(renderCast)
+    val mapa = Mappingmap(map, renderCast)
     mapa.isOpaque = false
     mapa.layout = null
     mapa.setSize(1366, 768)
@@ -483,7 +456,6 @@ fun main() = runBlocking {
     layeredPane.add(mapa, 1)
     layeredPane.add(renderCast, 2)
 
-    val player = Player(renderCast)
     val keysPressed: MutableMap<Int, Boolean> = mutableMapOf()
     var centerX = frame.width / 2
 
@@ -496,7 +468,7 @@ fun main() = runBlocking {
 
         override fun mouseReleased(event: MouseEvent) {
             if (event.button == MouseEvent.BUTTON1) {
-                isShooting = false // Reset flagi po zwolnieniu przycisku myszy
+                isShooting = false
             }
         }
     })
@@ -518,7 +490,7 @@ fun main() = runBlocking {
             keysPressed[event.keyCode] = true
             when (event.keyCode) {
                 KeyEvent.VK_SPACE -> {
-                    if (!isShooting) { // Wywołaj strzał tylko, jeśli klawisz nie był wcześniej wciśnięty
+                    if (!isShooting) {
                         renderCast.shotgun()
                     }
                 }
@@ -529,9 +501,8 @@ fun main() = runBlocking {
             keysPressed[event.keyCode] = false
             when (event.keyCode) {
                 KeyEvent.VK_SPACE -> {
-                    isShooting = false // Reset flagi po zwolnieniu spacji
+                    isShooting = false
                 }
-                KeyEvent.VK_M -> map = true
             }
         }
     })
@@ -542,6 +513,7 @@ fun main() = runBlocking {
         }
     })
 
+    //fps counter
     var lastFrameTime = System.nanoTime()
     var frameCount = 0
     var lastFpsUpdate = System.nanoTime()
@@ -551,16 +523,13 @@ fun main() = runBlocking {
         val elapsedTime = currentTime - lastFrameTime
 
         if (elapsedTime >= (1_000_000_000 / 120)) {
-            // Aktualizacja gry
             player.update(keysPressed)
             renderCast.repaint()
             mapa.repaint()
 
-            // Liczenie klatek
             frameCount++
             lastFrameTime = currentTime
 
-            // Aktualizacja FPS co sekundę
             if (currentTime - lastFpsUpdate >= 1_000_000_000L) {
                 fps = frameCount
                 frameCount = 0
@@ -568,16 +537,14 @@ fun main() = runBlocking {
             }
         }
 
-        // Dynamiczne opóźnienie, aby nie zużywać za dużo CPU
         val timeToNextFrame = FRAME_TIME_NS - (System.nanoTime() - lastFrameTime)
         if (timeToNextFrame > 0) {
-            delay((timeToNextFrame / 1_000_000)) // Konwersja ns na ms
+            delay((timeToNextFrame / 1_000_000))
         }
     }
 }
 
 class Map {
-    // Wartości: 1-ściana, 0-pusta przestrzeń, 5-początek i koniec labiryntu
     var grid: Array<IntArray> = arrayOf(
         intArrayOf(5,5,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1),
         intArrayOf(5,0,1,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,1),
@@ -609,13 +576,57 @@ class Map {
         intArrayOf(1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,1,0,0,0,5),
         intArrayOf(1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,5,5)
     )
+
+    private var wallDistances: Array<Array<Double>>? = null
+
+    fun getWallDistances(): Array<Array<Double>> {
+        if (wallDistances == null) {
+            wallDistances = precomputeWallDistances()
+        }
+        return wallDistances!!
+    }
+
+    private fun precomputeWallDistances(): Array<Array<Double>> {
+        val height = grid.size
+        val width = grid[0].size
+        val distances = Array(height) { Array(width) { Double.MAX_VALUE } }
+
+        for (y in 0 until height) {
+            for (x in 0 until width) {
+                if (grid[y][x] == 1) continue
+                var minDistance = Double.MAX_VALUE
+                for (dy in -2..2) {
+                    for (dx in -2..2) {
+                        val checkX = x + dx
+                        val checkY = y + dy
+                        if (checkY in grid.indices && checkX in grid[0].indices && grid[checkY][checkX] == 1) {
+                            val distance = sqrt((dx * dx + dy * dy).toDouble())
+                            minDistance = minOf(minDistance, distance)
+                        }
+                    }
+                }
+                distances[y][x] = minDistance
+            }
+        }
+        return distances
+    }
+
+    fun updateWallDistances() {
+        wallDistances = null // Zresetuj cache po zmianie grid
+    }
 }
 
-class Mappingmap(private val renderCast: RenderCast) : JPanel() {
-    private var map = Map()
+class Mappingmap(private val map: Map, private val renderCast: RenderCast) : JPanel() {
     private val miniMapSize = 200
     private val offsetX = 10
     private val offsetY = 10
+    private var bufferedImage: BufferedImage? = null
+    private var lastGrid: Array<IntArray>? = null
+
+    init {
+        preferredSize = Dimension(miniMapSize + offsetX * 2, miniMapSize + offsetY * 2)
+        isOpaque = false
+    }
 
     override fun paintComponent(v: Graphics) {
         super.paintComponent(v)
@@ -623,64 +634,81 @@ class Mappingmap(private val renderCast: RenderCast) : JPanel() {
 
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
 
-        val mapWidth = map.grid[0].size
-        val mapHeight = map.grid.size
-        val tileScale = minOf(miniMapSize.toDouble() / mapWidth, miniMapSize.toDouble() / mapHeight)
+        // cache map
+        if (bufferedImage == null || !map.grid.contentDeepEquals(lastGrid)) {
+            bufferedImage = BufferedImage(miniMapSize + offsetX * 2, miniMapSize + offsetY * 2, BufferedImage.TYPE_INT_ARGB)
+            val bufferGraphics = bufferedImage!!.createGraphics()
+            bufferGraphics.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
 
-        for (row in map.grid.indices) {
-            for (col in map.grid[row].indices) {
-                val x = (col * tileScale).toInt()
-                val y = (row * tileScale).toInt()
-                val tileSize = tileScale.toInt() + 1
+            val mapWidth = map.grid[0].size
+            val mapHeight = map.grid.size
+            val tileScale = minOf(miniMapSize.toDouble() / mapWidth, miniMapSize.toDouble() / mapHeight)
 
-                when (map.grid[row][col]) {
-                    1 -> {
-                        g2.color = Color(0, 255, 0)
-                        g2.fillRect(x + offsetX, y + offsetY, tileSize, tileSize)
-                    }
-                    5 -> {
-                        g2.color = Color.YELLOW
-                        g2.fillRect(x + offsetX, y + offsetY, tileSize, tileSize)
+            // draw map
+            for (row in map.grid.indices) {
+                for (col in map.grid[row].indices) {
+                    val x = (col * tileScale).toInt()
+                    val y = (row * tileScale).toInt()
+                    val tileSize = tileScale.toInt() + 1
+
+                    when (map.grid[row][col]) {
+                        1 -> {
+                            bufferGraphics.color = Color(0, 255, 0)
+                            bufferGraphics.fillRect(x + offsetX, y + offsetY, tileSize, tileSize)
+                        }
+                        5 -> {
+                            bufferGraphics.color = Color.YELLOW
+                            bufferGraphics.fillRect(x + offsetX, y + offsetY, tileSize, tileSize)
+                        }
                     }
                 }
             }
+
+            lastGrid = map.grid.map { it.clone() }.toTypedArray()
+            bufferGraphics.dispose()
         }
 
-        // Rysuj punkty ścieżki na minimapie
-        enemies.get(0).path.forEach { node ->
-            val pointX = offsetX + (node.x * tileScale).toInt()
-            val pointY = offsetY + (node.y * tileScale).toInt()
-            g2.color = Color(255, 0 ,0, 144)
-            g2.fillOval(pointX - 3, pointY - 3, 5, 5)
-        }
-        enemies.get(1).path.forEach { node ->
-            val pointX = offsetX + (node.x * tileScale).toInt()
-            val pointY = offsetY + (node.y * tileScale).toInt()
-            g2.color = Color(255, 255 ,0, 144)
-            g2.fillOval(pointX - 3, pointY - 3, 5, 5)
+        g2.drawImage(bufferedImage, 0, 0, null)
+
+        val tileScale = minOf(miniMapSize.toDouble() / map.grid[0].size, miniMapSize.toDouble() / map.grid.size)
+
+        // draw path enemy
+        val enemies = renderCast.getEnemies()
+        if (enemies.size >= 3) {
+            enemies[0].path.forEach { node ->
+                val pointX = offsetX + (node.x * tileScale).toInt()
+                val pointY = offsetY + (node.y * tileScale).toInt()
+                g2.color = Color(255, 0, 0, 144)
+                g2.fillOval(pointX - 3, pointY - 3, 5, 5)
+            }
+            enemies[1].path.forEach { node ->
+                val pointX = offsetX + (node.x * tileScale).toInt()
+                val pointY = offsetY + (node.y * tileScale).toInt()
+                g2.color = Color(255, 255, 0, 144)
+                g2.fillOval(pointX - 3, pointY - 3, 5, 5)
+            }
+            enemies[2].path.forEach { node ->
+                val pointX = offsetX + (node.x * tileScale).toInt()
+                val pointY = offsetY + (node.y * tileScale).toInt()
+                g2.color = Color(255, 0, 255, 144)
+                g2.fillOval(pointX - 3, pointY - 3, 5, 5)
+            }
         }
 
-        (enemies.get(2).path).forEach { node ->
-            val pointX = offsetX + (node.x * tileScale).toInt()
-            val pointY = offsetY + (node.y * tileScale).toInt()
-            g2.color = Color(255, 0 ,255, 144)
-            g2.fillOval(pointX - 3, pointY - 3, 5, 5)
-        }
-
-        // Rysuj przeciwników na minimapie
-        renderCast.getEnemies().forEach { enemy ->
+        // draw enemy
+        enemies.forEach { enemy ->
             val enemyX = offsetX + (enemy.x / tileSize * tileScale).toInt()
             val enemyY = offsetY + (enemy.y / tileSize * tileScale).toInt()
             if (enemy.health > 0) {
                 g2.color = Color.RED
                 g2.fillRect(enemyX - 3, enemyY - 3, 9, 9)
-            } else{
-                g2.color = Color(0, 197 ,197, 200)
+            } else {
+                g2.color = Color(0, 197, 197, 200)
                 g2.fillRect(enemyX - 3, enemyY - 3, 7, 7)
             }
         }
 
-        // Rysuj pozycję gracza na minimapie
+        // draw player
         val playerX = offsetX + (positionX / tileSize * tileScale).toInt()
         val playerY = offsetY + (positionY / tileSize * tileScale).toInt()
         val angleRad = Math.toRadians(currentangle.toDouble())
@@ -695,12 +723,11 @@ class Mappingmap(private val renderCast: RenderCast) : JPanel() {
         g2.fillRect(playerX - 2, playerY - 2, 5, 5)
 
         g2.color = Color.white
-        g2.fillRect(683, 384 , 3, 3)
+        g2.fillRect(683, 384, 3, 3)
 
         g2.color = Color.YELLOW
         g2.font = Font("BOLD", Font.BOLD, 17)
         g2.drawString("FPS: $fps", 1366 - 90, 20)
-        isOpaque = false
     }
 
     override fun getPreferredSize(): Dimension {
