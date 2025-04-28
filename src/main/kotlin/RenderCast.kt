@@ -16,6 +16,8 @@ import kotlin.math.sqrt
 import kotlin.random.Random
 import javax.sound.sampled.AudioSystem
 import javax.sound.sampled.FloatControl
+import kotlin.math.floor
+import kotlin.math.round
 
 class RenderCast : JPanel() {
     private var map = Map()
@@ -78,24 +80,21 @@ class RenderCast : JPanel() {
         }
 
         // Inicjalizacja przeciwników
-        enemies.add(Enemy((tileSize * 6) - (tileSize / 2), (tileSize * 12) - (tileSize / 2), 100, enemyTextureId!!, this, speed = (2.0 * ((10..19).random()/10.0))))
+        enemies.add(Enemy((tileSize * 2) - (tileSize / 2), (tileSize * 6) - (tileSize / 2), 100, enemyTextureId!!, this, speed = (2.0 * ((10..19).random()/10.0))))
         enemies.add(Enemy((tileSize * 16) - (tileSize / 2), (tileSize * 18) - (tileSize / 2), 100, enemyTextureId!!, this, speed = (2.0 * ((10..19).random()/10.0))))
         enemies.add(Enemy((tileSize * 2) - (tileSize / 2), (tileSize * 22) - (tileSize / 2), 100, enemyTextureId!!, this, speed = (2.0 * ((10..19).random()/10.0))))
         println(enemies[0].speed)
         println(enemies[1].speed)
         println(enemies[2].speed)
 
-        lightSources.add(LightSource(x = (enemies[0].x/tileSize), y = enemies[0].y/tileSize, color = Color(255, 20,20), intensity = 0.4, range = 3.0, owner = "${enemies[0]}"))
-        lightSources.add(LightSource(x = (enemies[1].x/tileSize), y = enemies[1].y/tileSize, color = Color(255, 255,20), intensity = 0.4, range = 3.0, owner = "${enemies[1]}"))
-        lightSources.add(LightSource(x = (enemies[2].x/tileSize), y = enemies[2].y/tileSize, color = Color(255, 20,255), intensity = 0.3, range = 2.0, owner = "${enemies[2]}"))
+        lightSources.add(LightSource(x = (enemies[0].x/tileSize), y = enemies[0].y/tileSize, color = Color(20, 255,20), intensity = 0.75, range = 3.0, owner = "${enemies[0]}"))
+        lightSources.add(LightSource(x = (enemies[1].x/tileSize), y = enemies[1].y/tileSize, color = Color(255, 22,20), intensity = 0.75, range = 3.0, owner = "${enemies[1]}"))
+        lightSources.add(LightSource(x = (enemies[2].x/tileSize), y = enemies[2].y/tileSize, color = Color(22, 20,255), intensity = 0.75, range = 3.0, owner = "${enemies[2]}"))
         println(lightSources[0].owner + " " +enemies[0])
         println(lightSources[1].owner + " " +enemies[1])
         println(lightSources[2].owner + " " +enemies[2])
 
-        lightSources.add(LightSource(x = (1/tileSize), y = 1/tileSize, color = Color(200, 200,100), intensity = 0.4, range = 0.15, owner = "nic"))
-        lightSources.add(LightSource(x = (1/tileSize), y = 1/tileSize, color = Color(200, 200,100), intensity = 0.4, range = 0.15, owner = "nic"))
-        lightSources.add(LightSource(x = (1/tileSize), y = 1/tileSize, color = Color(200, 200,100), intensity = 0.4, range = 0.15, owner = "nic"))
-
+        lightSources.add(LightSource(x = (1/tileSize), y = 1/tileSize, color = Color(200, 200,100), intensity = 0.4, range = 0.15, owner = "player"))
 
         buffer = BufferedImage(screenWidth, screenHeight, BufferedImage.TYPE_INT_RGB)
         bufferGraphics = buffer.createGraphics()
@@ -143,15 +142,12 @@ class RenderCast : JPanel() {
         var totalBlue = baseColor.blue.toDouble()
 
         lightSources.forEach { light ->
-            // Oblicz odległość od źródła światła (w jednostkach mapy)
             val dx = worldX - light.x
             val dy = worldY - light.y
             val distance = sqrt(dx * dx + dy * dy)
 
-            if (distance < light.range) {
-                // Model zanikania światła: odwrotność kwadratu odległości
+            if (distance < light.range && isLightVisible(light, worldX, worldY)) {
                 val attenuation = light.intensity * (0.75 / (1.0 + distance * distance))
-                // Skaluj kolor światła
                 totalRed += light.color.red * attenuation
                 totalGreen += light.color.green * attenuation
                 totalBlue += light.color.blue * attenuation
@@ -163,6 +159,196 @@ class RenderCast : JPanel() {
             totalGreen.toInt().coerceIn(0, 255),
             totalBlue.toInt().coerceIn(0, 255)
         )
+    }
+
+    private fun isLightVisible(light: LightSource, targetX: Double, targetY: Double): Boolean {
+        val startX = light.x
+        val startY = light.y
+
+        // Oblicz odległość i kierunek do punktu docelowego
+        val dx = targetX - startX
+        val dy = targetY - startY
+        val distance = sqrt(dx * dx + dy * dy)
+
+        // Jeśli punkt jest poza zasięgiem lub zbyt blisko, zwróć false
+        if (distance > light.range || distance < 0.001) return false
+
+        // Sprawdź, czy punkt jest w tej samej komórce
+        val startMapX = floor(startX).toInt()
+        val startMapY = floor(startY).toInt()
+        val targetMapX = floor(targetX).toInt()
+        val targetMapY = floor(targetY).toInt()
+
+        if (startMapX == targetMapX && startMapY == targetMapY) return true
+        val stepSize = 0.25
+
+        // Sprawdź punkty na granicach (np. x=0.0, x=1.0, y=1.0, y=2.0)
+        val isOnBoundary = abs(targetX - round(targetX)) < 1e-6 || abs(targetY - round(targetY)) < 1e-6
+        if (isOnBoundary) {
+            // Określ możliwe komórki dla punktu na granicy
+            val possibleCells = mutableListOf<Pair<Int, Int>>()
+            if (abs(targetX - round(targetX)) < 1e-6) {
+                val x = round(targetX).toInt()
+                possibleCells.add(Pair(x, targetMapY))
+                possibleCells.add(Pair(x - 1, targetMapY))
+            } else {
+                possibleCells.add(Pair(targetMapX, targetMapY))
+            }
+            if (abs(targetY - round(targetY)) < 1e-6) {
+                val y = round(targetY).toInt()
+                possibleCells.add(Pair(targetMapX, y))
+                possibleCells.add(Pair(targetMapX, y - 1))
+            } else {
+                possibleCells.add(Pair(targetMapX, targetMapY))
+            }
+
+            // Sprawdź, czy punkt jest powierzchnią ściany widoczną z wolnej komórki
+            for ((mapX, mapY) in possibleCells.distinct()) {
+                if (mapX < 0 || mapX >= map.grid[0].size || mapY < 0 || mapY >= map.grid.size) continue
+                // Jeśli komórka jest wolna, sprawdź ścieżkę
+                if (map.grid[mapY][mapX] != 1 && map.grid[mapY][mapX] != 5) {
+                    val stepX = dx / distance
+                    val stepY = dy / distance
+                    val steps = (distance / stepSize).toInt().coerceAtLeast(1)
+
+                    var currentX = startX
+                    var currentY = startY
+
+                    for (i in 1..steps) {
+                        currentX = startX + stepX * stepSize * i
+                        currentY = startY + stepY * stepSize * i
+
+                        val currMapX = if (abs(currentX - round(currentX)) < 1e-6) round(currentX).toInt() else floor(currentX).toInt()
+                        val currMapY = if (abs(currentY - round(currentY)) < 1e-6) round(currentY).toInt() else floor(currentY).toInt()
+
+                        if (currMapX < 0 || currMapX >= map.grid[0].size || currMapY < 0 || currMapY >= map.grid.size) {
+                            return false
+                        }
+
+                        if (map.grid[currMapY][currMapX] == 1 || map.grid[currMapY][currMapX] == 5) {
+                            return false
+                        }
+
+                        if (currMapX == mapX && currMapY == mapY) {
+                            return true
+                        }
+                    }
+                    return abs(currentX - targetX) < stepSize && abs(currentY - targetY) < stepSize
+                }
+                // Jeśli komórka jest ścianą, sprawdź, czy punkt jest jej powierzchnią widoczną
+                if (map.grid[mapY][mapX] == 1 || map.grid[mapY][mapX] == 5) {
+                    // Określ, która powierzchnia ściany została trafiona
+                    val isLeftWall = abs(targetX - mapX) < 1e-6
+                    val isRightWall = abs(targetX - (mapX + 1)) < 1e-6
+                    val isTopWall = abs(targetY - mapY) < 1e-6
+                    val isBottomWall = abs(targetY - (mapY + 1)) < 1e-6
+
+                    // Sprawdź kierunek promienia, aby potwierdzić trafienie w odpowiednią powierzchnię
+                    val hitValid = when {
+                        isLeftWall -> dx > 0 // Promień z prawej strony (np. z (1,1) do x=0.0)
+                        isRightWall -> dx < 0 // Promień z lewej strony (np. z (1,1) do x=1.0)
+                        isTopWall -> dy > 0 // Promień z dołu (np. z (1,1) do y=1.0)
+                        isBottomWall -> dy < 0 // Promień z góry (np. z (1,2) do y=2.0)
+                        else -> false
+                    }
+
+                    if (hitValid) {
+                        // Sprawdź sąsiednie komórki, czy są wolne
+                        val neighbors = listOf(
+                            Pair(mapX + 1, mapY), Pair(mapX - 1, mapY),
+                            Pair(mapX, mapY + 1), Pair(mapX, mapY - 1)
+                        )
+                        for ((nX, nY) in neighbors) {
+                            if (nX < 0 || nX >= map.grid[0].size || nY < 0 || nY >= map.grid.size) continue
+                            if (map.grid[nY][nX] != 1 && map.grid[nY][nX] != 5) {
+                                // Sprawdź, czy sąsiednia komórka odpowiada kierunkowi promienia
+                                val neighborValid = when {
+                                    isLeftWall -> nX == mapX + 1 // Wolna komórka po prawej
+                                    isRightWall -> nX == mapX - 1 // Wolna komórka po lewej
+                                    isTopWall -> nY == mapY + 1 // Wolna komórka poniżej
+                                    isBottomWall -> nY == mapY - 1 // Wolna komórka powyżej
+                                    else -> false
+                                }
+                                if (neighborValid) {
+                                    // Sprawdź ścieżkę do punktu na powierzchni ściany
+                                    val stepX = dx / distance
+                                    val stepY = dy / distance
+                                    val steps = (distance / stepSize).toInt().coerceAtLeast(1)
+
+                                    var currentX = startX
+                                    var currentY = startY
+
+                                    for (i in 1..steps) {
+                                        currentX = startX + stepX * stepSize * i
+                                        currentY = startY + stepY * stepSize * i
+
+                                        val currMapX = if (abs(currentX - round(currentX)) < 1e-6) round(currentX).toInt() else floor(currentX).toInt()
+                                        val currMapY = if (abs(currentY - round(currentY)) < 1e-6) round(currentY).toInt() else floor(currentY).toInt()
+
+                                        if (currMapX < 0 || currMapX >= map.grid[0].size || currMapY < 0 || currMapY >= map.grid.size) {
+                                            return false
+                                        }
+
+                                        if (map.grid[currMapY][currMapX] == 1 || map.grid[currMapY][currMapX] == 5) {
+                                            return false
+                                        }
+
+                                        if (abs(currentX - targetX) < 1e-6 && abs(currentY - targetY) < 1e-6) {
+                                            return true
+                                        }
+                                    }
+                                    return abs(currentX - targetX) < stepSize && abs(currentY - targetY) < stepSize
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            return false // Punkt nie jest widoczny
+        }
+
+        // Normalizuj kierunek
+        val stepX = dx / distance
+        val stepY = dy / distance
+
+        // Użyj małego kroku dla precyzji
+        val steps = (distance / stepSize).toInt().coerceAtLeast(1)
+
+        // Iteruj wzdłuż linii
+        var currentX = startX
+        var currentY = startY
+
+        for (i in 1..steps) {
+            // Oblicz aktualną pozycję
+            currentX = startX + stepX * stepSize * i
+            currentY = startY + stepY * stepSize * i
+
+            // Pobierz komórkę mapy z dokładnym przypisaniem granic
+            val mapX = if (abs(currentX - round(currentX)) < 1e-6) round(currentX).toInt() else floor(currentX).toInt()
+            val mapY = if (abs(currentY - round(currentY)) < 1e-6) round(currentY).toInt() else floor(currentY).toInt()
+
+            // Sprawdź granice mapy
+            if (mapX < 0 || mapX >= map.grid[0].size || mapY < 0 || mapY >= map.grid.size) {
+                return false
+            }
+
+            // Sprawdź, czy napotkano ścianę
+            if (map.grid[mapY][mapX] == 1 || map.grid[mapY][mapX] == 5) {
+                return false
+            }
+
+            // Jeśli dotarliśmy do komórki docelowej
+            if (mapX == targetMapX && mapY == targetMapY) {
+                return true
+            }
+        }
+
+        // Jeśli jesteśmy blisko celu, sprawdź komórkę
+        if (abs(currentX - targetX) < stepSize && abs(currentY - targetY) < stepSize) {
+            return map.grid[targetMapY][targetMapX] != 1 && map.grid[targetMapY][targetMapX] != 5
+        }
+
+        return false
     }
 
     private fun renderWallsToBuffer() {
