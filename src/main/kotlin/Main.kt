@@ -433,10 +433,9 @@ fun main() = runBlocking {
     )
 
     frame.isVisible = true
-
     val map = Map()
     val renderCast = RenderCast(map)
-    val player = Player(renderCast, map)
+    val player = Player(renderCast = renderCast, map)
 
     val layeredPane = JLayeredPane()
     layeredPane.setSize(1366, 768)
@@ -547,35 +546,130 @@ fun main() = runBlocking {
 class Map {
     var grid: Array<IntArray> = arrayOf(
         intArrayOf(5,5,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1),
-        intArrayOf(5,0,1,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,1),
-        intArrayOf(1,0,1,0,1,0,1,1,1,0,1,0,1,0,1,0,1,1,1,0,1,1,1,0,1,1,1,1,1),
+        intArrayOf(5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1),
+        intArrayOf(1,0,1,0,1,0,1,1,1,0,1,0,1,0,1,0,1,1,1,0,1,1,1,0,1,1,1,0,1),
         intArrayOf(1,0,1,0,1,0,0,0,1,0,1,0,1,0,0,0,1,0,1,0,1,0,0,0,1,0,0,0,1),
         intArrayOf(1,0,1,1,1,0,1,0,1,0,1,0,1,1,1,1,1,0,1,1,1,1,1,0,1,1,1,0,1),
         intArrayOf(1,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,1,0,0,0,0,0,0,0,1),
-        intArrayOf(1,0,1,1,1,1,1,0,1,1,1,1,1,0,1,1,1,0,1,0,1,1,1,1,1,1,1,0,1),
+        intArrayOf(1,0,1,1,1,1,1,0,1,1,1,1,1,0,1,1,1,0,1,0,1,1,1,1,1,1,1,0,5),
         intArrayOf(1,0,0,0,0,0,1,0,1,0,0,0,0,0,0,0,0,0,1,0,1,0,0,0,0,0,1,0,1),
-        intArrayOf(1,0,1,0,1,0,1,0,1,1,1,0,1,0,1,1,1,1,1,0,1,0,1,1,1,1,1,1,1),
+        intArrayOf(1,0,1,0,1,0,1,0,1,1,1,0,1,0,1,1,1,1,1,0,1,0,1,1,1,1,1,0,5),
         intArrayOf(1,0,1,0,1,0,0,0,0,0,1,0,1,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0,1),
-        intArrayOf(1,0,1,1,1,1,1,1,1,1,1,0,1,1,1,0,1,1,1,0,1,0,1,1,1,1,1,0,1),
+        intArrayOf(1,0,1,1,1,1,1,1,1,1,1,0,1,1,1,0,1,1,1,0,1,0,1,1,1,1,1,0,5),
         intArrayOf(1,0,0,0,1,0,0,0,0,0,0,0,0,0,1,0,0,0,1,0,1,0,1,0,1,0,0,0,1),
-        intArrayOf(1,1,1,0,1,1,1,1,1,0,1,1,1,0,1,0,1,0,1,1,1,0,1,0,1,1,1,0,1),
+        intArrayOf(1,1,1,0,1,1,1,1,1,0,1,1,1,0,1,0,1,0,1,1,1,0,1,0,1,1,1,0,5),
         intArrayOf(1,0,0,0,1,0,1,0,1,0,0,0,1,0,1,0,1,0,0,0,0,0,1,0,1,0,1,0,1),
-        intArrayOf(1,0,1,0,1,0,1,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,1,0,1,0,1),
+        intArrayOf(1,0,1,0,1,0,1,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,1,0,1,0,5),
         intArrayOf(1,0,1,0,1,0,1,0,0,0,0,0,0,0,1,0,0,0,1,0,1,0,0,0,0,0,0,0,1),
-        intArrayOf(1,0,1,1,1,0,1,1,1,1,1,1,1,0,1,1,1,0,1,0,1,0,1,0,1,1,1,0,1),
+        intArrayOf(1,0,1,1,1,0,1,1,1,1,1,1,1,0,1,1,1,0,1,0,1,0,1,0,1,1,1,0,5),
         intArrayOf(1,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,1,0,1,0,0,0,1),
-        intArrayOf(1,0,1,1,1,1,1,1,1,1,1,0,1,0,1,0,1,1,1,1,1,1,1,1,1,0,1,0,1),
+        intArrayOf(1,0,1,1,1,1,1,1,1,1,1,0,1,0,1,0,1,1,1,1,1,1,1,1,1,0,1,0,5),
         intArrayOf(1,0,0,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,0,0,0,0,1,0,1,0,1),
-        intArrayOf(1,0,1,0,1,0,1,0,1,0,1,1,1,0,1,1,1,0,1,0,1,0,1,0,1,1,1,0,1),
+        intArrayOf(1,0,1,0,1,0,1,0,1,0,1,1,1,0,1,1,1,0,1,0,1,0,1,0,1,1,1,0,5),
         intArrayOf(1,0,1,0,0,0,1,0,1,0,0,0,1,0,0,0,1,0,1,0,1,0,1,0,1,0,0,0,1),
-        intArrayOf(1,0,1,1,1,1,1,0,1,0,1,1,1,0,1,1,1,0,1,1,1,1,1,0,1,1,1,0,1),
+        intArrayOf(1,0,1,1,1,1,1,0,1,0,1,1,1,0,1,1,1,0,1,1,1,1,1,0,1,1,1,0,5),
         intArrayOf(1,0,0,0,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,0,0,1),
-        intArrayOf(1,0,1,1,1,1,1,1,1,0,1,1,1,0,1,1,1,0,1,1,1,0,1,1,1,0,1,0,1),
+        intArrayOf(1,0,1,1,1,1,1,1,1,0,1,1,1,0,1,1,1,0,1,1,1,0,1,1,1,0,1,0,5),
         intArrayOf(1,0,1,0,0,0,0,0,1,0,1,0,1,0,1,0,1,0,0,0,0,0,0,0,1,0,1,0,1),
-        intArrayOf(1,1,1,1,1,1,1,0,1,0,1,0,1,0,1,0,1,1,1,0,1,1,1,0,1,0,1,1,1),
+        intArrayOf(1,1,1,1,1,1,1,0,1,0,1,0,1,0,1,0,1,1,1,0,1,1,1,0,1,0,1,1,5),
         intArrayOf(1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,1,0,0,0,5),
         intArrayOf(1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,5,5)
     )
+
+    // Data classes and enum for room generation
+    data class GridPoint(val x: Int, val y: Int)
+    data class RoomTemplate(val grid: Array<IntArray>, val entrances: List<GridPoint>)
+    enum class Direction { UP, DOWN, LEFT, RIGHT }
+
+    // Room templates
+    private val templates = listOf(
+        // Template 1: Small 5x5 room, entrances: top, right
+        RoomTemplate(
+            grid = arrayOf(
+                intArrayOf(1, 1, 0, 1, 1),
+                intArrayOf(1, 0, 0, 0, 1),
+                intArrayOf(1, 0, 0, 0, 1),
+                intArrayOf(1, 0, 0, 0, 1),
+                intArrayOf(1, 1, 1, 1, 1)
+            ),
+            entrances = listOf(GridPoint(2, -1))
+        ),
+        RoomTemplate(
+            grid = arrayOf(
+                intArrayOf(1, 1, 1, 1, 1),
+                intArrayOf(1, 0, 0, 0, 1),
+                intArrayOf(1, 0, 0, 0, 1),
+                intArrayOf(1, 0, 0, 0, 1),
+                intArrayOf(1, 1, 0, 1, 1)
+            ),
+            entrances = listOf(GridPoint(2, 5))
+        ),
+        RoomTemplate(
+            grid = arrayOf(
+                intArrayOf(1, 1, 1, 1, 1),
+                intArrayOf(1, 0, 0, 0, 1),
+                intArrayOf(1, 0, 0, 0, 0),
+                intArrayOf(1, 0, 0, 0, 1),
+                intArrayOf(1, 1, 1, 1, 1)
+            ),
+            entrances = listOf(GridPoint(2, 5))
+        ),
+        RoomTemplate(
+            grid = arrayOf(
+                intArrayOf(1, 1, 1, 1, 1),
+                intArrayOf(1, 0, 0, 0, 1),
+                intArrayOf(0, 0, 0, 0, 1),
+                intArrayOf(1, 0, 0, 0, 1),
+                intArrayOf(1, 1, 1, 1, 1)
+            ),
+            entrances = listOf(GridPoint(-1, 2))
+        ),
+
+        // Template 2: Medium 7x7 room, entrances: left, right, bottom
+        RoomTemplate(
+            grid = arrayOf(
+                intArrayOf(1, 1, 1, 5, 1, 1, 1),
+                intArrayOf(1, 0, 0, 0, 0, 0, 1),
+                intArrayOf(1, 0, 0, 0, 0, 0, 1),
+                intArrayOf(0, 0, 0, 0, 0, 0, 5),
+                intArrayOf(1, 0, 0, 0, 0, 0, 1),
+                intArrayOf(1, 0, 0, 0, 0, 0, 1),
+                intArrayOf(1, 1, 1, 5, 1, 1, 1)
+            ),
+            entrances = listOf(GridPoint(-1, 3))
+        ),
+        // Template 3: Large 9x9 room, entrances: top, bottom
+        RoomTemplate(
+            grid = arrayOf(
+                intArrayOf(1, 1, 1, 1, 0, 1, 1, 1, 1),
+                intArrayOf(1, 0, 0, 0, 0, 0, 0, 0, 1),
+                intArrayOf(1, 0, 0, 0, 0, 0, 0, 0, 1),
+                intArrayOf(1, 0, 0, 0, 0, 0, 0, 0, 1),
+                intArrayOf(5, 0, 0, 0, 0, 0, 0, 0, 5),
+                intArrayOf(1, 0, 0, 0, 0, 0, 0, 0, 1),
+                intArrayOf(1, 0, 0, 0, 0, 0, 0, 0, 1),
+                intArrayOf(1, 0, 0, 0, 0, 0, 0, 0, 1),
+                intArrayOf(1, 1, 1, 1, 1, 1, 1, 1, 1)
+            ),
+            entrances = listOf(GridPoint(4, -1))
+        ),
+        // Template 4: Rectangular 6x8 room, entrances: left, top
+        RoomTemplate(
+            grid = arrayOf(
+                intArrayOf(1, 1, 1, 1, 1, 1, 5, 1),
+                intArrayOf(1, 0, 0, 0, 0, 0, 0, 1),
+                intArrayOf(0, 0, 0, 0, 0, 0, 0, 1),
+                intArrayOf(1, 0, 0, 0, 0, 0, 0, 1),
+                intArrayOf(1, 0, 0, 0, 0, 0, 0, 5),
+                intArrayOf(1, 1, 1, 5, 1, 1, 1, 1)
+            ),
+            entrances = listOf(GridPoint(-1, 2))
+        )
+    )
+
+    // Track room connections and last entrance
+    private val roomConnections = mutableListOf<Pair<GridPoint, GridPoint>>()
+    private var lastEntrance: GridPoint? = null
 
     private var wallDistances: Array<Array<Double>>? = null
 
@@ -612,8 +706,178 @@ class Map {
     }
 
     fun updateWallDistances() {
-        wallDistances = null // Zresetuj cache po zmianie grid
+        wallDistances = null
     }
+
+    fun expandGridIfNeeded(offsetX: Int, offsetY: Int, roomWidth: Int, roomHeight: Int) {
+        val currentHeight = grid.size
+        val currentWidth = grid[0].size
+
+        val minX = minOf(0, offsetX)
+        val maxX = maxOf(currentWidth, offsetX + roomWidth)
+        val minY = minOf(0, offsetY)
+        val maxY = maxOf(currentHeight, offsetY + roomHeight)
+
+        val newWidth = maxX - minX
+        val newHeight = maxY - minY
+        val offsetXInNewGrid = -minX
+        val offsetYInNewGrid = -minY
+
+        val newGrid = Array(newHeight) { IntArray(newWidth) { 1 } }
+
+        for (y in 0 until currentHeight) {
+            for (x in 0 until currentWidth) {
+                newGrid[y + offsetYInNewGrid][x + offsetXInNewGrid] = grid[y][x]
+            }
+        }
+
+        grid = newGrid
+        updateWallDistances()
+    }
+
+    private fun checkOverlap(
+        offsetX: Int,
+        offsetY: Int,
+        template: RoomTemplate,
+        triggerPoint: GridPoint,
+        connectionPoint: GridPoint
+    ): Boolean {
+        val roomWidth = template.grid[0].size
+        val roomHeight = template.grid.size
+
+        for (y in 0 until roomHeight) {
+            for (x in 0 until roomWidth) {
+                val mapX = offsetX + x
+                val mapY = offsetY + y
+                if (mapY in grid.indices && mapX in grid[0].indices) {
+                    if (template.grid[y][x] == 1) continue // Walls can overlap
+                    if (mapX == triggerPoint.x && mapY == triggerPoint.y) continue
+                    if (mapX == connectionPoint.x && mapY == connectionPoint.y) continue
+                    if (grid[mapY][mapX] != 1) {
+                        return false
+                    }
+                }
+            }
+        }
+        return true
+    }
+
+    fun generateRoom(triggerPoint: GridPoint, entryDirection: Direction): GridPoint? {
+        val connectionPoint = when (entryDirection) {
+            Direction.UP -> GridPoint(triggerPoint.x, triggerPoint.y - 1)
+            Direction.DOWN -> GridPoint(triggerPoint.x, triggerPoint.y + 1)
+            Direction.LEFT -> GridPoint(triggerPoint.x - 1, triggerPoint.y)
+            Direction.RIGHT -> GridPoint(triggerPoint.x + 1, triggerPoint.y)
+        }
+
+        // Prefer entrances that align with the entry direction
+        val preferredEntrances = when (entryDirection) {
+            Direction.UP -> { entrance: GridPoint -> entrance.y == templates[0].grid.size - 1 } // Bottom entrance
+            Direction.DOWN -> { entrance: GridPoint -> entrance.y == 0 } // Top entrance
+            Direction.LEFT -> { entrance: GridPoint -> entrance.x == templates[0].grid[0].size - 1 } // Right entrance
+            Direction.RIGHT -> { entrance: GridPoint -> entrance.x == 0 } // Left entrance
+        }
+
+        val shuffledTemplates = templates.shuffled()
+        var selectedTemplate: RoomTemplate? = null
+        var alignedEntrance: GridPoint? = null
+        var offsetX = 1
+        var offsetY = 0
+
+        // First pass: try preferred entrances
+        for (template in shuffledTemplates) {
+            val validEntrances = template.entrances.filter(preferredEntrances).shuffled()
+            for (entrance in validEntrances) {
+                offsetX = connectionPoint.x - entrance.x
+                offsetY = connectionPoint.y - entrance.y
+                if (checkOverlap(offsetX, offsetY, template, triggerPoint, connectionPoint)) {
+                    selectedTemplate = template
+                    alignedEntrance = entrance
+                    break
+                }
+            }
+            if (selectedTemplate != null) break
+        }
+
+        // Second pass: try any entrance if no preferred ones work
+        if (selectedTemplate == null) {
+            for (template in shuffledTemplates) {
+                val shuffledEntrances = template.entrances.shuffled()
+                for (entrance in shuffledEntrances) {
+                    offsetX = connectionPoint.x - entrance.x
+                    offsetY = connectionPoint.y - entrance.y
+                    if (checkOverlap(offsetX, offsetY, template, triggerPoint, connectionPoint)) {
+                        selectedTemplate = template
+                        alignedEntrance = entrance
+                        break
+                    }
+                }
+                if (selectedTemplate != null) break
+            }
+        }
+
+        // Fallback: Try adjusting position slightly
+        if (selectedTemplate == null) {
+            for (template in shuffledTemplates) {
+                val entrance = template.entrances.random()
+                val offsets = listOf(
+                    Pair(0, 0), Pair(1, 0), Pair(-1, 0), Pair(0, 1), Pair(0, -1)
+                ).shuffled()
+                for ((dx, dy) in offsets) {
+                    offsetX = connectionPoint.x - entrance.x + dx
+                    offsetY = connectionPoint.y - entrance.y + dy
+                    if (checkOverlap(offsetX, offsetY, template, triggerPoint, connectionPoint)) {
+                        selectedTemplate = template
+                        alignedEntrance = entrance
+                        break
+                    }
+                }
+                if (selectedTemplate != null) break
+            }
+        }
+
+        if (selectedTemplate == null || alignedEntrance == null) {
+            return null
+        }
+
+        val roomWidth = selectedTemplate.grid[0].size
+        val roomHeight = selectedTemplate.grid.size
+
+        expandGridIfNeeded(offsetX, offsetY, roomWidth, roomHeight)
+
+        for (y in 0 until roomHeight) {
+            for (x in 0 until roomWidth) {
+                val mapX = offsetX + x
+                val mapY = offsetY + y
+                if (mapY in grid.indices && mapX in grid[0].indices) {
+                    grid[mapY][mapX] = selectedTemplate.grid[y][x]
+                }
+            }
+        }
+
+        grid[triggerPoint.y][triggerPoint.x] = 0
+
+        lastEntrance?.let {
+            if (it.y in grid.indices && it.x in grid[0].indices) {
+                grid[it.y][it.x] = 0
+            }
+        }
+
+        val newEntrances = selectedTemplate.entrances.filter { it != alignedEntrance }
+        val newEntrance = newEntrances.randomOrNull()
+        if (newEntrance != null) {
+            val newEntrancePoint = GridPoint(offsetX + newEntrance.x, offsetY + newEntrance.y)
+            grid[newEntrancePoint.y][newEntrancePoint.x] = 5
+            lastEntrance = newEntrancePoint
+            roomConnections.add(Pair(triggerPoint, newEntrancePoint))
+            updateWallDistances()
+            return newEntrancePoint
+        }
+
+        updateWallDistances()
+        return null
+    }
+
 }
 
 class Mappingmap(private val map: Map, private val renderCast: RenderCast) : JPanel() {

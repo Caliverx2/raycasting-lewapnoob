@@ -14,6 +14,9 @@ class Player(private val renderCast: RenderCast, private val map: Map) {
     private val sensitivity = 0.07
     var playerHealth = 100
 
+    private var lastGridX = (positionX / tileSize).toInt()
+    private var lastGridY = (positionY / tileSize).toInt()
+
     private fun canMoveTo(x: Double, y: Double, deltaX: Double, deltaY: Double): Pair<Boolean, Enemy?> {
         val left = x - playerSize / 2
         val right = x + playerSize / 2
@@ -164,6 +167,28 @@ class Player(private val renderCast: RenderCast, private val map: Map) {
             movementSpeed = 2.5
         } else {
             movementSpeed = 1.5
+        }
+
+        val gridX = (positionX / tileSize).toInt()
+        val gridY = (positionY / tileSize).toInt()
+        if (gridX != lastGridX || gridY != lastGridY) {
+            if (gridY in map.grid.indices && gridX in map.grid[0].indices && map.grid[gridY][gridX] == 5) {
+                val direction = when {
+                    gridX > lastGridX -> Map.Direction.LEFT
+                    gridX < lastGridX -> Map.Direction.RIGHT
+                    gridY > lastGridY -> Map.Direction.UP
+                    else -> Map.Direction.DOWN
+                    /*
+                    gridX > lastGridX -> Map.Direction.LEFT
+                    gridX < lastGridX -> Map.Direction.RIGHT
+                    gridY > lastGridY -> Map.Direction.UP
+                    else -> Map.Direction.DOWN
+                    */
+                }
+                map.generateRoom(Map.GridPoint(gridX, gridY), direction)
+            }
+            lastGridX = gridX
+            lastGridY = gridY
         }
     }
 }

@@ -207,10 +207,11 @@ class RenderCast(private val map: Map) : JPanel() {
                 lightSources[3].x = newX
                 lightSources[3].y = newY
             } else {
+                /*
                 if (mapY in map.grid.indices && mapX in map.grid[0].indices && map.grid[mapY][mapX] == 1) {
                     map.grid[mapY][mapX] = 0
                     map.updateWallDistances() // Odśwież cache odległości
-                }
+                } */
                 lightSources[3].intensity = 0.0
                 isLightMoving = false
             }
