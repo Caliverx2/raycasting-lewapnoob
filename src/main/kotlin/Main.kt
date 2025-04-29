@@ -23,6 +23,7 @@ import java.awt.event.MouseMotionAdapter
 import java.awt.event.ComponentAdapter
 import java.awt.event.ComponentEvent
 import java.awt.image.BufferedImage
+import javax.imageio.ImageIO
 import javax.swing.JLayeredPane
 import kotlin.math.*
 
@@ -434,8 +435,13 @@ fun main() = runBlocking {
 
     frame.isVisible = true
     val map = Map()
+
+    // Następnie tworzysz RenderCast i przypisujesz go do mapy
     val renderCast = RenderCast(map)
-    val player = Player(renderCast = renderCast, map)
+    map.renderCast = renderCast
+
+    // Tworzysz gracza z poprawnymi zależnościami
+    val player = Player(renderCast, map)
 
     val layeredPane = JLayeredPane()
     layeredPane.setSize(1366, 768)
@@ -543,7 +549,7 @@ fun main() = runBlocking {
     }
 }
 
-class Map {
+class Map(var renderCast: RenderCast? = null) {
     var grid: Array<IntArray> = arrayOf(
         intArrayOf(5,5,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1),
         intArrayOf(5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1),
@@ -577,6 +583,7 @@ class Map {
     )
 
     // Data classes and enum for room generation
+    var enemyTextureId: BufferedImage? = ImageIO.read(this::class.java.classLoader.getResource("textures/boguch.jpg"))
     data class GridPoint(val x: Int, val y: Int)
     data class RoomTemplate(val grid: Array<IntArray>, val entrances: List<GridPoint>)
     enum class Direction { UP, DOWN, LEFT, RIGHT }
@@ -588,7 +595,7 @@ class Map {
             grid = arrayOf(
                 intArrayOf(1, 1, 0, 1, 1),
                 intArrayOf(1, 0, 0, 0, 1),
-                intArrayOf(1, 0, 0, 0, 1),
+                intArrayOf(1, 0, 6, 0, 1),
                 intArrayOf(1, 0, 0, 0, 1),
                 intArrayOf(1, 1, 1, 1, 1)
             ),
@@ -598,7 +605,7 @@ class Map {
             grid = arrayOf(
                 intArrayOf(1, 1, 1, 1, 1),
                 intArrayOf(1, 0, 0, 0, 1),
-                intArrayOf(1, 0, 0, 0, 1),
+                intArrayOf(1, 0, 3, 0, 1),
                 intArrayOf(1, 0, 0, 0, 1),
                 intArrayOf(1, 1, 0, 1, 1)
             ),
@@ -608,7 +615,7 @@ class Map {
             grid = arrayOf(
                 intArrayOf(1, 1, 1, 1, 1),
                 intArrayOf(1, 0, 0, 0, 1),
-                intArrayOf(1, 0, 0, 0, 0),
+                intArrayOf(1, 0, 6, 0, 0),
                 intArrayOf(1, 0, 0, 0, 1),
                 intArrayOf(1, 1, 1, 1, 1)
             ),
@@ -618,11 +625,11 @@ class Map {
             grid = arrayOf(
                 intArrayOf(1, 1, 1, 1, 1),
                 intArrayOf(1, 0, 0, 0, 1),
-                intArrayOf(0, 0, 0, 0, 1),
+                intArrayOf(0, 0, 3, 0, 1),
                 intArrayOf(1, 0, 0, 0, 1),
                 intArrayOf(1, 1, 1, 1, 1)
             ),
-            entrances = listOf(GridPoint(-1, 2))
+            entrances = listOf(GridPoint(-2, 2))
         ),
 
         // Template 2: Medium 7x7 room, entrances: left, right, bottom
@@ -630,14 +637,51 @@ class Map {
             grid = arrayOf(
                 intArrayOf(1, 1, 1, 5, 1, 1, 1),
                 intArrayOf(1, 0, 0, 0, 0, 0, 1),
-                intArrayOf(1, 0, 0, 0, 0, 0, 1),
+                intArrayOf(1, 0, 0, 0, 3, 0, 1),
                 intArrayOf(0, 0, 0, 0, 0, 0, 5),
                 intArrayOf(1, 0, 0, 0, 0, 0, 1),
-                intArrayOf(1, 0, 0, 0, 0, 0, 1),
+                intArrayOf(1, 0, 3, 0, 0, 0, 1),
                 intArrayOf(1, 1, 1, 5, 1, 1, 1)
             ),
             entrances = listOf(GridPoint(-1, 3))
         ),
+        RoomTemplate(
+            grid = arrayOf(
+                intArrayOf(1, 1, 1, 5, 1, 1, 1),
+                intArrayOf(1, 0, 0, 0, 0, 0, 1),
+                intArrayOf(1, 0, 0, 0, 3, 0, 1),
+                intArrayOf(5, 0, 0, 0, 0, 0, 0),
+                intArrayOf(1, 0, 0, 0, 0, 0, 1),
+                intArrayOf(1, 0, 3, 0, 0, 0, 1),
+                intArrayOf(1, 1, 1, 5, 1, 1, 1)
+            ),
+            entrances = listOf(GridPoint(7, 3))
+        ),
+        RoomTemplate(
+            grid = arrayOf(
+                intArrayOf(1, 1, 1, 0, 1, 1, 1),
+                intArrayOf(1, 0, 0, 0, 0, 0, 1),
+                intArrayOf(1, 0, 3, 0, 0, 0, 1),
+                intArrayOf(5, 0, 0, 0, 0, 0, 5),
+                intArrayOf(1, 0, 0, 0, 0, 0, 1),
+                intArrayOf(1, 0, 0, 0, 3, 0, 1),
+                intArrayOf(1, 1, 1, 5, 1, 1, 1)
+            ),
+            entrances = listOf(GridPoint(3, -1))
+        ),
+        RoomTemplate(
+            grid = arrayOf(
+                intArrayOf(1, 1, 1, 5, 1, 1, 1),
+                intArrayOf(1, 0, 0, 0, 0, 0, 1),
+                intArrayOf(1, 0, 3, 0, 0, 0, 1),
+                intArrayOf(5, 0, 0, 0, 0, 0, 5),
+                intArrayOf(1, 0, 0, 0, 0, 0, 1),
+                intArrayOf(1, 0, 0, 0, 3, 0, 1),
+                intArrayOf(1, 1, 1, 0, 1, 1, 1)
+            ),
+            entrances = listOf(GridPoint(3, 7))
+        ),
+
         // Template 3: Large 9x9 room, entrances: top, bottom
         RoomTemplate(
             grid = arrayOf(
@@ -653,6 +697,49 @@ class Map {
             ),
             entrances = listOf(GridPoint(4, -1))
         ),
+        RoomTemplate(
+            grid = arrayOf(
+                intArrayOf(1, 1, 1, 1, 1, 1, 1, 1, 1),
+                intArrayOf(1, 0, 0, 0, 0, 0, 0, 0, 1),
+                intArrayOf(1, 0, 0, 0, 0, 0, 0, 0, 1),
+                intArrayOf(1, 0, 0, 0, 0, 0, 0, 0, 1),
+                intArrayOf(5, 0, 0, 0, 0, 0, 0, 0, 5),
+                intArrayOf(1, 0, 0, 0, 0, 0, 0, 0, 1),
+                intArrayOf(1, 0, 0, 0, 0, 0, 0, 0, 1),
+                intArrayOf(1, 0, 0, 0, 0, 0, 0, 0, 1),
+                intArrayOf(1, 1, 1, 1, 0, 1, 1, 1, 1)
+            ),
+            entrances = listOf(GridPoint(4, 9))
+        ),
+        RoomTemplate(
+            grid = arrayOf(
+                intArrayOf(1, 1, 1, 1, 5, 1, 1, 1, 1),
+                intArrayOf(1, 0, 0, 0, 0, 0, 0, 0, 1),
+                intArrayOf(1, 0, 0, 0, 0, 0, 0, 0, 1),
+                intArrayOf(1, 0, 0, 0, 0, 0, 0, 0, 1),
+                intArrayOf(0, 0, 0, 0, 0, 0, 0, 0, 1),
+                intArrayOf(1, 0, 0, 0, 0, 0, 0, 0, 1),
+                intArrayOf(1, 0, 0, 0, 0, 0, 0, 0, 1),
+                intArrayOf(1, 0, 0, 0, 0, 0, 0, 0, 1),
+                intArrayOf(1, 1, 1, 1, 5, 1, 1, 1, 1)
+            ),
+            entrances = listOf(GridPoint(-1, 4))
+        ),
+        RoomTemplate(
+            grid = arrayOf(
+                intArrayOf(1, 1, 1, 1, 5, 1, 1, 1, 1),
+                intArrayOf(1, 0, 0, 0, 0, 0, 0, 0, 1),
+                intArrayOf(1, 0, 0, 0, 0, 0, 0, 0, 1),
+                intArrayOf(1, 0, 0, 0, 0, 0, 0, 0, 1),
+                intArrayOf(1, 0, 0, 0, 0, 0, 0, 0, 0),
+                intArrayOf(1, 0, 0, 0, 0, 0, 0, 0, 1),
+                intArrayOf(1, 0, 0, 0, 0, 0, 0, 0, 1),
+                intArrayOf(1, 0, 0, 0, 0, 0, 0, 0, 1),
+                intArrayOf(1, 1, 1, 1, 5, 1, 1, 1, 1)
+            ),
+            entrances = listOf(GridPoint(9, 4))
+        ),
+
         // Template 4: Rectangular 6x8 room, entrances: left, top
         RoomTemplate(
             grid = arrayOf(
@@ -664,6 +751,43 @@ class Map {
                 intArrayOf(1, 1, 1, 5, 1, 1, 1, 1)
             ),
             entrances = listOf(GridPoint(-1, 2))
+        ),
+        RoomTemplate(
+            grid = arrayOf(
+                intArrayOf(1, 5, 1, 1, 1, 1, 1, 1),
+                intArrayOf(1, 0, 0, 0, 0, 0, 0, 1),
+                intArrayOf(1, 0, 0, 0, 0, 0, 0, 0),
+                intArrayOf(1, 0, 0, 0, 0, 0, 0, 1),
+                intArrayOf(5, 0, 0, 0, 0, 0, 0, 1),
+                intArrayOf(1, 1, 1, 1, 5, 1, 1, 1)
+            ),
+            entrances = listOf(GridPoint(8, 2))
+        ),
+        RoomTemplate(
+            grid = arrayOf(
+                intArrayOf(1, 1, 0, 1, 1, 1),
+                intArrayOf(1, 0, 0, 0, 0, 1),
+                intArrayOf(1, 0, 0, 0, 0, 1),
+                intArrayOf(1, 0, 0, 0, 0, 5),
+                intArrayOf(1, 0, 0, 0, 0, 1),
+                intArrayOf(1, 0, 0, 0, 0, 1),
+                intArrayOf(5, 0, 0, 0, 0, 1),
+                intArrayOf(1, 1, 1, 1, 5, 1)
+            ),
+            entrances = listOf(GridPoint(2, -1))
+        ),
+        RoomTemplate(
+            grid = arrayOf(
+                intArrayOf(1, 5, 1, 1, 1, 1),
+                intArrayOf(1, 0, 0, 0, 0, 5),
+                intArrayOf(1, 0, 0, 0, 0, 1),
+                intArrayOf(0, 0, 0, 0, 0, 1),
+                intArrayOf(5, 0, 0, 0, 0, 1),
+                intArrayOf(1, 0, 0, 0, 0, 1),
+                intArrayOf(0, 0, 0, 0, 0, 1),
+                intArrayOf(1, 1, 1, 0, 1, 1)
+            ),
+            entrances = listOf(GridPoint(3, 8))
         )
     )
 
@@ -750,6 +874,17 @@ class Map {
                 val mapX = offsetX + x
                 val mapY = offsetY + y
                 if (mapY in grid.indices && mapX in grid[0].indices) {
+                    if (template.grid[y][x] == 3) {
+                        renderCast?.let {
+                            enemies.add(Enemy((tileSize * mapX) - (tileSize / 2), (tileSize * mapY) - (tileSize / 2), 100, enemyTextureId!!, renderCast = it, this, speed = (2.0 * ((10..19).random() / 10.0))))
+                        }?: throw IllegalStateException("skip it")
+                    }
+                    if (template.grid[y][x] == 6) {
+                        renderCast?.let {
+                            lightSources.add(LightSource((tileSize * x) - (tileSize / 2), (tileSize * y) - (tileSize / 2), color = Color(200, 200, 100), intensity = 0.4, range = 5.0, owner = "grid"))
+                        }
+                    }
+
                     if (template.grid[y][x] == 1) continue // Walls can overlap
                     if (mapX == triggerPoint.x && mapY == triggerPoint.y) continue
                     if (mapX == connectionPoint.x && mapY == connectionPoint.y) continue
