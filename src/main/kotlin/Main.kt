@@ -590,13 +590,13 @@ class Map(var renderCast: RenderCast? = null) {
         // Template 1: Small 5x5 room, entrances: top, right
         RoomTemplate(
             grid = arrayOf(
-                intArrayOf(1, 1, 0, 1, 1),
-                intArrayOf(1, 0, 0, 0, 1),
-                intArrayOf(1, 0, 6, 0, 1),
-                intArrayOf(1, 0, 0, 0, 1),
-                intArrayOf(1, 1, 1, 1, 1)
+                intArrayOf(2, 2, 0, 2, 2),
+                intArrayOf(2, 0, 0, 0, 2),
+                intArrayOf(2, 0, 6, 0, 2),
+                intArrayOf(2, 0, 0, 0, 2),
+                intArrayOf(2, 2, 2, 2, 2)
             ),
-            entrances = listOf(GridPoint(2, -1))
+            entrances = listOf(GridPoint(2, -2))
         ),
         RoomTemplate(
             grid = arrayOf(
@@ -606,17 +606,17 @@ class Map(var renderCast: RenderCast? = null) {
                 intArrayOf(1, 0, 0, 0, 1),
                 intArrayOf(1, 1, 0, 1, 1)
             ),
-            entrances = listOf(GridPoint(2, 5))
+            entrances = listOf(GridPoint(2, 6))
         ),
         RoomTemplate(
             grid = arrayOf(
-                intArrayOf(1, 1, 1, 1, 1),
-                intArrayOf(1, 0, 0, 0, 1),
-                intArrayOf(1, 0, 6, 0, 0),
-                intArrayOf(1, 0, 0, 0, 1),
-                intArrayOf(1, 1, 1, 1, 1)
+                intArrayOf(2, 2, 2, 2, 2),
+                intArrayOf(2, 0, 0, 0, 2),
+                intArrayOf(2, 0, 6, 0, 0),
+                intArrayOf(2, 0, 0, 0, 2),
+                intArrayOf(2, 2, 2, 2, 2)
             ),
-            entrances = listOf(GridPoint(2, 5))
+            entrances = listOf(GridPoint(6, 2))
         ),
         RoomTemplate(
             grid = arrayOf(
@@ -632,15 +632,15 @@ class Map(var renderCast: RenderCast? = null) {
         // Template 2: Medium 7x7 room, entrances: left, right, bottom
         RoomTemplate(
             grid = arrayOf(
-                intArrayOf(1, 1, 1, 5, 1, 1, 1),
-                intArrayOf(1, 0, 0, 0, 0, 0, 1),
-                intArrayOf(1, 0, 3, 0, 0, 0, 1),
+                intArrayOf(2, 2, 2, 5, 2, 2, 2),
+                intArrayOf(2, 0, 0, 0, 0, 0, 2),
+                intArrayOf(2, 0, 3, 0, 0, 0, 2),
                 intArrayOf(0, 0, 0, 6, 0, 0, 5),
-                intArrayOf(1, 0, 0, 0, 3, 0, 1),
-                intArrayOf(1, 0, 0, 0, 0, 0, 1),
-                intArrayOf(1, 1, 1, 5, 1, 1, 1)
+                intArrayOf(2, 0, 0, 0, 3, 0, 2),
+                intArrayOf(2, 0, 0, 0, 0, 0, 2),
+                intArrayOf(2, 2, 2, 5, 2, 2, 2)
             ),
-            entrances = listOf(GridPoint(-1, 3))
+            entrances = listOf(GridPoint(-2, 3))
         ),
         RoomTemplate(
             grid = arrayOf(
@@ -652,19 +652,19 @@ class Map(var renderCast: RenderCast? = null) {
                 intArrayOf(1, 0, 0, 0, 0, 0, 1),
                 intArrayOf(1, 1, 1, 5, 1, 1, 1)
             ),
-            entrances = listOf(GridPoint(7, 3))
+            entrances = listOf(GridPoint(8, 3))
         ),
         RoomTemplate(
             grid = arrayOf(
-                intArrayOf(1, 1, 1, 0, 1, 1, 1),
-                intArrayOf(1, 0, 0, 0, 0, 0, 1),
-                intArrayOf(1, 0, 0, 0, 3, 0, 1),
+                intArrayOf(2, 2, 2, 0, 2, 2, 2),
+                intArrayOf(2, 0, 0, 0, 0, 0, 2),
+                intArrayOf(2, 0, 0, 0, 3, 0, 2),
                 intArrayOf(5, 0, 0, 6, 0, 0, 5),
-                intArrayOf(1, 0, 3, 0, 0, 0, 1),
-                intArrayOf(1, 0, 0, 0, 0, 0, 1),
-                intArrayOf(1, 1, 1, 5, 1, 1, 1)
+                intArrayOf(2, 0, 3, 0, 0, 0, 2),
+                intArrayOf(2, 0, 0, 0, 0, 0, 2),
+                intArrayOf(2, 2, 2, 5, 2, 2, 2)
             ),
-            entrances = listOf(GridPoint(3, -1))
+            entrances = listOf(GridPoint(3, -2))
         ),
         RoomTemplate(
             grid = arrayOf(
@@ -676,7 +676,7 @@ class Map(var renderCast: RenderCast? = null) {
                 intArrayOf(1, 0, 0, 0, 0, 0, 1),
                 intArrayOf(1, 1, 1, 0, 1, 1, 1)
             ),
-            entrances = listOf(GridPoint(3, 7))
+            entrances = listOf(GridPoint(3, 8))
         ),
 
         // Template 3: Large 9x9 room, entrances: top, bottom
@@ -692,21 +692,21 @@ class Map(var renderCast: RenderCast? = null) {
                 intArrayOf(1, 0, 0, 0, 0, 0, 0, 0, 1),
                 intArrayOf(1, 1, 1, 1, 1, 1, 1, 1, 1)
             ),
-            entrances = listOf(GridPoint(4, -1))
+            entrances = listOf(GridPoint(4, -2))
         ),
         RoomTemplate(
             grid = arrayOf(
-                intArrayOf(1, 1, 1, 1, 1, 1, 1, 1, 1),
-                intArrayOf(1, 0, 0, 0, 0, 0, 0, 0, 1),
-                intArrayOf(1, 0, 0, 0, 0, 0, 0, 0, 1),
-                intArrayOf(1, 0, 0, 0, 0, 0, 0, 0, 1),
+                intArrayOf(2, 2, 2, 2, 2, 2, 2, 2, 2),
+                intArrayOf(2, 0, 0, 0, 0, 0, 0, 0, 2),
+                intArrayOf(2, 0, 0, 0, 0, 0, 0, 0, 2),
+                intArrayOf(2, 0, 0, 0, 0, 0, 0, 0, 2),
                 intArrayOf(5, 0, 0, 0, 6, 0, 0, 0, 5),
-                intArrayOf(1, 0, 0, 0, 0, 0, 0, 0, 1),
-                intArrayOf(1, 0, 0, 0, 0, 0, 0, 0, 1),
-                intArrayOf(1, 0, 0, 0, 0, 0, 0, 0, 1),
-                intArrayOf(1, 1, 1, 1, 0, 1, 1, 1, 1)
+                intArrayOf(2, 0, 0, 0, 0, 0, 0, 0, 2),
+                intArrayOf(2, 0, 0, 0, 0, 0, 0, 0, 2),
+                intArrayOf(2, 0, 0, 0, 0, 0, 0, 0, 2),
+                intArrayOf(2, 2, 2, 2, 0, 2, 2, 2, 2)
             ),
-            entrances = listOf(GridPoint(4, 9))
+            entrances = listOf(GridPoint(4, 10))
         ),
         RoomTemplate(
             grid = arrayOf(
@@ -720,21 +720,21 @@ class Map(var renderCast: RenderCast? = null) {
                 intArrayOf(1, 0, 0, 0, 0, 0, 0, 0, 1),
                 intArrayOf(1, 1, 1, 1, 5, 1, 1, 1, 1)
             ),
-            entrances = listOf(GridPoint(-1, 4))
+            entrances = listOf(GridPoint(-2, 4))
         ),
         RoomTemplate(
             grid = arrayOf(
-                intArrayOf(1, 1, 1, 1, 5, 1, 1, 1, 1),
-                intArrayOf(1, 0, 0, 0, 0, 0, 0, 0, 1),
-                intArrayOf(1, 0, 0, 0, 0, 0, 0, 0, 1),
-                intArrayOf(1, 0, 0, 0, 0, 0, 0, 0, 1),
-                intArrayOf(1, 0, 0, 0, 6, 0, 0, 0, 0),
-                intArrayOf(1, 0, 0, 0, 0, 0, 0, 0, 1),
-                intArrayOf(1, 0, 0, 0, 0, 0, 0, 0, 1),
-                intArrayOf(1, 0, 0, 0, 0, 0, 0, 0, 1),
-                intArrayOf(1, 1, 1, 1, 5, 1, 1, 1, 1)
+                intArrayOf(2, 2, 2, 2, 5, 2, 2, 2, 2),
+                intArrayOf(2, 0, 0, 0, 0, 0, 0, 0, 2),
+                intArrayOf(2, 0, 0, 0, 0, 0, 0, 0, 2),
+                intArrayOf(2, 0, 0, 0, 0, 0, 0, 0, 2),
+                intArrayOf(2, 0, 0, 0, 6, 0, 0, 0, 0),
+                intArrayOf(2, 0, 0, 0, 0, 0, 0, 0, 2),
+                intArrayOf(2, 0, 0, 0, 0, 0, 0, 0, 2),
+                intArrayOf(2, 0, 0, 0, 0, 0, 0, 0, 2),
+                intArrayOf(2, 2, 2, 2, 5, 2, 2, 2, 2)
             ),
-            entrances = listOf(GridPoint(9, 4))
+            entrances = listOf(GridPoint(10, 4))
         ),
 
         // Template 4: Rectangular 6x8 room, entrances: left, top
@@ -747,7 +747,7 @@ class Map(var renderCast: RenderCast? = null) {
                 intArrayOf(1, 0, 0, 0, 0, 0, 0, 5),
                 intArrayOf(1, 1, 1, 5, 1, 1, 1, 1)
             ),
-            entrances = listOf(GridPoint(-1, 2))
+            entrances = listOf(GridPoint(-2, 2))
         ),
         RoomTemplate(
             grid = arrayOf(
@@ -758,7 +758,7 @@ class Map(var renderCast: RenderCast? = null) {
                 intArrayOf(5, 0, 0, 0, 0, 0, 0, 1),
                 intArrayOf(1, 1, 1, 1, 5, 1, 1, 1)
             ),
-            entrances = listOf(GridPoint(8, 2))
+            entrances = listOf(GridPoint(9, 2))
         ),
         RoomTemplate(
             grid = arrayOf(
@@ -771,7 +771,7 @@ class Map(var renderCast: RenderCast? = null) {
                 intArrayOf(5, 0, 0, 0, 0, 1),
                 intArrayOf(1, 1, 1, 1, 5, 1)
             ),
-            entrances = listOf(GridPoint(2, -1))
+            entrances = listOf(GridPoint(2, -2))
         ),
         RoomTemplate(
             grid = arrayOf(
@@ -784,7 +784,7 @@ class Map(var renderCast: RenderCast? = null) {
                 intArrayOf(0, 0, 0, 0, 0, 1),
                 intArrayOf(1, 1, 1, 0, 1, 1)
             ),
-            entrances = listOf(GridPoint(3, 8))
+            entrances = listOf(GridPoint(3, 9))
         )
     )
 
@@ -884,10 +884,8 @@ class Map(var renderCast: RenderCast? = null) {
                         } ?: throw IllegalStateException("skip it")
                     }
                     if (template.grid[y][x] == 6) {
-                        println("próbaless go")
                         renderCast?.let {
-                            lightSources.add(LightSource((mapX+0.5), (mapY+0.5), color = Color(200, 20, 20), intensity = 1.5, range = 50.0, owner = "skun"))
-                            println("Adding light source at x=${mapX-1.5}, y=${mapY-1.5}")
+                            lightSources.add(LightSource((mapX+0.5), (mapY+0.5), color = Color(200, 20, 20), intensity = 1.5, range = 7.0, owner = "skun"))
                             it.repaint()
                         }
                     }

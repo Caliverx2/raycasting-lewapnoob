@@ -63,26 +63,26 @@ class RenderCast(private val map: Map) : JPanel() {
             ceilingTexture = ImageIO.read(this::class.java.classLoader.getResource("textures/ceiling.jpg"))
 
             loadTexture(1, "textures/bricks.jpg")
-            loadTexture(2, "textures/gold.jpg")
-            loadTexture(5, Color(20, 50, 50))
+            loadTexture(2, Color(20, 50, 50))
+            loadTexture(5, "textures/gold.jpg")
         } catch (e: Exception) {
             println("Error loading textures: ${e.message}")
             floorTexture = createTexture(Color.darkGray)
             ceilingTexture = createTexture(Color.lightGray)
             textureMap[1] = createTexture(Color(90, 39, 15))
-            textureMap[2] = createTexture(Color(255, 215, 0))
-            textureMap[5] = createTexture(Color(20, 50, 50))
+            textureMap[2] = createTexture(Color(20, 50, 50))
+            textureMap[5] = createTexture(Color(255, 215, 0))
             enemyTextureId = createTexture(Color(255, 68, 68))
         }
 
         enemies.add(Enemy((tileSize * 2) - (tileSize / 2), (tileSize * 6) - (tileSize / 2), 100, enemyTextureId!!, this, map, speed = (2.0 * ((10..19).random() / 10.0))))
-        enemies.add(Enemy((tileSize * 16) - (tileSize / 2), (tileSize * 18) - (tileSize / 2), 100, enemyTextureId!!, this, map, speed = (2.0 * ((10..19).random() / 10.0))))
+        enemies.add(Enemy((tileSize * 12) - (tileSize / 2), (tileSize * 18) - (tileSize / 2), 100, enemyTextureId!!, this, map, speed = (2.0 * ((10..19).random() / 10.0))))
         enemies.add(Enemy((tileSize * 2) - (tileSize / 2), (tileSize * 22) - (tileSize / 2), 100, enemyTextureId!!, this, map, speed = (2.0 * ((10..19).random() / 10.0))))
 
         lightSources.add(LightSource((enemies[0].x / tileSize), (enemies[0].y / tileSize), color = Color(20, 255, 20), intensity = 0.75, range = 3.0, owner = "${enemies[0]}"))
         lightSources.add(LightSource((enemies[1].x / tileSize), (enemies[1].y / tileSize), color = Color(255, 22, 20), intensity = 0.75, range = 3.0, owner = "${enemies[1]}"))
         lightSources.add(LightSource((enemies[2].x / tileSize), (enemies[2].y / tileSize), color = Color(22, 20, 255), intensity = 0.75, range = 3.0, owner = "${enemies[2]}"))
-        lightSources.add(LightSource(positionX / tileSize, positionY / tileSize, color = Color(200, 200, 100), intensity = 0.75, range = 0.15, owner = "player"))
+        lightSources.add(LightSource(0.0, 0.0, color = Color(200, 200, 100), intensity = 0.75, range = 0.15, owner = "player"))
 
         buffer = BufferedImage(screenWidth, screenHeight, BufferedImage.TYPE_INT_RGB)
         bufferGraphics = buffer.createGraphics()
@@ -134,19 +134,20 @@ class RenderCast(private val map: Map) : JPanel() {
         var totalRed = baseColor.red.toDouble()
         var totalGreen = baseColor.green.toDouble()
         var totalBlue = baseColor.blue.toDouble()
+        try {
+            lightSources.forEach { light ->
+                val dx = worldX - light.x
+                val dy = worldY - light.y
+                val distance = sqrt(dx * dx + dy * dy)
 
-        lightSources.forEach { light ->
-            val dx = worldX - light.x
-            val dy = worldY - light.y
-            val distance = sqrt(dx * dx + dy * dy)
-
-            if (distance < light.range && isLightVisible(light, worldX, worldY)) {
-                val attenuation = light.intensity * (0.75 / (1.0 + distance * distance))
-                totalRed += light.color.red * attenuation
-                totalGreen += light.color.green * attenuation
-                totalBlue += light.color.blue * attenuation
+                if (distance < light.range && isLightVisible(light, worldX, worldY)) {
+                    val attenuation = light.intensity * (0.75 / (1.0 + distance * distance))
+                    totalRed += light.color.red * attenuation
+                    totalGreen += light.color.green * attenuation
+                    totalBlue += light.color.blue * attenuation
+                }
             }
-        }
+        } catch (e: Exception) {}
 
         return Color(
             totalRed.toInt().coerceIn(0, 255),
