@@ -63,7 +63,7 @@ class RenderCast(private val map: Map) : JPanel() {
             ceilingTexture = ImageIO.read(this::class.java.classLoader.getResource("textures/ceiling.jpg"))
 
             loadTexture(1, "textures/bricks.jpg")
-            loadTexture(2, Color(20, 50, 50))
+            loadTexture(2, "textures/black_bricks.png")//Color(20, 50, 50))
             loadTexture(5, "textures/gold.jpg")
         } catch (e: Exception) {
             println("Error loading textures: ${e.message}")

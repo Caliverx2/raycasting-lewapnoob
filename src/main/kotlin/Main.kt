@@ -634,9 +634,9 @@ class Map(var renderCast: RenderCast? = null) {
             grid = arrayOf(
                 intArrayOf(2, 2, 2, 5, 2, 2, 2),
                 intArrayOf(2, 0, 0, 0, 0, 0, 2),
-                intArrayOf(2, 0, 3, 0, 0, 0, 2),
-                intArrayOf(0, 0, 0, 6, 0, 0, 5),
-                intArrayOf(2, 0, 0, 0, 3, 0, 2),
+                intArrayOf(2, 0, 6, 0, 6, 0, 2),
+                intArrayOf(0, 0, 0, 3, 0, 3, 5),
+                intArrayOf(2, 0, 6, 0, 6, 0, 2),
                 intArrayOf(2, 0, 0, 0, 0, 0, 2),
                 intArrayOf(2, 2, 2, 5, 2, 2, 2)
             ),
@@ -646,9 +646,9 @@ class Map(var renderCast: RenderCast? = null) {
             grid = arrayOf(
                 intArrayOf(1, 1, 1, 5, 1, 1, 1),
                 intArrayOf(1, 0, 0, 0, 0, 0, 1),
-                intArrayOf(1, 0, 0, 0, 3, 0, 1),
-                intArrayOf(5, 0, 0, 6, 0, 0, 0),
-                intArrayOf(1, 0, 3, 0, 0, 0, 1),
+                intArrayOf(1, 0, 6, 0, 6, 0, 1),
+                intArrayOf(5, 3, 0, 3, 0, 0, 0),
+                intArrayOf(1, 0, 6, 0, 6, 0, 1),
                 intArrayOf(1, 0, 0, 0, 0, 0, 1),
                 intArrayOf(1, 1, 1, 5, 1, 1, 1)
             ),
@@ -658,10 +658,10 @@ class Map(var renderCast: RenderCast? = null) {
             grid = arrayOf(
                 intArrayOf(2, 2, 2, 0, 2, 2, 2),
                 intArrayOf(2, 0, 0, 0, 0, 0, 2),
-                intArrayOf(2, 0, 0, 0, 3, 0, 2),
-                intArrayOf(5, 0, 0, 6, 0, 0, 5),
-                intArrayOf(2, 0, 3, 0, 0, 0, 2),
-                intArrayOf(2, 0, 0, 0, 0, 0, 2),
+                intArrayOf(2, 0, 6, 0, 6, 0, 2),
+                intArrayOf(5, 0, 0, 3, 0, 0, 5),
+                intArrayOf(2, 0, 6, 0, 6, 0, 2),
+                intArrayOf(2, 0, 0, 3, 0, 0, 2),
                 intArrayOf(2, 2, 2, 5, 2, 2, 2)
             ),
             entrances = listOf(GridPoint(3, -2))
@@ -669,10 +669,10 @@ class Map(var renderCast: RenderCast? = null) {
         RoomTemplate(
             grid = arrayOf(
                 intArrayOf(1, 1, 1, 5, 1, 1, 1),
-                intArrayOf(1, 0, 0, 0, 0, 0, 1),
-                intArrayOf(1, 0, 3, 0, 0, 0, 1),
-                intArrayOf(5, 0, 0, 6, 0, 0, 5),
-                intArrayOf(1, 0, 0, 0, 3, 0, 1),
+                intArrayOf(1, 0, 0, 3, 0, 0, 1),
+                intArrayOf(1, 0, 6, 0, 6, 0, 1),
+                intArrayOf(5, 0, 0, 3, 0, 0, 5),
+                intArrayOf(1, 0, 6, 0, 6, 0, 1),
                 intArrayOf(1, 0, 0, 0, 0, 0, 1),
                 intArrayOf(1, 1, 1, 0, 1, 1, 1)
             ),
@@ -684,11 +684,11 @@ class Map(var renderCast: RenderCast? = null) {
             grid = arrayOf(
                 intArrayOf(1, 1, 1, 1, 0, 1, 1, 1, 1),
                 intArrayOf(1, 0, 0, 0, 0, 0, 0, 0, 1),
+                intArrayOf(1, 0, 6, 0, 0, 0, 6, 0, 1),
                 intArrayOf(1, 0, 0, 0, 0, 0, 0, 0, 1),
+                intArrayOf(5, 0, 0, 0, 0, 0, 0, 0, 5),
                 intArrayOf(1, 0, 0, 0, 0, 0, 0, 0, 1),
-                intArrayOf(5, 0, 0, 0, 6, 0, 0, 0, 5),
-                intArrayOf(1, 0, 0, 0, 0, 0, 0, 0, 1),
-                intArrayOf(1, 0, 0, 0, 0, 0, 0, 0, 1),
+                intArrayOf(1, 0, 6, 0, 0, 0, 6, 0, 1),
                 intArrayOf(1, 0, 0, 0, 0, 0, 0, 0, 1),
                 intArrayOf(1, 1, 1, 1, 1, 1, 1, 1, 1)
             ),
@@ -698,11 +698,11 @@ class Map(var renderCast: RenderCast? = null) {
             grid = arrayOf(
                 intArrayOf(2, 2, 2, 2, 2, 2, 2, 2, 2),
                 intArrayOf(2, 0, 0, 0, 0, 0, 0, 0, 2),
+                intArrayOf(2, 0, 6, 0, 0, 0, 6, 0, 2),
                 intArrayOf(2, 0, 0, 0, 0, 0, 0, 0, 2),
+                intArrayOf(5, 0, 0, 0, 0, 0, 0, 0, 5),
                 intArrayOf(2, 0, 0, 0, 0, 0, 0, 0, 2),
-                intArrayOf(5, 0, 0, 0, 6, 0, 0, 0, 5),
-                intArrayOf(2, 0, 0, 0, 0, 0, 0, 0, 2),
-                intArrayOf(2, 0, 0, 0, 0, 0, 0, 0, 2),
+                intArrayOf(2, 0, 6, 0, 0, 0, 6, 0, 2),
                 intArrayOf(2, 0, 0, 0, 0, 0, 0, 0, 2),
                 intArrayOf(2, 2, 2, 2, 0, 2, 2, 2, 2)
             ),
@@ -712,11 +712,11 @@ class Map(var renderCast: RenderCast? = null) {
             grid = arrayOf(
                 intArrayOf(1, 1, 1, 1, 5, 1, 1, 1, 1),
                 intArrayOf(1, 0, 0, 0, 0, 0, 0, 0, 1),
+                intArrayOf(1, 0, 6, 0, 0, 0, 6, 0, 1),
                 intArrayOf(1, 0, 0, 0, 0, 0, 0, 0, 1),
+                intArrayOf(0, 0, 0, 0, 0, 0, 0, 0, 1),
                 intArrayOf(1, 0, 0, 0, 0, 0, 0, 0, 1),
-                intArrayOf(0, 0, 0, 0, 6, 0, 0, 0, 1),
-                intArrayOf(1, 0, 0, 0, 0, 0, 0, 0, 1),
-                intArrayOf(1, 0, 0, 0, 0, 0, 0, 0, 1),
+                intArrayOf(1, 0, 6, 0, 0, 0, 6, 0, 1),
                 intArrayOf(1, 0, 0, 0, 0, 0, 0, 0, 1),
                 intArrayOf(1, 1, 1, 1, 5, 1, 1, 1, 1)
             ),
@@ -726,11 +726,11 @@ class Map(var renderCast: RenderCast? = null) {
             grid = arrayOf(
                 intArrayOf(2, 2, 2, 2, 5, 2, 2, 2, 2),
                 intArrayOf(2, 0, 0, 0, 0, 0, 0, 0, 2),
+                intArrayOf(2, 0, 6, 0, 0, 0, 6, 0, 2),
                 intArrayOf(2, 0, 0, 0, 0, 0, 0, 0, 2),
+                intArrayOf(2, 0, 0, 0, 0, 0, 0, 0, 0),
                 intArrayOf(2, 0, 0, 0, 0, 0, 0, 0, 2),
-                intArrayOf(2, 0, 0, 0, 6, 0, 0, 0, 0),
-                intArrayOf(2, 0, 0, 0, 0, 0, 0, 0, 2),
-                intArrayOf(2, 0, 0, 0, 0, 0, 0, 0, 2),
+                intArrayOf(2, 0, 6, 0, 0, 0, 6, 0, 2),
                 intArrayOf(2, 0, 0, 0, 0, 0, 0, 0, 2),
                 intArrayOf(2, 2, 2, 2, 5, 2, 2, 2, 2)
             ),
