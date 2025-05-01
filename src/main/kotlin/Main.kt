@@ -50,10 +50,9 @@ class LightSource(
     var y: Double,
     var color: Color,
     var intensity: Double,
-    val range: Double,
+    var range: Double,
     var owner: String = ""
 )
-
 
 class Enemy(var x: Double, var y: Double, var health: Int = 10, var texture: BufferedImage, private val renderCast: RenderCast, private val map: Map, var speed: Double = 0.9) {
     var path: List<Node> = emptyList()
@@ -116,7 +115,7 @@ class Enemy(var x: Double, var y: Double, var health: Int = 10, var texture: Buf
 
         for (gridY in gridTop..gridBottom) {
             for (gridX in gridLeft..gridRight) {
-                if (gridY !in map.grid.indices || gridX !in map.grid[gridY].indices || map.grid[gridY][gridX] == 1) {
+                if (gridY !in map.grid.indices || gridX !in map.grid[gridY].indices || ((map.grid[gridY][gridX] != 0) and (map.grid[gridY][gridX] != 5) and (map.grid[gridY][gridX] != 3) and (map.grid[gridY][gridX] != 6))) {
                     return Pair(false, null)
                 }
             }
@@ -175,7 +174,7 @@ class Enemy(var x: Double, var y: Double, var health: Int = 10, var texture: Buf
 
         if (startY !in map.grid.indices || startX !in map.grid[0].indices ||
             goalY !in map.grid.indices || goalX !in map.grid[0].indices ||
-            map.grid[goalY][goalX] == 1
+            ((map.grid[goalY][goalX] != 0) and (map.grid[goalY][goalX] != 5) and (map.grid[goalY][goalX] != 3) and (map.grid[goalY][goalX] != 6))
         ) {
             return emptyList()
         }
@@ -417,8 +416,6 @@ class Enemy(var x: Double, var y: Double, var health: Int = 10, var texture: Buf
     }
 }
 
-data class Node(val x: Int, val y: Int)
-
 fun main() = runBlocking {
     val frame = JFrame("rolada z gówna")
     frame.defaultCloseOperation = JFrame.EXIT_ON_CLOSE
@@ -551,35 +548,35 @@ fun main() = runBlocking {
 
 class Map(var renderCast: RenderCast? = null) {
     var grid: Array<IntArray> = arrayOf(
-        intArrayOf(5,5,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1),
-        intArrayOf(5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1),
-        intArrayOf(1,0,1,0,1,0,1,1,1,0,1,0,1,0,1,0,1,1,1,0,1,1,1,0,1,1,1,0,1),
-        intArrayOf(1,0,1,0,1,0,0,0,1,0,1,0,1,0,0,0,1,0,1,0,1,0,0,0,1,0,0,0,1),
-        intArrayOf(1,0,1,1,1,0,1,0,1,0,1,0,1,1,1,1,1,0,1,1,1,1,1,0,1,1,1,0,1),
-        intArrayOf(1,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,1,0,0,0,0,0,0,0,1),
-        intArrayOf(1,0,1,1,1,1,1,0,1,1,1,1,1,0,1,1,1,0,1,0,1,1,1,1,1,1,1,0,5),
-        intArrayOf(1,0,0,0,0,0,1,0,1,0,0,0,0,0,0,0,0,0,1,0,1,0,0,0,0,0,1,0,1),
-        intArrayOf(1,0,1,0,1,0,1,0,1,1,1,0,1,0,1,1,1,1,1,0,1,0,1,1,1,1,1,0,5),
-        intArrayOf(1,0,1,0,1,0,0,0,0,0,1,0,1,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0,1),
-        intArrayOf(1,0,1,1,1,1,1,1,1,1,1,0,1,1,1,0,1,1,1,0,1,0,1,1,1,1,1,0,5),
-        intArrayOf(1,0,0,0,1,0,0,0,0,0,0,0,0,0,1,0,0,0,1,0,1,0,1,0,1,0,0,0,1),
-        intArrayOf(1,1,1,0,1,1,1,1,1,0,1,1,1,0,1,0,1,0,1,1,1,0,1,0,1,1,1,0,5),
-        intArrayOf(1,0,0,0,1,0,1,0,1,0,0,0,1,0,1,0,1,0,0,0,0,0,1,0,1,0,1,0,1),
-        intArrayOf(1,0,1,0,1,0,1,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,1,0,1,0,5),
-        intArrayOf(1,0,1,0,1,0,1,0,0,0,0,0,0,0,1,0,0,0,1,0,1,0,0,0,0,0,0,0,1),
-        intArrayOf(1,0,1,1,1,0,1,1,1,1,1,1,1,0,1,1,1,0,1,0,1,0,1,0,1,1,1,0,5),
-        intArrayOf(1,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,1,0,1,0,0,0,1),
-        intArrayOf(1,0,1,1,1,1,1,1,1,1,1,0,1,0,1,0,1,1,1,1,1,1,1,1,1,0,1,0,5),
-        intArrayOf(1,0,0,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,0,0,0,0,1,0,1,0,1),
-        intArrayOf(1,0,1,0,1,0,1,0,1,0,1,1,1,0,1,1,1,0,1,0,1,0,1,0,1,1,1,0,5),
-        intArrayOf(1,0,1,0,0,0,1,0,1,0,0,0,1,0,0,0,1,0,1,0,1,0,1,0,1,0,0,0,1),
-        intArrayOf(1,0,1,1,1,1,1,0,1,0,1,1,1,0,1,1,1,0,1,1,1,1,1,0,1,1,1,0,5),
-        intArrayOf(1,0,0,0,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,0,0,1),
-        intArrayOf(1,0,1,1,1,1,1,1,1,0,1,1,1,0,1,1,1,0,1,1,1,0,1,1,1,0,1,0,5),
-        intArrayOf(1,0,1,0,0,0,0,0,1,0,1,0,1,0,1,0,1,0,0,0,0,0,0,0,1,0,1,0,1),
-        intArrayOf(1,1,1,1,1,1,1,0,1,0,1,0,1,0,1,0,1,1,1,0,1,1,1,0,1,0,1,1,5),
-        intArrayOf(1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,1,0,0,0,5),
-        intArrayOf(1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,5,5)
+        intArrayOf(5,5,1,1,1,1,1,1,1,1,1,1,1,1),
+        intArrayOf(5,0,0,0,0,0,0,0,0,0,0,0,0,1),
+        intArrayOf(1,0,1,0,1,0,1,1,1,0,1,0,0,1),
+        intArrayOf(1,0,1,0,1,0,0,0,1,0,1,0,0,1),
+        intArrayOf(1,0,1,1,1,0,1,0,1,0,1,0,0,1),
+        intArrayOf(1,0,1,0,0,0,1,0,0,0,1,0,0,1),
+        intArrayOf(1,0,1,1,1,1,1,0,1,1,1,1,0,5),
+        intArrayOf(1,0,0,0,0,0,1,0,1,0,0,0,0,1),
+        intArrayOf(1,0,1,0,1,0,1,0,1,1,1,0,0,5),
+        intArrayOf(1,0,1,0,1,0,0,0,0,0,1,0,0,1),
+        intArrayOf(1,0,1,1,1,1,1,1,1,1,1,0,0,5),
+        intArrayOf(1,0,0,0,1,0,0,0,0,0,0,0,0,1),
+        intArrayOf(1,1,1,0,1,1,1,1,1,0,1,1,0,5),
+        intArrayOf(1,0,0,0,1,0,1,0,1,0,0,0,0,1),
+        intArrayOf(1,0,1,0,1,0,1,0,1,1,1,1,0,5),
+        intArrayOf(1,0,1,0,1,0,1,0,0,0,0,0,0,1),
+        intArrayOf(1,0,1,1,1,0,1,1,1,1,1,1,0,5),
+        intArrayOf(1,0,0,0,0,0,1,0,0,0,0,0,0,1),
+        intArrayOf(1,0,1,1,1,1,1,1,1,1,1,0,0,5),
+        intArrayOf(1,0,0,0,1,0,1,0,1,0,1,0,0,1),
+        intArrayOf(1,0,1,0,1,0,1,0,1,0,1,1,0,5),
+        intArrayOf(1,0,1,0,0,0,1,0,1,0,0,0,0,1),
+        intArrayOf(1,0,1,1,1,1,1,0,1,0,1,1,0,5),
+        intArrayOf(1,0,0,0,0,0,0,0,0,0,1,0,0,1),
+        intArrayOf(1,0,1,1,1,1,1,1,1,0,1,1,0,5),
+        intArrayOf(1,0,1,0,0,0,0,0,1,0,1,0,0,1),
+        intArrayOf(1,1,1,1,1,1,1,0,1,0,1,0,0,5),
+        intArrayOf(1,0,0,0,0,0,0,0,0,0,0,0,0,5),
+        intArrayOf(1,1,1,1,1,1,1,1,1,1,1,1,1,1)
     )
 
     // Data classes and enum for room generation
@@ -637,10 +634,10 @@ class Map(var renderCast: RenderCast? = null) {
             grid = arrayOf(
                 intArrayOf(1, 1, 1, 5, 1, 1, 1),
                 intArrayOf(1, 0, 0, 0, 0, 0, 1),
-                intArrayOf(1, 0, 0, 0, 3, 0, 1),
-                intArrayOf(0, 0, 0, 0, 0, 0, 5),
-                intArrayOf(1, 0, 0, 0, 0, 0, 1),
                 intArrayOf(1, 0, 3, 0, 0, 0, 1),
+                intArrayOf(0, 0, 0, 6, 0, 0, 5),
+                intArrayOf(1, 0, 0, 0, 3, 0, 1),
+                intArrayOf(1, 0, 0, 0, 0, 0, 1),
                 intArrayOf(1, 1, 1, 5, 1, 1, 1)
             ),
             entrances = listOf(GridPoint(-1, 3))
@@ -650,9 +647,9 @@ class Map(var renderCast: RenderCast? = null) {
                 intArrayOf(1, 1, 1, 5, 1, 1, 1),
                 intArrayOf(1, 0, 0, 0, 0, 0, 1),
                 intArrayOf(1, 0, 0, 0, 3, 0, 1),
-                intArrayOf(5, 0, 0, 0, 0, 0, 0),
-                intArrayOf(1, 0, 0, 0, 0, 0, 1),
+                intArrayOf(5, 0, 0, 6, 0, 0, 0),
                 intArrayOf(1, 0, 3, 0, 0, 0, 1),
+                intArrayOf(1, 0, 0, 0, 0, 0, 1),
                 intArrayOf(1, 1, 1, 5, 1, 1, 1)
             ),
             entrances = listOf(GridPoint(7, 3))
@@ -661,10 +658,10 @@ class Map(var renderCast: RenderCast? = null) {
             grid = arrayOf(
                 intArrayOf(1, 1, 1, 0, 1, 1, 1),
                 intArrayOf(1, 0, 0, 0, 0, 0, 1),
-                intArrayOf(1, 0, 3, 0, 0, 0, 1),
-                intArrayOf(5, 0, 0, 0, 0, 0, 5),
-                intArrayOf(1, 0, 0, 0, 0, 0, 1),
                 intArrayOf(1, 0, 0, 0, 3, 0, 1),
+                intArrayOf(5, 0, 0, 6, 0, 0, 5),
+                intArrayOf(1, 0, 3, 0, 0, 0, 1),
+                intArrayOf(1, 0, 0, 0, 0, 0, 1),
                 intArrayOf(1, 1, 1, 5, 1, 1, 1)
             ),
             entrances = listOf(GridPoint(3, -1))
@@ -674,9 +671,9 @@ class Map(var renderCast: RenderCast? = null) {
                 intArrayOf(1, 1, 1, 5, 1, 1, 1),
                 intArrayOf(1, 0, 0, 0, 0, 0, 1),
                 intArrayOf(1, 0, 3, 0, 0, 0, 1),
-                intArrayOf(5, 0, 0, 0, 0, 0, 5),
-                intArrayOf(1, 0, 0, 0, 0, 0, 1),
+                intArrayOf(5, 0, 0, 6, 0, 0, 5),
                 intArrayOf(1, 0, 0, 0, 3, 0, 1),
+                intArrayOf(1, 0, 0, 0, 0, 0, 1),
                 intArrayOf(1, 1, 1, 0, 1, 1, 1)
             ),
             entrances = listOf(GridPoint(3, 7))
@@ -689,7 +686,7 @@ class Map(var renderCast: RenderCast? = null) {
                 intArrayOf(1, 0, 0, 0, 0, 0, 0, 0, 1),
                 intArrayOf(1, 0, 0, 0, 0, 0, 0, 0, 1),
                 intArrayOf(1, 0, 0, 0, 0, 0, 0, 0, 1),
-                intArrayOf(5, 0, 0, 0, 0, 0, 0, 0, 5),
+                intArrayOf(5, 0, 0, 0, 6, 0, 0, 0, 5),
                 intArrayOf(1, 0, 0, 0, 0, 0, 0, 0, 1),
                 intArrayOf(1, 0, 0, 0, 0, 0, 0, 0, 1),
                 intArrayOf(1, 0, 0, 0, 0, 0, 0, 0, 1),
@@ -703,7 +700,7 @@ class Map(var renderCast: RenderCast? = null) {
                 intArrayOf(1, 0, 0, 0, 0, 0, 0, 0, 1),
                 intArrayOf(1, 0, 0, 0, 0, 0, 0, 0, 1),
                 intArrayOf(1, 0, 0, 0, 0, 0, 0, 0, 1),
-                intArrayOf(5, 0, 0, 0, 0, 0, 0, 0, 5),
+                intArrayOf(5, 0, 0, 0, 6, 0, 0, 0, 5),
                 intArrayOf(1, 0, 0, 0, 0, 0, 0, 0, 1),
                 intArrayOf(1, 0, 0, 0, 0, 0, 0, 0, 1),
                 intArrayOf(1, 0, 0, 0, 0, 0, 0, 0, 1),
@@ -717,7 +714,7 @@ class Map(var renderCast: RenderCast? = null) {
                 intArrayOf(1, 0, 0, 0, 0, 0, 0, 0, 1),
                 intArrayOf(1, 0, 0, 0, 0, 0, 0, 0, 1),
                 intArrayOf(1, 0, 0, 0, 0, 0, 0, 0, 1),
-                intArrayOf(0, 0, 0, 0, 0, 0, 0, 0, 1),
+                intArrayOf(0, 0, 0, 0, 6, 0, 0, 0, 1),
                 intArrayOf(1, 0, 0, 0, 0, 0, 0, 0, 1),
                 intArrayOf(1, 0, 0, 0, 0, 0, 0, 0, 1),
                 intArrayOf(1, 0, 0, 0, 0, 0, 0, 0, 1),
@@ -731,7 +728,7 @@ class Map(var renderCast: RenderCast? = null) {
                 intArrayOf(1, 0, 0, 0, 0, 0, 0, 0, 1),
                 intArrayOf(1, 0, 0, 0, 0, 0, 0, 0, 1),
                 intArrayOf(1, 0, 0, 0, 0, 0, 0, 0, 1),
-                intArrayOf(1, 0, 0, 0, 0, 0, 0, 0, 0),
+                intArrayOf(1, 0, 0, 0, 6, 0, 0, 0, 0),
                 intArrayOf(1, 0, 0, 0, 0, 0, 0, 0, 1),
                 intArrayOf(1, 0, 0, 0, 0, 0, 0, 0, 1),
                 intArrayOf(1, 0, 0, 0, 0, 0, 0, 0, 1),
@@ -794,7 +791,6 @@ class Map(var renderCast: RenderCast? = null) {
     // Track room connections and last entrance
     private val roomConnections = mutableListOf<Pair<GridPoint, GridPoint>>()
     private var lastEntrance: GridPoint? = null
-
     private var wallDistances: Array<Array<Double>>? = null
 
     fun getWallDistances(): Array<Array<Double>> {
@@ -876,16 +872,27 @@ class Map(var renderCast: RenderCast? = null) {
                 if (mapY in grid.indices && mapX in grid[0].indices) {
                     if (template.grid[y][x] == 3) {
                         renderCast?.let {
-                            enemies.add(Enemy((tileSize * mapX) - (tileSize / 2), (tileSize * mapY) - (tileSize / 2), 100, enemyTextureId!!, renderCast = it, this, speed = (2.0 * ((10..19).random() / 10.0))))
-                        }?: throw IllegalStateException("skip it")
+                            enemies.add(Enemy(
+                                (tileSize * mapX) - (tileSize / 2),
+                                (tileSize * mapY) - (tileSize / 2),
+                                100,
+                                enemyTextureId!!,
+                                renderCast = it,
+                                this,
+                                speed = (2.0 * ((10..19).random() / 10.0))
+                            ))
+                        } ?: throw IllegalStateException("skip it")
                     }
                     if (template.grid[y][x] == 6) {
+                        println("próbaless go")
                         renderCast?.let {
-                            lightSources.add(LightSource((tileSize * x) - (tileSize / 2), (tileSize * y) - (tileSize / 2), color = Color(200, 200, 100), intensity = 0.4, range = 5.0, owner = "grid"))
+                            lightSources.add(LightSource((mapX+0.5), (mapY+0.5), color = Color(200, 20, 20), intensity = 1.5, range = 50.0, owner = "skun"))
+                            println("Adding light source at x=${mapX-1.5}, y=${mapY-1.5}")
+                            it.repaint()
                         }
                     }
 
-                    if (template.grid[y][x] == 1) continue // Walls can overlap
+                    if (template.grid[y][x] == 1) continue
                     if (mapX == triggerPoint.x && mapY == triggerPoint.y) continue
                     if (mapX == connectionPoint.x && mapY == connectionPoint.y) continue
                     if (grid[mapY][mapX] != 1) {
@@ -1053,6 +1060,10 @@ class Mappingmap(private val map: Map, private val renderCast: RenderCast) : JPa
                     when (map.grid[row][col]) {
                         1 -> {
                             bufferGraphics.color = Color(0, 255, 0)
+                            bufferGraphics.fillRect(x + offsetX, y + offsetY, tileSize, tileSize)
+                        }
+                        2 -> {
+                            bufferGraphics.color = Color(80, 100, 80)
                             bufferGraphics.fillRect(x + offsetX, y + offsetY, tileSize, tileSize)
                         }
                         5 -> {

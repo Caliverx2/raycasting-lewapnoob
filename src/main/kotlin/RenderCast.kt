@@ -27,7 +27,9 @@ class RenderCast(private val map: Map) : JPanel() {
     private val rayCount = screenWidth
     private val wallHeight = 32.0
 
-    private var textures: Array<BufferedImage> = arrayOf()
+    private val textureMap: MutableMap<Int, BufferedImage> = mutableMapOf()
+    // Nowy zbiór indeksów reprezentujących ściany
+    private val wallIndices: Set<Int> = setOf(1, 2, 5) // Ściany to indeksy 1, 2, 5
     var enemyTextureId: BufferedImage? = null
     private var floorTexture: BufferedImage? = null
     private var ceilingTexture: BufferedImage? = null
@@ -38,15 +40,12 @@ class RenderCast(private val map: Map) : JPanel() {
     private val maxBrightness = 1.0
     private val shadeDistanceScale = 10.0
     private val fogColor = Color(180, 180, 180)
-    private val fogDensity = 0.15
-
+    private val fogDensity = 0.05
     private val rayCosines = DoubleArray(rayCount)
     private val raySines = DoubleArray(rayCount)
     private val rayAngles = DoubleArray(rayCount)
-
-    private var visibleEnemies = mutableListOf<Triple<Enemy, Int, Double>>() // (Enemy, screenX, distance)
+    private var visibleEnemies = mutableListOf<Triple<Enemy, Int, Double>>()
     private val zBuffer = DoubleArray(rayCount) { Double.MAX_VALUE }
-
     private var lastShotTime = 0L
     private val SHOT_COOLDOWN = 500_000_000L
     private var lastLightMoveTime = 0L
@@ -62,30 +61,28 @@ class RenderCast(private val map: Map) : JPanel() {
             enemyTextureId = ImageIO.read(this::class.java.classLoader.getResource("textures/boguch.jpg"))
             floorTexture = ImageIO.read(this::class.java.classLoader.getResource("textures/floor.jpg"))
             ceilingTexture = ImageIO.read(this::class.java.classLoader.getResource("textures/ceiling.jpg"))
-            textures = arrayOf(
-                ImageIO.read(this::class.java.classLoader.getResource("textures/bricks.jpg")),
-                ImageIO.read(this::class.java.classLoader.getResource("textures/gold.jpg"))
-            )
+
+            loadTexture(1, "textures/bricks.jpg")
+            loadTexture(2, "textures/gold.jpg")
+            loadTexture(5, Color(20, 50, 50))
         } catch (e: Exception) {
             println("Error loading textures: ${e.message}")
             floorTexture = createTexture(Color.darkGray)
             ceilingTexture = createTexture(Color.lightGray)
-            textures = arrayOf(
-                createTexture(Color(90, 39, 15)),
-                createTexture(Color(255, 215, 0))
-            )
+            textureMap[1] = createTexture(Color(90, 39, 15))
+            textureMap[2] = createTexture(Color(255, 215, 0))
+            textureMap[5] = createTexture(Color(20, 50, 50))
             enemyTextureId = createTexture(Color(255, 68, 68))
         }
 
-        // Initialization of opponents
         enemies.add(Enemy((tileSize * 2) - (tileSize / 2), (tileSize * 6) - (tileSize / 2), 100, enemyTextureId!!, this, map, speed = (2.0 * ((10..19).random() / 10.0))))
         enemies.add(Enemy((tileSize * 16) - (tileSize / 2), (tileSize * 18) - (tileSize / 2), 100, enemyTextureId!!, this, map, speed = (2.0 * ((10..19).random() / 10.0))))
         enemies.add(Enemy((tileSize * 2) - (tileSize / 2), (tileSize * 22) - (tileSize / 2), 100, enemyTextureId!!, this, map, speed = (2.0 * ((10..19).random() / 10.0))))
 
-        lightSources.add(LightSource(x = (enemies[0].x / tileSize), y = enemies[0].y / tileSize, color = Color(20, 255, 20), intensity = 0.75, range = 3.0, owner = "${enemies[0]}"))
-        lightSources.add(LightSource(x = (enemies[1].x / tileSize), y = enemies[1].y / tileSize, color = Color(255, 22, 20), intensity = 0.75, range = 3.0, owner = "${enemies[1]}"))
-        lightSources.add(LightSource(x = (enemies[2].x / tileSize), y = enemies[2].y / tileSize, color = Color(22, 20, 255), intensity = 0.75, range = 3.0, owner = "${enemies[2]}"))
-        lightSources.add(LightSource(x = (1 / tileSize), y = 1 / tileSize, color = Color(200, 200, 100), intensity = 0.4, range = 0.15, owner = "player"))
+        lightSources.add(LightSource((enemies[0].x / tileSize), (enemies[0].y / tileSize), color = Color(20, 255, 20), intensity = 0.75, range = 3.0, owner = "${enemies[0]}"))
+        lightSources.add(LightSource((enemies[1].x / tileSize), (enemies[1].y / tileSize), color = Color(255, 22, 20), intensity = 0.75, range = 3.0, owner = "${enemies[1]}"))
+        lightSources.add(LightSource((enemies[2].x / tileSize), (enemies[2].y / tileSize), color = Color(22, 20, 255), intensity = 0.75, range = 3.0, owner = "${enemies[2]}"))
+        lightSources.add(LightSource(positionX / tileSize, positionY / tileSize, color = Color(200, 200, 100), intensity = 0.75, range = 0.15, owner = "player"))
 
         buffer = BufferedImage(screenWidth, screenHeight, BufferedImage.TYPE_INT_RGB)
         bufferGraphics = buffer.createGraphics()
@@ -98,6 +95,19 @@ class RenderCast(private val map: Map) : JPanel() {
             rayCosines[ray] = cos(rayAngleRad)
             raySines[ray] = sin(rayAngleRad)
         }
+    }
+
+    private fun loadTexture(index: Int, resourcePath: String) {
+        try {
+            textureMap[index] = ImageIO.read(this::class.java.classLoader.getResource(resourcePath))
+        } catch (e: Exception) {
+            println("Error loading texture $resourcePath: ${e.message}")
+            textureMap[index] = createTexture(Color.gray)
+        }
+    }
+
+    private fun loadTexture(index: Int, color: Color) {
+        textureMap[index] = createTexture(color)
     }
 
     private fun createTexture(color: Color): BufferedImage {
@@ -152,7 +162,7 @@ class RenderCast(private val map: Map) : JPanel() {
         val dy = targetY - startY
         val distance = sqrt(dx * dx + dy * dy)
 
-        if (distance > light.range || distance < 0.001) return false
+        if (distance > light.range) return false
 
         val stepSize = 0.25
         val stepX = dx / distance
@@ -173,7 +183,8 @@ class RenderCast(private val map: Map) : JPanel() {
                 return false
             }
 
-            if (map.grid[mapY][mapX] == 1 || map.grid[mapY][mapX] == 5) {
+            // Użycie wallIndices zamiast stałych indeksów
+            if (wallIndices.contains(map.grid[mapY][mapX])) {
                 return false
             }
 
@@ -188,9 +199,14 @@ class RenderCast(private val map: Map) : JPanel() {
     fun renderWallsToBuffer() {
         enemies.forEach { it.update() }
 
-        for (i in 0 until minOf(3, enemies.size)) {
-            lightSources[i].x = enemies[i].x / tileSize
-            lightSources[i].y = enemies[i].y / tileSize
+        enemies.forEachIndexed { index, enemy ->
+            if (index < lightSources.size) {
+                val light = lightSources[index]
+                if (light.owner == "${enemy}") {
+                    light.x = enemy.x / tileSize
+                    light.y = enemy.y / tileSize
+                }
+            }
         }
 
         val currentTime = System.nanoTime()
@@ -198,22 +214,20 @@ class RenderCast(private val map: Map) : JPanel() {
             lastLightMoveTime = currentTime
             val angleRad = Math.toRadians(lightMoveDirection)
             val moveDistance = tileSize / 2.0 / tileSize
-            val newX = lightSources[3].x + moveDistance * cos(angleRad)
-            val newY = lightSources[3].y + moveDistance * sin(angleRad)
+            val playerLight = lightSources.find { it.owner == "player" }
+            playerLight?.let {
+                val newX = it.x + moveDistance * cos(angleRad)
+                val newY = it.y + moveDistance * sin(angleRad)
 
-            val mapX = newX.toInt()
-            val mapY = newY.toInt()
-            if (mapY in map.grid.indices && mapX in map.grid[0].indices && map.grid[mapY][mapX] != 1) {
-                lightSources[3].x = newX
-                lightSources[3].y = newY
-            } else {
-                /*
-                if (mapY in map.grid.indices && mapX in map.grid[0].indices && map.grid[mapY][mapX] == 1) {
-                    map.grid[mapY][mapX] = 0
-                    map.updateWallDistances() // Odśwież cache odległości
-                } */
-                lightSources[3].intensity = 0.0
-                isLightMoving = false
+                val mapX = newX.toInt()
+                val mapY = newY.toInt()
+                if (mapY in map.grid.indices && mapX in map.grid[0].indices && !wallIndices.contains(map.grid[mapY][mapX])) {
+                    it.x = newX
+                    it.y = newY
+                } else {
+                    it.intensity = 0.0
+                    isLightMoving = false
+                }
             }
         }
 
@@ -283,7 +297,8 @@ class RenderCast(private val map: Map) : JPanel() {
                 if (mapY !in map.grid.indices || mapX !in map.grid[0].indices) {
                     break
                 }
-                if (map.grid[mapY][mapX] == 1 || map.grid[mapY][mapX] == 5) {
+                // Sprawdzamy, czy indeks należy do wallIndices
+                if (wallIndices.contains(map.grid[mapY][mapX])) {
                     hitWall = true
                     wallType = map.grid[mapY][mapX]
                 }
@@ -365,7 +380,9 @@ class RenderCast(private val map: Map) : JPanel() {
                 if (side == 0 && rayDirX > 0 || side == 1 && rayDirY < 0) {
                     textureX = textureSize - textureX - 1
                 }
-                val texture = textures[if (wallType == 1) 0 else 1]
+
+                // Użycie textureMap do uzyskania tekstury dla wallType
+                val texture = textureMap[wallType] ?: createTexture(Color.gray)
                 for (y in drawStart until drawEnd) {
                     val wallY = (y - (screenHeight / 2.0 + horizonOffset) + lineHeight / 2.0) * wallHeight / lineHeight
                     val textureY = (wallY * textureSize / wallHeight).toInt().coerceIn(0, textureSize - 1)
@@ -440,6 +457,7 @@ class RenderCast(private val map: Map) : JPanel() {
         renderEnemies()
     }
 
+    // Reszta metod bez zmian
     private fun renderEnemies() {
         visibleEnemies.sortByDescending { it.third }
 
@@ -572,7 +590,8 @@ class RenderCast(private val map: Map) : JPanel() {
                 if (mapY !in map.grid.indices || mapX !in map.grid[0].indices) {
                     break
                 }
-                if (map.grid[mapY][mapX] == 1 || map.grid[mapY][mapX] == 5) {
+                // Użycie wallIndices do wykrywania ścian
+                if (wallIndices.contains(map.grid[mapY][mapX])) {
                     hitWall = true
                     wallDistance = if (side == 0) {
                         (mapX - playerPosX + (1 - stepX) / 2.0) / rayDirX
@@ -585,45 +604,46 @@ class RenderCast(private val map: Map) : JPanel() {
 
             playSound(soundFile, volume = 0.65f)
 
-            lightSources[3].x = positionX / tileSize
-            lightSources[3].y = positionY / tileSize
-            lightMoveDirection = currentangle.toDouble()
-            lightSources[3].intensity = 0.4
-            lastLightMoveTime = currentTime
-            isLightMoving = true
+            lightSources.find { it.owner == "player" }?.let {
+                it.x = positionX / tileSize
+                it.y = positionY / tileSize
+                lightMoveDirection = currentangle.toDouble()
+                it.intensity = 0.75
+                lastLightMoveTime = currentTime
+                isLightMoving = true
+            }
 
             enemies.toList().forEach { enemy ->
-                lightSources.toList().forEach { LightSource ->
-                    val dx = enemy.x / tileSize - playerPosX
-                    val dy = enemy.y / tileSize - playerPosY
-                    val rayLength = dx * rayDirX + dy * rayDirY
+                val dx = enemy.x / tileSize - playerPosX
+                val dy = enemy.y / tileSize - playerPosY
+                val rayLength = dx * rayDirX + dy * rayDirY
 
-                    if (rayLength > 0 && rayLength < wallDistance) {
-                        val perpendicularDistance = abs(dx * rayDirY - dy * rayDirX)
-                        if ((perpendicularDistance < (enemy.size * 20) / 2 / tileSize) and (enemy.health >= 1)) {
-                            val angleToEnemy = atan2(dy, dx)
-                            var angleDiff = abs(angleToEnemy - shotAngleRad)
-                            angleDiff = min(angleDiff, 2 * Math.PI - angleDiff)
+                if (rayLength > 0 && rayLength < wallDistance) {
+                    val perpendicularDistance = abs(dx * rayDirY - dy * rayDirX)
+                    if ((perpendicularDistance < (enemy.size * 20) / 2 / tileSize) && (enemy.health >= 1)) {
+                        val angleToEnemy = atan2(dy, dx)
+                        var angleDiff = abs(angleToEnemy - shotAngleRad)
+                        angleDiff = min(angleDiff, 2 * Math.PI - angleDiff)
 
-                            if (angleDiff < Math.toRadians(35.0)) {
-                                enemy.health -= 10
-                                if (enemy.health <= 0) {
-                                    playSound(when {
-                                        random < 0.16f -> "scream1.wav"
-                                        random < 0.32f -> "scream2.wav"
-                                        random < 0.48f -> "scream3.wav"
-                                        random < 0.64f -> "scream4.wav"
-                                        random < 0.80f -> "scream5.wav"
-                                        else -> "scream6.wav"
-                                    }, volume = 0.65f)
-                                    try {
-                                        lightSources.find { it.owner == "${enemy}" }?.let {
-                                            lightSources[lightSources.indexOf(it)].color = Color(0, 0, 0)
-                                        }
-                                        enemy.texture = ImageIO.read(this::class.java.classLoader.getResource("textures/boguch_bochen_chlepa.jpg"))
-                                    } catch (e: Exception) {
-                                        enemy.texture = createTexture(Color.black)
+                        if (angleDiff < Math.toRadians(35.0)) {
+                            enemy.health -= 25
+                            println("enemy: ${enemy} heal: ${enemy.health}")
+                            if (enemy.health <= 0) {
+                                playSound(when {
+                                    random < 0.16f -> "scream1.wav"
+                                    random < 0.32f -> "scream2.wav"
+                                    random < 0.48f -> "scream3.wav"
+                                    random < 0.64f -> "scream4.wav"
+                                    random < 0.80f -> "scream5.wav"
+                                    else -> "scream6.wav"
+                                }, volume = 0.65f)
+                                try {
+                                    lightSources.find { it.owner == "${enemy}" }?.let {
+                                        lightSources[lightSources.indexOf(it)].color = Color(0, 0, 0)
                                     }
+                                    enemy.texture = ImageIO.read(this::class.java.classLoader.getResource("textures/boguch_bochen_chlepa.jpg"))
+                                } catch (e: Exception) {
+                                    enemy.texture = createTexture(Color.black)
                                 }
                             }
                         }

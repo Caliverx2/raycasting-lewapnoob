@@ -30,7 +30,7 @@ class Player(private val renderCast: RenderCast, private val map: Map) {
 
         for (gridY in gridTop..gridBottom) {
             for (gridX in gridLeft..gridRight) {
-                if (gridY !in map.grid.indices || gridX !in map.grid[0].indices || map.grid[gridY][gridX] == 1) {
+                if (gridY !in map.grid.indices || gridX !in map.grid[0].indices || ((map.grid[gridY][gridX] != 0) and (map.grid[gridY][gridX] != 5) and (map.grid[gridY][gridX] != 3) and (map.grid[gridY][gridX] != 6))) {
                     return Pair(false, null)
                 }
             }
@@ -178,13 +178,9 @@ class Player(private val renderCast: RenderCast, private val map: Map) {
                     gridX < lastGridX -> Map.Direction.RIGHT
                     gridY > lastGridY -> Map.Direction.UP
                     else -> Map.Direction.DOWN
-                    /*
-                    gridX > lastGridX -> Map.Direction.LEFT
-                    gridX < lastGridX -> Map.Direction.RIGHT
-                    gridY > lastGridY -> Map.Direction.UP
-                    else -> Map.Direction.DOWN
-                    */
                 }
+                lightSources[3].x = positionX
+                lightSources[3].y = positionY
                 map.generateRoom(Map.GridPoint(gridX, gridY), direction)
             }
             lastGridX = gridX
