@@ -548,8 +548,8 @@ fun main() = runBlocking {
 
 class Map(var renderCast: RenderCast? = null) {
     var grid: Array<IntArray> = arrayOf(
-        intArrayOf(5,5,1,1,1,1,1,1,1,1,1,1,1,1),
-        intArrayOf(5,0,0,0,0,0,0,0,0,0,0,0,0,1),
+        intArrayOf(1,1,1,1,1,1,1,1,1,1,1,1,1,1),
+        intArrayOf(1,0,0,0,0,0,0,0,0,0,0,0,0,1),
         intArrayOf(1,0,1,0,1,0,1,1,1,0,1,0,0,1),
         intArrayOf(1,0,1,0,1,0,0,0,1,0,1,0,0,1),
         intArrayOf(1,0,1,1,1,0,1,0,1,0,1,0,0,1),
@@ -740,22 +740,22 @@ class Map(var renderCast: RenderCast? = null) {
         // Template 4: Rectangular 6x8 room, entrances: left, top
         RoomTemplate(
             grid = arrayOf(
-                intArrayOf(1, 1, 1, 1, 1, 1, 5, 1),
+                intArrayOf(1, 1, 1, 1, 1, 5, 1, 1),
                 intArrayOf(1, 0, 0, 0, 0, 0, 0, 1),
                 intArrayOf(0, 0, 0, 0, 0, 0, 0, 1),
-                intArrayOf(1, 0, 0, 0, 0, 0, 0, 1),
                 intArrayOf(1, 0, 0, 0, 0, 0, 0, 5),
+                intArrayOf(1, 0, 0, 0, 0, 0, 0, 1),
                 intArrayOf(1, 1, 1, 5, 1, 1, 1, 1)
             ),
             entrances = listOf(GridPoint(-2, 2))
         ),
         RoomTemplate(
             grid = arrayOf(
-                intArrayOf(1, 5, 1, 1, 1, 1, 1, 1),
+                intArrayOf(1, 1, 5, 1, 1, 1, 1, 1),
                 intArrayOf(1, 0, 0, 0, 0, 0, 0, 1),
                 intArrayOf(1, 0, 0, 0, 0, 0, 0, 0),
-                intArrayOf(1, 0, 0, 0, 0, 0, 0, 1),
                 intArrayOf(5, 0, 0, 0, 0, 0, 0, 1),
+                intArrayOf(1, 0, 0, 0, 0, 0, 0, 1),
                 intArrayOf(1, 1, 1, 1, 5, 1, 1, 1)
             ),
             entrances = listOf(GridPoint(9, 2))
@@ -767,22 +767,22 @@ class Map(var renderCast: RenderCast? = null) {
                 intArrayOf(1, 0, 0, 0, 0, 1),
                 intArrayOf(1, 0, 0, 0, 0, 5),
                 intArrayOf(1, 0, 0, 0, 0, 1),
-                intArrayOf(1, 0, 0, 0, 0, 1),
                 intArrayOf(5, 0, 0, 0, 0, 1),
-                intArrayOf(1, 1, 1, 1, 5, 1)
+                intArrayOf(1, 0, 0, 0, 0, 1),
+                intArrayOf(1, 1, 1, 5, 1, 1)
             ),
             entrances = listOf(GridPoint(2, -2))
         ),
         RoomTemplate(
             grid = arrayOf(
-                intArrayOf(1, 5, 1, 1, 1, 1),
-                intArrayOf(1, 0, 0, 0, 0, 5),
-                intArrayOf(1, 0, 0, 0, 0, 1),
-                intArrayOf(0, 0, 0, 0, 0, 1),
-                intArrayOf(5, 0, 0, 0, 0, 1),
-                intArrayOf(1, 0, 0, 0, 0, 1),
-                intArrayOf(0, 0, 0, 0, 0, 1),
-                intArrayOf(1, 1, 1, 0, 1, 1)
+                intArrayOf(1, 1, 5, 1, 1, 1, 1, 1),
+                intArrayOf(1, 0, 0, 0, 0, 0, 0, 1),
+                intArrayOf(1, 0, 0, 0, 0, 0, 0, 5),
+                intArrayOf(0, 0, 0, 0, 0, 0, 0, 1),
+                intArrayOf(5, 0, 0, 0, 0, 1, 1, 1),
+                intArrayOf(1, 0, 0, 0, 0, 1, 1, 1),
+                intArrayOf(0, 0, 0, 0, 0, 1, 1, 1),
+                intArrayOf(1, 1, 1, 0, 1, 1, 1, 1)
             ),
             entrances = listOf(GridPoint(3, 9))
         )
@@ -879,13 +879,15 @@ class Map(var renderCast: RenderCast? = null) {
                                 enemyTextureId!!,
                                 renderCast = it,
                                 this,
-                                speed = (2.0 * ((10..19).random() / 10.0))
+                                speed = (4.0 * ((10..19).random() / 10.0))
                             ))
+                            lightSources.add(LightSource((mapX+0.5), (mapY+0.5), color = Color(20, 20, 200), intensity = 0.25, range = 1.0, owner = "${enemies[enemies.size-1]}"))
+                            println(lightSources.get(lightSources.size-1).owner)
                         } ?: throw IllegalStateException("skip it")
                     }
                     if (template.grid[y][x] == 6) {
                         renderCast?.let {
-                            lightSources.add(LightSource((mapX+0.5), (mapY+0.5), color = Color(200, 20, 20), intensity = 1.5, range = 7.0, owner = "skun"))
+                            lightSources.add(LightSource((mapX+0.5), (mapY+0.5), color = Color(200, 20, 20), intensity = 0.25, range = 3.0, owner = "skun"))
                             it.repaint()
                         }
                     }

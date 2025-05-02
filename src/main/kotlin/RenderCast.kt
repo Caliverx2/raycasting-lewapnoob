@@ -18,6 +18,7 @@ import javax.sound.sampled.AudioSystem
 import javax.sound.sampled.FloatControl
 import kotlin.math.floor
 import kotlin.math.min
+import kotlin.math.pow
 
 class RenderCast(private val map: Map) : JPanel() {
     private val screenWidth = 320
@@ -75,14 +76,15 @@ class RenderCast(private val map: Map) : JPanel() {
             enemyTextureId = createTexture(Color(255, 68, 68))
         }
 
+        lightSources.add(LightSource(0.0, 0.0, color = Color(200, 200, 100), intensity = 0.75, range = 0.15, owner = "player"))
+
         enemies.add(Enemy((tileSize * 2) - (tileSize / 2), (tileSize * 6) - (tileSize / 2), 100, enemyTextureId!!, this, map, speed = (2.0 * ((10..19).random() / 10.0))))
         enemies.add(Enemy((tileSize * 12) - (tileSize / 2), (tileSize * 18) - (tileSize / 2), 100, enemyTextureId!!, this, map, speed = (2.0 * ((10..19).random() / 10.0))))
         enemies.add(Enemy((tileSize * 2) - (tileSize / 2), (tileSize * 22) - (tileSize / 2), 100, enemyTextureId!!, this, map, speed = (2.0 * ((10..19).random() / 10.0))))
 
-        lightSources.add(LightSource((enemies[0].x / tileSize), (enemies[0].y / tileSize), color = Color(20, 255, 20), intensity = 0.75, range = 3.0, owner = "${enemies[0]}"))
-        lightSources.add(LightSource((enemies[1].x / tileSize), (enemies[1].y / tileSize), color = Color(255, 22, 20), intensity = 0.75, range = 3.0, owner = "${enemies[1]}"))
-        lightSources.add(LightSource((enemies[2].x / tileSize), (enemies[2].y / tileSize), color = Color(22, 20, 255), intensity = 0.75, range = 3.0, owner = "${enemies[2]}"))
-        lightSources.add(LightSource(0.0, 0.0, color = Color(200, 200, 100), intensity = 0.75, range = 0.15, owner = "player"))
+        lightSources.add(LightSource((enemies[0].x / tileSize), (enemies[0].y / tileSize), color = Color(20, 255, 20), intensity = 0.35, range = 3.0, owner = "${enemies[0]}"))
+        lightSources.add(LightSource((enemies[1].x / tileSize), (enemies[1].y / tileSize), color = Color(255, 22, 20), intensity = 0.35, range = 3.0, owner = "${enemies[1]}"))
+        lightSources.add(LightSource((enemies[2].x / tileSize), (enemies[2].y / tileSize), color = Color(22, 20, 255), intensity = 0.35, range = 3.0, owner = "${enemies[2]}"))
 
         buffer = BufferedImage(screenWidth, screenHeight, BufferedImage.TYPE_INT_RGB)
         bufferGraphics = buffer.createGraphics()
@@ -134,20 +136,24 @@ class RenderCast(private val map: Map) : JPanel() {
         var totalRed = baseColor.red.toDouble()
         var totalGreen = baseColor.green.toDouble()
         var totalBlue = baseColor.blue.toDouble()
-        try {
-            lightSources.forEach { light ->
-                val dx = worldX - light.x
-                val dy = worldY - light.y
-                val distance = sqrt(dx * dx + dy * dy)
 
-                if (distance < light.range && isLightVisible(light, worldX, worldY)) {
-                    val attenuation = light.intensity * (0.75 / (1.0 + distance * distance))
+        lightSources.forEach { light ->
+            val dx = worldX - light.x
+            val dy = worldY - light.y
+            val distanceSquared = dx * dx + dy * dy
+            val rangeSquared = light.range * light.range
+
+            if (distanceSquared <= rangeSquared) {
+                val distance = sqrt(distanceSquared)
+                if (isLightVisible(light, worldX, worldY, distance)) {
+                    // Use a smoother attenuation curve to reduce artifacts at range edges
+                    val attenuation = light.intensity * (1.0 - (distance / light.range).pow(2)).coerceAtLeast(0.0)
                     totalRed += light.color.red * attenuation
                     totalGreen += light.color.green * attenuation
                     totalBlue += light.color.blue * attenuation
                 }
             }
-        } catch (e: Exception) {}
+        }
 
         return Color(
             totalRed.toInt().coerceIn(0, 255),
@@ -156,58 +162,59 @@ class RenderCast(private val map: Map) : JPanel() {
         )
     }
 
-    private fun isLightVisible(light: LightSource, targetX: Double, targetY: Double): Boolean {
+    private fun isLightVisible(light: LightSource, targetX: Double, targetY: Double, distance: Double): Boolean {
         val startX = light.x
         val startY = light.y
-        val dx = targetX - startX
-        val dy = targetY - startY
-        val distance = sqrt(dx * dx + dy * dy)
+        val MIN_STEP_SIZE = 0.25
+        val MAX_STEP_SIZE = 0.75
 
         if (distance > light.range) return false
 
-        val stepSize = 0.25
-        val stepX = dx / distance
-        val stepY = dy / distance
-        val steps = (distance / stepSize).toInt().coerceAtLeast(1)
+        val dx = targetX - startX
+        val dy = targetY - startY
+        // Adaptive step size based on distance for better precision
+        val stepSize = (MIN_STEP_SIZE + (MAX_STEP_SIZE - MIN_STEP_SIZE) * (distance / light.range)).coerceIn(MIN_STEP_SIZE, MAX_STEP_SIZE)
+        val stepX = dx / distance * stepSize
+        val stepY = dy / distance * stepSize
+        val steps = (distance / stepSize).toInt() + 1
 
         var currentX = startX
         var currentY = startY
 
-        for (i in 1..steps) {
-            currentX = startX + stepX * stepSize * i
-            currentY = startY + stepY * stepSize * i
+        for (i in 0 until steps) {
+            currentX = startX + stepX * i
+            currentY = startY + stepY * i
+            val mapX = currentX.toInt()
+            val mapY = currentY.toInt()
 
-            val mapX = floor(currentX).toInt()
-            val mapY = floor(currentY).toInt()
-
-            if (mapX < 0 || mapX >= map.grid[0].size || mapY < 0 || mapY >= map.grid.size) {
+            if (mapX !in 0 until map.grid[0].size || mapY !in 0 until map.grid.size) {
                 return false
             }
 
-            // Użycie wallIndices zamiast stałych indeksów
             if (wallIndices.contains(map.grid[mapY][mapX])) {
                 return false
             }
 
-            if (abs(currentX - targetX) < stepSize && abs(currentY - targetY) < stepSize) {
+            // Check if we've reached the target within a small tolerance
+            if (sqrt((currentX - targetX) * (currentX - targetX) + (currentY - targetY) * (currentY - targetY)) < stepSize) {
                 return true
             }
         }
 
-        return false
+        return true
     }
 
     fun renderWallsToBuffer() {
         enemies.forEach { it.update() }
 
         enemies.forEachIndexed { index, enemy ->
-            if (index < lightSources.size) {
-                val light = lightSources[index]
+            //if (index < lightSources.size) {
+                val light = lightSources[index+1]
                 if (light.owner == "${enemy}") {
                     light.x = enemy.x / tileSize
                     light.y = enemy.y / tileSize
                 }
-            }
+            //}
         }
 
         val currentTime = System.nanoTime()
@@ -443,7 +450,7 @@ class RenderCast(private val map: Map) : JPanel() {
                 )
                 val worldX = playerPosX + rowDistance * rayDirX
                 val worldY = playerPosY + rowDistance * rayDirY
-                val litColor = calculateLightContribution(worldX, worldY, shadedColor)
+                val litColor = calculateLightContribution(worldX, worldY, originalColor)
                 val fogFactor = 1.0 - exp(-fogDensity * rowDistance)
                 val finalColor = Color(
                     ((1.0 - fogFactor) * litColor.red + fogFactor * fogColor.red).toInt().coerceIn(0, 255),
