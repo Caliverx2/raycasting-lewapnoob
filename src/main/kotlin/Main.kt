@@ -44,6 +44,7 @@ var enemies = mutableListOf<Enemy>()
 var lightSources = mutableListOf<LightSource>()
 var isShooting = false
 
+
 class LightSource(
     var x: Double,
     var y: Double,
@@ -277,7 +278,7 @@ class Enemy(var x: Double, var y: Double, var health: Int = 10, var texture: Buf
         val dyToPlayer = y - positionY
         val distanceToPlayer = sqrt(dxToPlayer * dxToPlayer + dyToPlayer * dyToPlayer)
 
-        // Logika przerywania/wznawiania pościgu
+        // Logic for interrupting/resuming the chase
         if (isChasing && distanceToPlayer > CHASE_STOP_DISTANCE) {
             isChasing = false
             path = emptyList()
@@ -415,7 +416,6 @@ class Enemy(var x: Double, var y: Double, var health: Int = 10, var texture: Buf
 
             val (canMove, _) = canMoveTo(newX, newY)
             if (canMove) {
-                println("sex")
                 x = newX
                 y = newY
                 lastMoveX = moveX * randomMoveDistance
@@ -427,7 +427,6 @@ class Enemy(var x: Double, var y: Double, var health: Int = 10, var texture: Buf
                 accumulatedDistance = 0.0
             } else {
                 if (canMove) {
-                    println("sex")
                     x = newX
                     y = newY
                     lastMoveX = moveX * randomMoveDistance
@@ -460,11 +459,9 @@ fun main() = runBlocking {
     frame.isVisible = true
     val map = Map()
 
-    // Następnie tworzysz RenderCast i przypisujesz go do mapy
     val renderCast = RenderCast(map)
     map.renderCast = renderCast
 
-    // Tworzysz gracza z poprawnymi zależnościami
     val player = Player(renderCast, map)
 
     val layeredPane = JLayeredPane()
@@ -594,7 +591,7 @@ class Map(var renderCast: RenderCast? = null) {
     )
 
     // Data classes and enum for room generation
-    val limitRooms = 9
+    val limitRooms = 9*9
     var currentRooms = 0
     var enemyTextureId: BufferedImage? = ImageIO.read(this::class.java.classLoader.getResource("textures/boguch.jpg"))
     data class GridPoint(val x: Int, val y: Int)
@@ -758,8 +755,8 @@ class Map(var renderCast: RenderCast? = null) {
             grid = arrayOf(
                 intArrayOf(1, 1, 1, 1, 1, 5, 1, 1),
                 intArrayOf(1, 0, 0, 0, 0, 0, 0, 1),
-                intArrayOf(0, 0, 0, 0, 0, 0, 0, 1),
-                intArrayOf(1, 0, 0, 0, 0, 0, 0, 5),
+                intArrayOf(0, 0, 0, 0, 3, 0, 0, 1),
+                intArrayOf(1, 0, 0, 0, 0, 0, 0, 1),
                 intArrayOf(1, 0, 0, 0, 0, 0, 0, 1),
                 intArrayOf(1, 1, 1, 5, 1, 1, 1, 1)
             ),
@@ -767,40 +764,36 @@ class Map(var renderCast: RenderCast? = null) {
         ),
         RoomTemplate(
             grid = arrayOf(
-                intArrayOf(1, 1, 5, 1, 1, 1, 1, 1),
+                intArrayOf(1, 1, 1, 1, 1, 0, 1, 1),
                 intArrayOf(1, 0, 0, 0, 0, 0, 0, 1),
+                intArrayOf(1, 0, 0, 0, 0, 0, 0, 1),
+                intArrayOf(1, 0, 3, 0, 0, 0, 0, 5),
+                intArrayOf(1, 0, 0, 0, 0, 0, 0, 1),
+                intArrayOf(1, 1, 1, 5, 1, 1, 1, 1)
+            ),
+            entrances = listOf(GridPoint(5, -2))
+        ),
+        RoomTemplate(
+            grid = arrayOf(
+                intArrayOf(1, 1, 1, 1, 1, 5, 1, 1),
+                intArrayOf(1, 0, 0, 0, 0, 0, 0, 1),
+                intArrayOf(1, 0, 3, 0, 0, 0, 0, 1),
                 intArrayOf(1, 0, 0, 0, 0, 0, 0, 0),
+                intArrayOf(1, 0, 0, 0, 0, 0, 0, 1),
+                intArrayOf(1, 1, 1, 5, 1, 1, 1, 1)
+            ),
+            entrances = listOf(GridPoint(9, 3))
+        ),
+        RoomTemplate(
+            grid = arrayOf(
+                intArrayOf(1, 1, 1, 1, 1, 5, 1, 1),
+                intArrayOf(1, 0, 0, 0, 0, 0, 0, 1),
                 intArrayOf(5, 0, 0, 0, 0, 0, 0, 1),
+                intArrayOf(1, 0, 0, 0, 0, 3, 0, 1),
                 intArrayOf(1, 0, 0, 0, 0, 0, 0, 1),
-                intArrayOf(1, 1, 1, 1, 5, 1, 1, 1)
-            ),
-            entrances = listOf(GridPoint(9, 2))
-        ),
-        RoomTemplate(
-            grid = arrayOf(
-                intArrayOf(1, 1, 0, 1, 1, 1),
-                intArrayOf(1, 0, 0, 0, 0, 1),
-                intArrayOf(1, 0, 0, 0, 0, 1),
-                intArrayOf(1, 0, 0, 0, 0, 5),
-                intArrayOf(1, 0, 0, 0, 0, 1),
-                intArrayOf(5, 0, 0, 0, 0, 1),
-                intArrayOf(1, 0, 0, 0, 0, 1),
-                intArrayOf(1, 1, 1, 5, 1, 1)
-            ),
-            entrances = listOf(GridPoint(2, -2))
-        ),
-        RoomTemplate(
-            grid = arrayOf(
-                intArrayOf(1, 1, 5, 1, 1, 1, 1, 1),
-                intArrayOf(1, 0, 0, 0, 0, 0, 0, 1),
-                intArrayOf(1, 0, 0, 0, 0, 0, 0, 5),
-                intArrayOf(0, 0, 0, 0, 0, 0, 0, 1),
-                intArrayOf(5, 0, 0, 0, 0, 1, 1, 1),
-                intArrayOf(1, 0, 0, 0, 0, 1, 1, 1),
-                intArrayOf(0, 0, 0, 0, 0, 1, 1, 1),
                 intArrayOf(1, 1, 1, 0, 1, 1, 1, 1)
             ),
-            entrances = listOf(GridPoint(3, 9))
+            entrances = listOf(GridPoint(3, 7))
         )
     )
 
@@ -982,7 +975,7 @@ class Map(var renderCast: RenderCast? = null) {
 
             expandGridIfNeeded(offsetX, offsetY, roomWidth, roomHeight)
 
-            // Kopiowanie szablonu do siatki
+            // Copy a template to the grid
             for (y in 0 until roomHeight) {
                 for (x in 0 until roomWidth) {
                     val mapX = offsetX + x
@@ -993,7 +986,7 @@ class Map(var renderCast: RenderCast? = null) {
                 }
             }
 
-            // Dodawanie przeciwników i źródeł światła dla pól 3 i 6
+            // Adding enemies and light sources for squares 3 and 6
             for (y in 0 until roomHeight) {
                 for (x in 0 until roomWidth) {
                     val mapX = offsetX + x
@@ -1038,7 +1031,7 @@ class Map(var renderCast: RenderCast? = null) {
                 }
             }
 
-            // Ustawienie triggerPoint i lastEntrance
+            // setting triggerPoint i lastEntrance
             grid[triggerPoint.y][triggerPoint.x] = 0
 
             lastEntrance?.let {
@@ -1087,14 +1080,13 @@ class Mappingmap(private val map: Map, private val renderCast: RenderCast) : JPa
 
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
 
-        // Oblicz skalę minimapy
         val tileScale = miniMapSize.toDouble() / maxRenderTiles
 
-        // Pozycja gracza na minimapie (zawsze w centrum)
+        // Player position on the minimap (always in the center)
         val playerMapX = miniMapSize / 2 + offsetX
         val playerMapY = miniMapSize / 2 + offsetY
 
-        // Oblicz pozycję gracza na siatce mapy
+        // pos player -> titesize
         val playerGridX = positionX / tileSize
         val playerGridY = positionY / tileSize
 
@@ -1104,27 +1096,26 @@ class Mappingmap(private val map: Map, private val renderCast: RenderCast) : JPa
             val bufferGraphics = bufferedImage!!.createGraphics()
             bufferGraphics.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
 
-            // Wyczyść tło
+            // Clear Background
             bufferGraphics.color = Color(0, 0, 0, 0)
             bufferGraphics.fillRect(0, 0, miniMapSize + offsetX * 2, miniMapSize + offsetY * 2)
 
-            // Oblicz zakres renderowania wokół gracza
+            // Calculate the rendering range around the player
             val startX = (playerGridX - maxRenderTiles / 2).toInt().coerceIn(0, map.grid[0].size - 1)
             val endX = (playerGridX + maxRenderTiles / 2).toInt().coerceIn(0, map.grid[0].size - 1)
             val startY = (playerGridY - maxRenderTiles / 2).toInt().coerceIn(0, map.grid.size - 1)
             val endY = (playerGridY + maxRenderTiles / 2).toInt().coerceIn(0, map.grid.size - 1)
 
-            // Rysuj mapę z przesunięciem względem gracza
+            // Draw the map with the offset relative to the player, Calculate tile position relative to player position
             for (row in startY..endY) {
                 for (col in startX..endX) {
-                    // Oblicz pozycję kafelka względem pozycji gracza
                     val relativeX = col - playerGridX
                     val relativeY = row - playerGridY
                     val x = (playerMapX + relativeX * tileScale).toInt()
                     val y = (playerMapY + relativeY * tileScale).toInt()
                     val scaledTileSize = tileScale.toInt() + 1
 
-                    // Rysuj tylko, jeśli kafelek znajduje się w granicach minimapy
+                    // Only draw if the tile is within the boundaries of the minimap
                     if (x >= offsetX && x < miniMapSize + offsetX && y >= offsetY && y < miniMapSize + offsetY) {
                         when (map.grid[row][col]) {
                             1 -> {
@@ -1144,16 +1135,14 @@ class Mappingmap(private val map: Map, private val renderCast: RenderCast) : JPa
                 }
             }
             bufferedImage == null
-            //lastGrid = map.grid.map { it.clone() }.toTypedArray()
             bufferGraphics.dispose()
         }
 
         g2.drawImage(bufferedImage, 0, 0, null)
 
         val enemies = renderCast.getEnemies()
-        // Rysuj ścieżki wrogów
+        // Draw enemies and their enemy paths. Assign them a random color. Set the path color for this enemy
         enemies.forEach { enemy ->
-            // Przypisz losowy kolor, jeśli wróg nie ma jeszcze koloru
             if (!enemyPathColors.containsKey(enemy)) {
                 enemyPathColors[enemy] = Color(((72-44)..255).random(), (72..255).random(), ((72+44)..255).random(), 144)
             }
@@ -1170,7 +1159,6 @@ class Mappingmap(private val map: Map, private val renderCast: RenderCast) : JPa
             }
         }
 
-        // Rysuj wrogów
         enemies.forEach { enemy ->
             val relativeX = (enemy.x / tileSize) - playerGridX
             val relativeY = (enemy.y / tileSize) - playerGridY
@@ -1187,7 +1175,7 @@ class Mappingmap(private val map: Map, private val renderCast: RenderCast) : JPa
             }
         }
 
-        // Rysuj gracza
+        // draw player
         val angleRad = Math.toRadians(currentangle.toDouble())
         val lineLength = 10.0
         val playerX2 = playerMapX + (lineLength * cos(angleRad)).toInt()
