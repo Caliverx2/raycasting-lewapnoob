@@ -27,6 +27,7 @@ class RenderCast(private val map: Map) : JPanel() {
     private val textureSize = 64
     private val rayCount = screenWidth
     private val wallHeight = 32.0
+    private val maxRayDistance = 22.0
 
     private val textureMap: MutableMap<Int, BufferedImage> = mutableMapOf()
     // Nowy zbiór indeksów reprezentujących ściany
@@ -208,20 +209,18 @@ class RenderCast(private val map: Map) : JPanel() {
         enemies.forEach { it.update() }
 
         enemies.forEachIndexed { index, enemy ->
-            //if (index < lightSources.size) {
-                val light = lightSources[index+1]
-                if (light.owner == "${enemy}") {
-                    light.x = enemy.x / tileSize
-                    light.y = enemy.y / tileSize
-                }
-            //}
+            val light = lightSources[index + 1]
+            if (light.owner == "${enemy}") {
+                light.x = enemy.x / tileSize
+                light.y = enemy.y / tileSize
+            }
         }
 
         val currentTime = System.nanoTime()
         if (isLightMoving && currentTime - lastLightMoveTime >= LIGHT_MOVE_INTERVAL) {
             lastLightMoveTime = currentTime
             val angleRad = Math.toRadians(lightMoveDirection)
-            val moveDistance = tileSize / 2.0 / tileSize
+            val moveDistance = (tileSize / 2.5 / tileSize)
             val playerLight = lightSources.find { it.owner == "player" }
             playerLight?.let {
                 val newX = it.x + moveDistance * cos(angleRad)
@@ -245,7 +244,7 @@ class RenderCast(private val map: Map) : JPanel() {
         val playerPosX = positionX / tileSize
         val playerPosY = positionY / tileSize
 
-        bufferGraphics.color = Color.BLACK
+        bufferGraphics.color = fogColor // Ustaw kolor tła na kolor mgły
         bufferGraphics.fillRect(0, 0, screenWidth, screenHeight)
 
         zBuffer.fill(Double.MAX_VALUE)
@@ -292,27 +291,31 @@ class RenderCast(private val map: Map) : JPanel() {
             var hitX = 0.0
             var hitY = 0.0
 
+            // Raycasting z ograniczeniem maksymalnej odległości
             while (!hitWall) {
                 if (sideDistX < sideDistY) {
                     sideDistX += deltaDistX
                     mapX += stepX
                     side = 0
+                    distance = (mapX - playerPosX + (1 - stepX) / 2.0) / rayDirX
                 } else {
                     sideDistY += deltaDistY
                     mapY += stepY
                     side = 1
+                    distance = (mapY - playerPosY + (1 - stepY) / 2.0) / rayDirY
                 }
-                if (mapY !in map.grid.indices || mapX !in map.grid[0].indices) {
+                // Sprawdź, czy odległość przekroczyła maksymalną
+                if (distance > maxRayDistance || mapY !in map.grid.indices || mapX !in map.grid[0].indices) {
+                    distance = maxRayDistance // Ogranicz odległość do maksymalnej
                     break
                 }
-                // Sprawdzamy, czy indeks należy do wallIndices
                 if (wallIndices.contains(map.grid[mapY][mapX])) {
                     hitWall = true
                     wallType = map.grid[mapY][mapX]
                 }
             }
 
-            if (hitWall) {
+            if (hitWall && distance <= maxRayDistance) {
                 distance = if (side == 0) {
                     (mapX - playerPosX + (1 - stepX) / 2.0) / rayDirX
                 } else {
@@ -324,7 +327,7 @@ class RenderCast(private val map: Map) : JPanel() {
                     distance *= cos(angleDiff)
                 } else {
                     hitWall = false
-                    distance = Double.MAX_VALUE
+                    distance = maxRayDistance
                 }
                 if (side == 0) {
                     hitX = mapX.toDouble() + (if (stepX > 0) 0.0 else 1.0)
@@ -333,6 +336,9 @@ class RenderCast(private val map: Map) : JPanel() {
                     hitY = mapY.toDouble() + (if (stepY > 0) 0.0 else 1.0)
                     hitX = playerPosX + (hitY - playerPosY) * (rayDirX / rayDirY)
                 }
+                zBuffer[ray] = distance
+            } else {
+                distance = maxRayDistance // Jeśli nie trafiono ściany, ustaw maksymalną odległość
                 zBuffer[ray] = distance
             }
 
@@ -349,7 +355,7 @@ class RenderCast(private val map: Map) : JPanel() {
                 val dy = closestY - playerPosY
 
                 val rayLength = dx * rayDirX + dy * rayDirY
-                if (rayLength > 0) {
+                if (rayLength > 0 && rayLength <= maxRayDistance) {
                     val perpendicularDistance = abs(dx * rayDirY - dy * rayDirX)
                     if (perpendicularDistance < halfSize + 0.05) {
                         val centerDx = enemy.x / tileSize - playerPosX
@@ -367,7 +373,7 @@ class RenderCast(private val map: Map) : JPanel() {
                 }
             }
 
-            val lineHeight = if (hitWall) {
+            val lineHeight = if (hitWall && distance <= maxRayDistance) {
                 ((wallHeight * screenHeight) / (distance * tileSize)).toInt().coerceIn(0, screenHeight * 2)
             } else {
                 0
@@ -375,7 +381,7 @@ class RenderCast(private val map: Map) : JPanel() {
             val drawStart = (-lineHeight / 2 + screenHeight / 2 + horizonOffset).coerceAtLeast(0.0).toInt()
             val drawEnd = (lineHeight / 2 + screenHeight / 2 + horizonOffset).coerceAtMost(screenHeight.toDouble()).toInt()
 
-            if (hitWall) {
+            if (hitWall && distance <= maxRayDistance) {
                 var textureX = if (side == 0) {
                     val blockY = mapY.toDouble()
                     val relativeY = hitY - blockY
@@ -389,7 +395,6 @@ class RenderCast(private val map: Map) : JPanel() {
                     textureX = textureSize - textureX - 1
                 }
 
-                // Użycie textureMap do uzyskania tekstury dla wallType
                 val texture = textureMap[wallType] ?: createTexture(Color.gray)
                 for (y in drawStart until drawEnd) {
                     val wallY = (y - (screenHeight / 2.0 + horizonOffset) + lineHeight / 2.0) * wallHeight / lineHeight
@@ -417,12 +422,12 @@ class RenderCast(private val map: Map) : JPanel() {
             }
 
             for (y in 0 until screenHeight) {
-                if (hitWall && y in drawStart until drawEnd) continue
+                if (hitWall && distance <= maxRayDistance && y in drawStart until drawEnd) continue
 
                 val isCeiling = y < (screenHeight / 2 + horizonOffset)
                 val texture = if (isCeiling) ceilingTexture else floorTexture
                 if (texture == null) {
-                    buffer.setRGB(ray, y, Color.GRAY.rgb)
+                    buffer.setRGB(ray, y, fogColor.rgb) // Użyj koloru mgły, jeśli brak tekstury
                     continue
                 }
 
@@ -431,7 +436,11 @@ class RenderCast(private val map: Map) : JPanel() {
                 } else {
                     (playerHeight * screenHeight / 2) / (10.0 * (y - (screenHeight / 2.0 + horizonOffset) + 0.0))
                 }
-                if (rowDistance < 0.01 || rowDistance > 50.0) continue
+                // Ogranicz odległość renderowania podłóg i sufitów do maxRayDistance
+                if (rowDistance < 0.01 || rowDistance > maxRayDistance) {
+                    buffer.setRGB(ray, y, fogColor.rgb) // Użyj koloru mgły poza maxRayDistance
+                    continue
+                }
 
                 val floorX = playerPosX + rowDistance * rayDirX + 100
                 val floorY = playerPosY + rowDistance * rayDirY + 100
