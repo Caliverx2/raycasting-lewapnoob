@@ -27,7 +27,7 @@ class RenderCast(private val map: Map) : JPanel() {
     private val textureSize = 64
     private val rayCount = screenWidth
     private val wallHeight = 32.0
-    private val maxRayDistance = 22.0
+    private val maxRayDistance = 22.0//22.0
 
     private val textureMap: MutableMap<Int, BufferedImage> = mutableMapOf()
     // Nowy zbiór indeksów reprezentujących ściany
@@ -37,6 +37,10 @@ class RenderCast(private val map: Map) : JPanel() {
     private var ceilingTexture: BufferedImage? = null
     private val buffer: BufferedImage
     private val bufferGraphics: Graphics
+    private var renderFps = 0
+    private var renderFrameCount = 0
+    private var lastRenderFpsUpdate = System.nanoTime()
+    private var lastRenderFrameTime = System.nanoTime()
 
     private val minBrightness = 0.25
     private val maxBrightness = 1.0
@@ -79,9 +83,9 @@ class RenderCast(private val map: Map) : JPanel() {
 
         lightSources.add(LightSource(0.0, 0.0, color = Color(200, 200, 100), intensity = 0.75, range = 0.15, owner = "player"))
 
-        enemies.add(Enemy((tileSize * 2) - (tileSize / 2), (tileSize * 6) - (tileSize / 2), 100, enemyTextureId!!, this, map, speed = (2.0 * ((10..19).random() / 10.0))))
-        enemies.add(Enemy((tileSize * 12) - (tileSize / 2), (tileSize * 18) - (tileSize / 2), 100, enemyTextureId!!, this, map, speed = (2.0 * ((10..19).random() / 10.0))))
-        enemies.add(Enemy((tileSize * 2) - (tileSize / 2), (tileSize * 22) - (tileSize / 2), 100, enemyTextureId!!, this, map, speed = (2.0 * ((10..19).random() / 10.0))))
+        enemies.add(Enemy((tileSize * 2) - (tileSize / 2), (tileSize * 6) - (tileSize / 2), 100, enemyTextureId!!, this, map, speed = (2.0 * ((18..19).random() / 10.0))))
+        enemies.add(Enemy((tileSize * 12) - (tileSize / 2), (tileSize * 18) - (tileSize / 2), 100, enemyTextureId!!, this, map, speed = (2.0 * ((18..19).random() / 10.0))))
+        enemies.add(Enemy((tileSize * 2) - (tileSize / 2), (tileSize * 16) - (tileSize / 2), 100, enemyTextureId!!, this, map, speed = (2.0 * ((18..19).random() / 10.0))))
 
         lightSources.add(LightSource((enemies[0].x / tileSize), (enemies[0].y / tileSize), color = Color(20, 255, 20), intensity = 0.35, range = 3.0, owner = "${enemies[0]}"))
         lightSources.add(LightSource((enemies[1].x / tileSize), (enemies[1].y / tileSize), color = Color(255, 22, 20), intensity = 0.35, range = 3.0, owner = "${enemies[1]}"))
@@ -121,6 +125,8 @@ class RenderCast(private val map: Map) : JPanel() {
         g.dispose()
         return texture
     }
+
+    fun getRenderFps(): Int = renderFps
 
     override fun paintComponent(g: Graphics) {
         super.paintComponent(g)
@@ -206,6 +212,9 @@ class RenderCast(private val map: Map) : JPanel() {
     }
 
     fun renderWallsToBuffer() {
+        var currentTime = System.nanoTime()
+        var elapsedTime = currentTime - lastRenderFrameTime
+
         enemies.forEach { it.update() }
 
         enemies.forEachIndexed { index, enemy ->
@@ -216,7 +225,6 @@ class RenderCast(private val map: Map) : JPanel() {
             }
         }
 
-        val currentTime = System.nanoTime()
         if (isLightMoving && currentTime - lastLightMoveTime >= LIGHT_MOVE_INTERVAL) {
             lastLightMoveTime = currentTime
             val angleRad = Math.toRadians(lightMoveDirection)
@@ -470,7 +478,14 @@ class RenderCast(private val map: Map) : JPanel() {
                 buffer.setRGB(ray, y, finalColor.rgb)
             }
         }
+        renderFrameCount++
+        lastRenderFrameTime = currentTime
 
+        if (currentTime - lastRenderFpsUpdate >= 1_000_000_000L) {
+            renderFps = renderFrameCount
+            renderFrameCount = 0
+            lastRenderFpsUpdate = currentTime
+        }
         renderEnemies()
     }
 

@@ -32,7 +32,6 @@ var map = true
 var currentangle = 45
 var tileSize = 40.0
 val mapa = 0.5
-var fps = 84
 var MouseSupport = false
 
 val TARGET_FPS = 90
@@ -57,7 +56,7 @@ class LightSource(
 class Enemy(var x: Double, var y: Double, var health: Int = 10, var texture: BufferedImage, private val renderCast: RenderCast, private val map: Map, var speed: Double = 0.9) {
     var path: List<Node> = emptyList()
     val size = 1.0
-    private val margin = 10
+    private val margin = 1
     private var pathUpdateTimer = 30
     private val pathUpdateInterval = 120
     private var stuckCounter = 0
@@ -67,8 +66,8 @@ class Enemy(var x: Double, var y: Double, var health: Int = 10, var texture: Buf
     var isMoving = false
     private var smoothedMoveX = 0.0
     private var smoothedMoveY = 0.0
-    private val smoothingFactor = 0.05
-    private val MIN_PLAYER_DISTANCE = 1.0 * tileSize
+    private val smoothingFactor = 0.1//0.05
+    private val MIN_PLAYER_DISTANCE = 1.5 * tileSize
     private var lastPlayerX = 0.0
     private var lastPlayerY = 0.0
 
@@ -76,8 +75,8 @@ class Enemy(var x: Double, var y: Double, var health: Int = 10, var texture: Buf
     private val idleThreshold = (1.5 * TARGET_FPS).toInt()
     private var randomMoveTimer = 0
     private val randomMoveInterval = 300
-    private val randomMoveDistance = tileSize * 0.5
-    private val moveThreshold = tileSize * 1.5
+    private val randomMoveDistance = tileSize * 1.5
+    private val moveThreshold = tileSize * 3.5
     private var lastX = x
     private var lastY = y
     private var accumulatedDistance = 0.0
@@ -403,7 +402,7 @@ class Enemy(var x: Double, var y: Double, var health: Int = 10, var texture: Buf
         }
 
         randomMoveTimer++
-        if (idleTimer >= idleThreshold && randomMoveTimer >= randomMoveInterval && !isChasing) {
+        if (idleTimer >= idleThreshold && randomMoveTimer >= randomMoveInterval && isChasing) {
             val directions = listOf(
                 Pair(1.0, 0.0),
                 Pair(-1.0, 0.0),
@@ -416,6 +415,7 @@ class Enemy(var x: Double, var y: Double, var health: Int = 10, var texture: Buf
 
             val (canMove, _) = canMoveTo(newX, newY)
             if (canMove) {
+                println("sex")
                 x = newX
                 y = newY
                 lastMoveX = moveX * randomMoveDistance
@@ -425,6 +425,19 @@ class Enemy(var x: Double, var y: Double, var health: Int = 10, var texture: Buf
                 idleTimer = 0
                 randomMoveTimer = 0
                 accumulatedDistance = 0.0
+            } else {
+                if (canMove) {
+                    println("sex")
+                    x = newX
+                    y = newY
+                    lastMoveX = moveX * randomMoveDistance
+                    lastMoveY = moveY * randomMoveDistance
+                    path = findPath()
+                    isMoving = true
+                    idleTimer = 0
+                    randomMoveTimer = 0
+                    accumulatedDistance = 0.0
+                }
             }
         }
     }
@@ -531,7 +544,6 @@ fun main() = runBlocking {
 
     //fps counter
     var lastFrameTime = System.nanoTime()
-    var frameCount = 0
     var lastFpsUpdate = System.nanoTime()
 
     while (true) {
@@ -543,12 +555,9 @@ fun main() = runBlocking {
             renderCast.repaint()
             mapa.repaint()
 
-            frameCount++
             lastFrameTime = currentTime
 
             if (currentTime - lastFpsUpdate >= 1_000_000_000L) {
-                fps = frameCount
-                frameCount = 0
                 lastFpsUpdate = currentTime
             }
         }
@@ -580,20 +589,13 @@ class Map(var renderCast: RenderCast? = null) {
         intArrayOf(1,0,1,0,1,0,1,0,0,0,0,0,0,1),
         intArrayOf(1,0,1,1,1,0,1,1,1,1,1,1,0,5),
         intArrayOf(1,0,0,0,0,0,1,0,0,0,0,0,0,1),
-        intArrayOf(1,0,1,1,1,1,1,1,1,1,1,0,0,5),
-        intArrayOf(1,0,0,0,1,0,1,0,1,0,1,0,0,1),
-        intArrayOf(1,0,1,0,1,0,1,0,1,0,1,1,0,5),
-        intArrayOf(1,0,1,0,0,0,1,0,1,0,0,0,0,1),
-        intArrayOf(1,0,1,1,1,1,1,0,1,0,1,1,0,5),
-        intArrayOf(1,0,0,0,0,0,0,0,0,0,1,0,0,1),
-        intArrayOf(1,0,1,1,1,1,1,1,1,0,1,1,0,5),
-        intArrayOf(1,0,1,0,0,0,0,0,1,0,1,0,0,1),
-        intArrayOf(1,1,1,1,1,1,1,0,1,0,1,0,0,5),
         intArrayOf(1,0,0,0,0,0,0,0,0,0,0,0,0,5),
-        intArrayOf(1,1,1,1,1,1,1,1,1,1,1,1,1,1)
+        intArrayOf(1,1,1,1,5,1,5,1,5,1,5,1,5,1)
     )
 
     // Data classes and enum for room generation
+    val limitRooms = 9
+    var currentRooms = 0
     var enemyTextureId: BufferedImage? = ImageIO.read(this::class.java.classLoader.getResource("textures/boguch.jpg"))
     data class GridPoint(val x: Int, val y: Int)
     data class RoomTemplate(val grid: Array<IntArray>, val entrances: List<GridPoint>)
@@ -897,47 +899,32 @@ class Map(var renderCast: RenderCast? = null) {
     }
 
     fun generateRoom(triggerPoint: GridPoint, entryDirection: Direction): GridPoint? {
-        val connectionPoint = when (entryDirection) {
-            Direction.UP -> GridPoint(triggerPoint.x, triggerPoint.y - 1)
-            Direction.DOWN -> GridPoint(triggerPoint.x, triggerPoint.y + 1)
-            Direction.LEFT -> GridPoint(triggerPoint.x - 1, triggerPoint.y)
-            Direction.RIGHT -> GridPoint(triggerPoint.x + 1, triggerPoint.y)
-        }
-
-        // Prefer entrances that align with the entry direction
-        val preferredEntrances = when (entryDirection) {
-            Direction.UP -> { entrance: GridPoint -> entrance.y == templates[0].grid.size - 1 } // Bottom entrance
-            Direction.DOWN -> { entrance: GridPoint -> entrance.y == 0 } // Top entrance
-            Direction.LEFT -> { entrance: GridPoint -> entrance.x == templates[0].grid[0].size - 1 } // Right entrance
-            Direction.RIGHT -> { entrance: GridPoint -> entrance.x == 0 } // Left entrance
-        }
-
-        val shuffledTemplates = templates.shuffled()
-        var selectedTemplate: RoomTemplate? = null
-        var alignedEntrance: GridPoint? = null
-        var offsetX = 1
-        var offsetY = 0
-
-        // First pass: try preferred entrances
-        for (template in shuffledTemplates) {
-            val validEntrances = template.entrances.filter(preferredEntrances).shuffled()
-            for (entrance in validEntrances) {
-                offsetX = connectionPoint.x - entrance.x
-                offsetY = connectionPoint.y - entrance.y
-                if (checkOverlap(offsetX, offsetY, template, triggerPoint, connectionPoint)) {
-                    selectedTemplate = template
-                    alignedEntrance = entrance
-                    break
-                }
+        if (currentRooms < limitRooms) {
+            val connectionPoint = when (entryDirection) {
+                Direction.UP -> GridPoint(triggerPoint.x, triggerPoint.y - 1)
+                Direction.DOWN -> GridPoint(triggerPoint.x, triggerPoint.y + 1)
+                Direction.LEFT -> GridPoint(triggerPoint.x - 1, triggerPoint.y)
+                Direction.RIGHT -> GridPoint(triggerPoint.x + 1, triggerPoint.y)
             }
-            if (selectedTemplate != null) break
-        }
 
-        // Second pass: try any entrance if no preferred ones work
-        if (selectedTemplate == null) {
+            // Prefer entrances that align with the entry direction
+            val preferredEntrances = when (entryDirection) {
+                Direction.UP -> { entrance: GridPoint -> entrance.y == templates[0].grid.size - 1 } // Bottom entrance
+                Direction.DOWN -> { entrance: GridPoint -> entrance.y == 0 } // Top entrance
+                Direction.LEFT -> { entrance: GridPoint -> entrance.x == templates[0].grid[0].size - 1 } // Right entrance
+                Direction.RIGHT -> { entrance: GridPoint -> entrance.x == 0 } // Left entrance
+            }
+
+            val shuffledTemplates = templates.shuffled()
+            var selectedTemplate: RoomTemplate? = null
+            var alignedEntrance: GridPoint? = null
+            var offsetX = 1
+            var offsetY = 0
+
+            // First pass: try preferred entrances
             for (template in shuffledTemplates) {
-                val shuffledEntrances = template.entrances.shuffled()
-                for (entrance in shuffledEntrances) {
+                val validEntrances = template.entrances.filter(preferredEntrances).shuffled()
+                for (entrance in validEntrances) {
                     offsetX = connectionPoint.x - entrance.x
                     offsetY = connectionPoint.y - entrance.y
                     if (checkOverlap(offsetX, offsetY, template, triggerPoint, connectionPoint)) {
@@ -948,114 +935,134 @@ class Map(var renderCast: RenderCast? = null) {
                 }
                 if (selectedTemplate != null) break
             }
-        }
 
-        // Fallback: Try adjusting position slightly
-        if (selectedTemplate == null) {
-            for (template in shuffledTemplates) {
-                val entrance = template.entrances.random()
-                val offsets = listOf(
-                    Pair(0, 0), Pair(1, 0), Pair(-1, 0), Pair(0, 1), Pair(0, -1)
-                ).shuffled()
-                for ((dx, dy) in offsets) {
-                    offsetX = connectionPoint.x - entrance.x + dx
-                    offsetY = connectionPoint.y - entrance.y + dy
-                    if (checkOverlap(offsetX, offsetY, template, triggerPoint, connectionPoint)) {
-                        selectedTemplate = template
-                        alignedEntrance = entrance
-                        break
+            // Second pass: try any entrance if no preferred ones work
+            if (selectedTemplate == null) {
+                for (template in shuffledTemplates) {
+                    val shuffledEntrances = template.entrances.shuffled()
+                    for (entrance in shuffledEntrances) {
+                        offsetX = connectionPoint.x - entrance.x
+                        offsetY = connectionPoint.y - entrance.y
+                        if (checkOverlap(offsetX, offsetY, template, triggerPoint, connectionPoint)) {
+                            selectedTemplate = template
+                            alignedEntrance = entrance
+                            break
+                        }
                     }
-                }
-                if (selectedTemplate != null) break
-            }
-        }
-
-        if (selectedTemplate == null || alignedEntrance == null) {
-            return null
-        }
-
-        val roomWidth = selectedTemplate.grid[0].size
-        val roomHeight = selectedTemplate.grid.size
-
-        expandGridIfNeeded(offsetX, offsetY, roomWidth, roomHeight)
-
-        // Kopiowanie szablonu do siatki
-        for (y in 0 until roomHeight) {
-            for (x in 0 until roomWidth) {
-                val mapX = offsetX + x
-                val mapY = offsetY + y
-                if (mapY in grid.indices && mapX in grid[0].indices) {
-                    grid[mapY][mapX] = selectedTemplate.grid[y][x]
+                    if (selectedTemplate != null) break
                 }
             }
-        }
 
-        // Dodawanie przeciwników i źródeł światła dla pól 3 i 6
-        for (y in 0 until roomHeight) {
-            for (x in 0 until roomWidth) {
-                val mapX = offsetX + x
-                val mapY = offsetY + y
-                if (mapY in grid.indices && mapX in grid[0].indices) {
-                    if (selectedTemplate.grid[y][x] == 3) {
-                        renderCast?.let {
-                            enemies.add(Enemy(
-                                (tileSize * mapX) - (tileSize / 2),
-                                (tileSize * mapY) - (tileSize / 2),
-                                100,
-                                enemyTextureId!!,
-                                renderCast = it,
-                                this,
-                                speed = (2.0 * ((10..15).random() / 10.0))
-                            ))
-                            lightSources.add(LightSource(
-                                (mapX + 0.5),
-                                (mapY + 0.5),
-                                color = Color(20, 20, 200),
-                                intensity = 0.25,
-                                range = 1.0,
-                                owner = "${enemies[enemies.size - 1]}"
-                            ))
-                            println(lightSources.get(lightSources.size - 1).owner)
-                        } ?: throw IllegalStateException("skip it")
+            // Fallback: Try adjusting position slightly
+            if (selectedTemplate == null) {
+                for (template in shuffledTemplates) {
+                    val entrance = template.entrances.random()
+                    val offsets = listOf(
+                        Pair(0, 0), Pair(1, 0), Pair(-1, 0), Pair(0, 1), Pair(0, -1)
+                    ).shuffled()
+                    for ((dx, dy) in offsets) {
+                        offsetX = connectionPoint.x - entrance.x + dx
+                        offsetY = connectionPoint.y - entrance.y + dy
+                        if (checkOverlap(offsetX, offsetY, template, triggerPoint, connectionPoint)) {
+                            selectedTemplate = template
+                            alignedEntrance = entrance
+                            break
+                        }
                     }
-                    if (selectedTemplate.grid[y][x] == 6) {
-                        renderCast?.let {
-                            lightSources.add(LightSource(
-                                (mapX + 0.5),
-                                (mapY + 0.5),
-                                color = Color(200, 20, 20),
-                                intensity = 0.25,
-                                range = 3.0,
-                                owner = "skun"
-                            ))
-                            it.repaint()
+                    if (selectedTemplate != null) break
+                }
+            }
+
+            if (selectedTemplate == null || alignedEntrance == null) {
+                return null
+            }
+
+            val roomWidth = selectedTemplate.grid[0].size
+            val roomHeight = selectedTemplate.grid.size
+
+            expandGridIfNeeded(offsetX, offsetY, roomWidth, roomHeight)
+
+            // Kopiowanie szablonu do siatki
+            for (y in 0 until roomHeight) {
+                for (x in 0 until roomWidth) {
+                    val mapX = offsetX + x
+                    val mapY = offsetY + y
+                    if (mapY in grid.indices && mapX in grid[0].indices) {
+                        grid[mapY][mapX] = selectedTemplate.grid[y][x]
+                    }
+                }
+            }
+
+            // Dodawanie przeciwników i źródeł światła dla pól 3 i 6
+            for (y in 0 until roomHeight) {
+                for (x in 0 until roomWidth) {
+                    val mapX = offsetX + x
+                    val mapY = offsetY + y
+                    if (mapY in grid.indices && mapX in grid[0].indices) {
+                        if (selectedTemplate.grid[y][x] == 3) {
+                            renderCast?.let {
+                                enemies.add(Enemy(
+                                    (tileSize * mapX) - (tileSize / 2),
+                                    (tileSize * mapY) - (tileSize / 2),
+                                    100,
+                                    enemyTextureId!!,
+                                    renderCast = it,
+                                    this,
+                                    speed = (2.0 * ((10..15).random() / 10.0))
+                                ))
+                                lightSources.add(LightSource(
+                                    (mapX + 0.5),
+                                    (mapY + 0.5),
+                                    color = Color(20, 20, 200),
+                                    intensity = 0.25,
+                                    range = 1.0,
+                                    owner = "${enemies[enemies.size - 1]}"
+                                ))
+                                println(lightSources.get(lightSources.size - 1).owner)
+                            } ?: throw IllegalStateException("skip it")
+                        }
+                        if (selectedTemplate.grid[y][x] == 6) {
+                            renderCast?.let {
+                                lightSources.add(LightSource(
+                                    (mapX + 0.5),
+                                    (mapY + 0.5),
+                                    color = Color(200, 20, 20),
+                                    intensity = 0.25,
+                                    range = 3.0,
+                                    owner = "skun"
+                                ))
+                                it.repaint()
+                            }
                         }
                     }
                 }
             }
-        }
 
-        // Ustawienie triggerPoint i lastEntrance
-        grid[triggerPoint.y][triggerPoint.x] = 0
+            // Ustawienie triggerPoint i lastEntrance
+            grid[triggerPoint.y][triggerPoint.x] = 0
 
-        lastEntrance?.let {
-            if (it.y in grid.indices && it.x in grid[0].indices) {
-                grid[it.y][it.x] = 0
+            lastEntrance?.let {
+                if (it.y in grid.indices && it.x in grid[0].indices) {
+                    grid[it.y][it.x] = 0
+                }
             }
-        }
 
-        val newEntrances = selectedTemplate.entrances.filter { it != alignedEntrance }
-        val newEntrance = newEntrances.randomOrNull()
-        if (newEntrance != null) {
-            val newEntrancePoint = GridPoint(offsetX + newEntrance.x, offsetY + newEntrance.y)
-            grid[newEntrancePoint.y][newEntrancePoint.x] = 5
-            lastEntrance = newEntrancePoint
-            roomConnections.add(Pair(triggerPoint, newEntrancePoint))
+            val newEntrances = selectedTemplate.entrances.filter { it != alignedEntrance }
+            val newEntrance = newEntrances.randomOrNull()
+            if (newEntrance != null) {
+                val newEntrancePoint = GridPoint(offsetX + newEntrance.x, offsetY + newEntrance.y)
+                grid[newEntrancePoint.y][newEntrancePoint.x] = 5
+                lastEntrance = newEntrancePoint
+                roomConnections.add(Pair(triggerPoint, newEntrancePoint))
+                updateWallDistances()
+                return newEntrancePoint
+            }
+
+            currentRooms += 1
+
             updateWallDistances()
-            return newEntrancePoint
+            return null
         }
-
-        updateWallDistances()
         return null
     }
 }
@@ -1197,7 +1204,7 @@ class Mappingmap(private val map: Map, private val renderCast: RenderCast) : JPa
 
         g2.color = Color.YELLOW
         g2.font = Font("BOLD", Font.BOLD, 17)
-        g2.drawString("FPS: $fps", 1366 - 90, 20)
+        g2.drawString("FPS: ${renderCast.getRenderFps()*2}", 1366 - 90, 20)
     }
 
     override fun getPreferredSize(): Dimension {
