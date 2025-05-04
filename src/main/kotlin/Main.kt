@@ -28,6 +28,7 @@ import java.util.PriorityQueue
 import javax.imageio.ImageIO
 import javax.swing.JLayeredPane
 import kotlin.math.*
+import kotlin.random.Random
 
 var playerHealth: Int = 100
 var level: Int = 1
@@ -110,6 +111,11 @@ class Enemy(
     private val ENEMY_AVOIDANCE_RADIUS = 1.0 * tileSize // Distance to penalize other enemies
     private val ENEMY_AVOIDANCE_COST = 10.0 // Cost penalty for being near another enemy
     private val ALIGNMENT_PENALTY = 5.0 // Penalty for aligning with other enemies
+    private var shootTimer = 0
+    private val minShootInterval = (1.0 * TARGET_FPS).toInt()
+    private val maxShootInterval = (2.5 * TARGET_FPS).toInt()
+    private var nextShootTime = Random.nextInt(minShootInterval, maxShootInterval + 1)
+    private val projectiles = mutableListOf<Projectile>()
 
     companion object {
         const val MIN_WALL_DISTANCE = 0.1
@@ -124,6 +130,77 @@ class Enemy(
     }
 
     data class Node(val x: Int, val y: Int)
+
+    private inner class Projectile(
+        var x: Double,
+        var y: Double,
+        val dx: Double,
+        val dy: Double,
+        val speed: Double = 5.0,
+        val size: Double = 0.1 * tileSize,
+        val damage: Int = 2*level,
+        var active: Boolean = true
+    ) {
+        fun update() {
+            if (!active) return
+            x += dx * speed * deltaTime * TARGET_FPS
+            y += dy * speed * deltaTime * TARGET_FPS
+
+            val gridX = (x / tileSize).toInt()
+            val gridY = (y / tileSize).toInt()
+            if (gridY in map.grid.indices && gridX in map.grid[0].indices) {
+                if (map.grid[gridY][gridX] == 1 || map.grid[gridY][gridX] == 2) {
+                    active = false
+                    return
+                }
+            }
+
+            val dxToPlayer = x - positionX
+            val dyToPlayer = y - positionY
+            val distanceToPlayer = sqrt(dxToPlayer * dxToPlayer + dyToPlayer * dyToPlayer)
+            if (distanceToPlayer < size + (tileSize * 0.5)) {
+                playerHealth -= damage
+                active = false
+                if (playerHealth <= 0) {
+                    playerHealth = 0
+                }
+            }
+        }
+
+        fun render(g2: Graphics2D) {
+            if (!active) return
+            // Assuming top-down 2D rendering similar to Mappingmap
+            val playerGridX = positionX / tileSize
+            val playerGridY = positionY / tileSize
+            val miniMapSize = 200
+            val offsetX = 10
+            val offsetY = 10
+            val maxRenderTiles = 25
+            val tileScale = miniMapSize.toDouble() / maxRenderTiles
+            val playerMapX = miniMapSize / 2 + offsetX
+            val playerMapY = miniMapSize / 2 + offsetY
+
+            val relativeX = (x / tileSize) - playerGridX
+            val relativeY = (y / tileSize) - playerGridY
+            val projX = (playerMapX + relativeX * tileScale).toInt()
+            val projY = (playerMapY + relativeY * tileScale).toInt()
+            if (projX >= offsetX && projX < miniMapSize + offsetX && projY >= offsetY && projY < miniMapSize + offsetY) {
+                g2.color = Color.RED
+                g2.fillOval(projX - 2, projY - 2, 4, 4)
+            }
+        }
+    }
+
+    private fun shootAtPlayer() {
+        val dx = positionX - x
+        val dy = positionY - y
+        val distance = sqrt(dx * dx + dy * dy)
+        if (distance > 0) {
+            val directionX = dx / distance
+            val directionY = dy / distance
+            projectiles.add(Projectile(x, y, directionX, directionY))
+        }
+    }
 
     private fun heuristic(node: Node, goal: Node): Double {
         return (abs(node.x - goal.x) + abs(node.y - goal.y)).toDouble()
@@ -142,11 +219,11 @@ class Enemy(
                 if (abs(otherX - nodeX) < tileSize / 2) sameColCount++
             }
         }
-        return sameRowCount >= 2 || sameColCount >= 2 // Alignment with 2+ enemies
+        return sameRowCount >= 2 || sameColCount >= 2
     }
 
     private fun calculateNodeCost(node: Node, enemies: List<Enemy>): Double {
-        var cost = 1.0 // Base cost
+        var cost = 1.0
         val nodeX = (node.x + 0.5) * tileSize
         val nodeY = (node.y + 0.5) * tileSize
 
@@ -197,7 +274,6 @@ class Enemy(
         val cacheKey = Pair(Node(startX, startY), Node(goalX, goalY))
         pathCache[cacheKey]?.let { return it }
 
-        // A* algorithm
         data class AStarNode(val node: Node, val fScore: Double, val gScore: Double)
 
         val openSet = PriorityQueue<AStarNode>(compareBy { it.fScore })
@@ -284,6 +360,7 @@ class Enemy(
             accumulatedDistance = 0.0
             lastX = x
             lastY = y
+            projectiles.clear()
             return
         }
 
@@ -313,6 +390,16 @@ class Enemy(
         } else if (!isChasing && distanceToPlayer < CHASE_RESUME_DISTANCE) {
             isChasing = true
         }
+
+        shootTimer++
+        if (shootTimer >= nextShootTime && isChasing && distanceToPlayer < CHASE_STOP_DISTANCE) {
+            shootAtPlayer()
+            shootTimer = 0
+            nextShootTime = Random.nextInt(minShootInterval, maxShootInterval + 1)
+        }
+
+        projectiles.forEach { it.update() }
+        projectiles.removeAll { !it.active }
 
         val playerMoved = sqrt((positionX - lastPlayerX) * (positionX - lastPlayerX) + (positionY - lastPlayerY) * (positionY - lastPlayerY)) > PLAYER_MOVE_THRESHOLD
         lastPlayerX = positionX
@@ -448,6 +535,10 @@ class Enemy(
                 accumulatedDistance = 0.0
             }
         }
+    }
+
+    fun renderProjectiles(g2: Graphics2D) {
+        projectiles.forEach { it.render(g2) }
     }
 
     fun canMoveTo(newX: Double, newY: Double, exclude: Enemy? = null): Pair<Boolean, Enemy?> {
@@ -664,7 +755,7 @@ class Map(var renderCast: RenderCast? = null) {
     )
 
     // Data classes and enum for room generation
-    val limitRooms = 2
+    val limitRooms = 10
     var currentRooms = 0
     var enemyTextureId: BufferedImage? = ImageIO.read(this::class.java.classLoader.getResource("textures/boguch.jpg"))
     data class GridPoint(val x: Int, val y: Int)
@@ -1137,6 +1228,8 @@ class Map(var renderCast: RenderCast? = null) {
             enemies = mutableListOf<Enemy>()
             lightSources = mutableListOf<LightSource>()
             keysList = mutableListOf<Key>()
+            lightSources.add(LightSource(0.0, 0.0, color = Color(200, 200, 100), intensity = 0.75, range = 0.15, owner = "player"))
+            renderCast
             grid = arrayOf(
                 intArrayOf(1,1,1,1,1,1,1,1,1,1,1,1,1,1),
                 intArrayOf(1,0,0,0,0,0,0,0,0,0,0,0,0,1),
@@ -1335,10 +1428,10 @@ class Mappingmap(private val map: Map, private val renderCast: RenderCast) : JPa
         g2.font = font?.deriveFont(Font.BOLD, 17f) ?: Font("Arial", Font.BOLD, 17)
 
         g2.drawString("${renderCast.getRenderFps()*2}", 1366 - 50, 20)
-        /*
+
         g2.drawString("HEAL: ${playerHealth}", 10, 240)
         g2.drawString("LEVEL: ${level}", 10, 260)
-        g2.drawString("POINTS: ${points}", 10, 280)*/
+        g2.drawString("POINTS: ${points}", 10, 280)
         g2.font = font?.deriveFont(Font.BOLD, 50f) ?: Font("Arial", Font.BOLD, 50)
         g2.drawString("${keys}", 85, 290)
     }

@@ -1,5 +1,6 @@
 package org.example.MainKt
 
+import java.awt.Color
 import java.awt.MouseInfo
 import java.awt.event.KeyEvent
 import kotlin.math.cos
@@ -197,12 +198,50 @@ class Player(private val renderCast: RenderCast, private val map: Map) {
                     gridY > lastGridY -> Map.Direction.UP
                     else -> Map.Direction.DOWN
                 }
-                lightSources[3].x = positionX
-                lightSources[3].y = positionY
                 map.generateRoom(Map.GridPoint(gridX, gridY), direction)
             }
             lastGridX = gridX
             lastGridY = gridY
+        }
+        if (playerHealth <= 0) {
+            positionX = (tileSize*2)-(tileSize/2)  //tile*positon - (half tile)
+            positionY = (tileSize*2)-(tileSize/2)
+            keys = 1
+            playerHealth = 100
+            map.currentRooms = 0
+            enemies = mutableListOf<Enemy>()
+            lightSources = mutableListOf<LightSource>()
+            keysList = mutableListOf<Key>()
+            lightSources.add(LightSource(0.0, 0.0, color = Color(200, 200, 100), intensity = 0.75, range = 0.15, owner = "player"))
+            enemies.add(Enemy((tileSize * 2) - (tileSize / 2), (tileSize * 6) - (tileSize / 2), 100*level, renderCast.enemyTextureId!!, renderCast, map, speed = (2.0 * ((18..19).random() / 10.0))))
+            enemies.add(Enemy((tileSize * 12) - (tileSize / 2), (tileSize * 18) - (tileSize / 2), 100*level, renderCast.enemyTextureId!!, renderCast, map, speed = (2.0 * ((18..19).random() / 10.0))))
+            enemies.add(Enemy((tileSize * 2) - (tileSize / 2), (tileSize * 16) - (tileSize / 2), 100*level, renderCast.enemyTextureId!!, renderCast, map, speed = (2.0 * ((18..19).random() / 10.0))))
+            lightSources.add(LightSource((enemies[0].x / tileSize), (enemies[0].y / tileSize), color = Color(20, 255, 20), intensity = 0.35, range = 1.5, owner = "${enemies[0]}"))
+            lightSources.add(LightSource((enemies[1].x / tileSize), (enemies[1].y / tileSize), color = Color(255, 22, 20), intensity = 0.35, range = 1.5, owner = "${enemies[1]}"))
+            lightSources.add(LightSource((enemies[2].x / tileSize), (enemies[2].y / tileSize), color = Color(22, 20, 255), intensity = 0.35, range = 1.5, owner = "${enemies[2]}"))
+            renderCast
+            map.grid = arrayOf(
+                intArrayOf(1,1,1,1,1,1,1,1,1,1,1,1,1,1),
+                intArrayOf(1,0,0,0,0,0,0,0,0,0,0,0,0,1),
+                intArrayOf(1,0,1,0,1,0,1,1,1,0,1,0,0,1),
+                intArrayOf(1,0,1,0,1,0,0,0,1,0,1,0,0,1),
+                intArrayOf(1,0,1,1,1,0,1,0,1,0,1,0,0,1),
+                intArrayOf(1,0,1,0,0,0,1,0,0,0,1,0,0,1),
+                intArrayOf(1,0,1,1,1,1,1,0,1,1,1,1,0,5),
+                intArrayOf(1,0,0,0,0,0,1,0,1,0,0,0,0,1),
+                intArrayOf(1,0,1,0,1,0,1,0,1,1,1,0,0,5),
+                intArrayOf(1,0,1,0,1,0,0,0,0,0,1,0,0,1),
+                intArrayOf(1,0,1,1,1,1,1,1,1,1,1,0,0,5),
+                intArrayOf(1,0,0,0,1,0,0,0,0,0,0,0,0,1),
+                intArrayOf(1,1,1,0,1,1,1,1,1,0,1,1,0,5),
+                intArrayOf(1,0,0,0,1,0,1,0,1,0,0,0,0,1),
+                intArrayOf(1,0,1,0,1,0,1,0,1,1,1,1,0,5),
+                intArrayOf(1,0,1,0,1,0,1,0,0,0,0,0,0,1),
+                intArrayOf(1,0,1,1,1,0,1,1,1,1,1,1,0,5),
+                intArrayOf(1,0,0,0,0,0,1,0,0,0,0,0,0,1),
+                intArrayOf(1,0,0,0,0,0,0,0,0,0,0,0,0,5),
+                intArrayOf(1,1,1,1,5,1,5,1,5,1,5,1,5,1)
+            )
         }
         checkKeyPickup()
     }
