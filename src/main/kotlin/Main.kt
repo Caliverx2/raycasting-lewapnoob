@@ -50,7 +50,19 @@ var positionY = (tileSize*2)-(tileSize/2)  //tile*positon - (half tile)
 var enemies = mutableListOf<Enemy>()
 var lightSources = mutableListOf<LightSource>()
 var keysList = mutableListOf<Key>()
+var medicationsList = mutableListOf<Medication>()
 var isShooting = false
+
+class Medication(
+    var x: Double,
+    var y: Double,
+    var texture: BufferedImage,
+    var active: Boolean = true,
+    var heal: Int = 100
+) {
+    val size = 0.5 * tileSize // Same size as Key (radius)
+    val pickupDistance = 0.5 * size // Same pickup distance as Key
+}
 
 class Key(
     var x: Double,
@@ -138,8 +150,9 @@ class Enemy(
         val dy: Double,
         val speed: Double = 5.0,
         val size: Double = 0.1 * tileSize,
-        val damage: Int = 2*level,
-        var active: Boolean = true
+        val damage: Int = 2 * level,
+        var active: Boolean = true,
+        val lightSource: LightSource? = null // Add light source for projectile
     ) {
         fun update() {
             if (!active) return
@@ -151,6 +164,7 @@ class Enemy(
             if (gridY in map.grid.indices && gridX in map.grid[0].indices) {
                 if (map.grid[gridY][gridX] == 1 || map.grid[gridY][gridX] == 2) {
                     active = false
+                    lightSource?.let { lightSources.remove(it) } // Remove light source on wall hit
                     return
                 }
             }
@@ -160,16 +174,34 @@ class Enemy(
             val distanceToPlayer = sqrt(dxToPlayer * dxToPlayer + dyToPlayer * dyToPlayer)
             if (distanceToPlayer < size + (tileSize * 0.5)) {
                 playerHealth -= damage
+                val random = Random.nextFloat()
+                if (playerHealth > 15) {
+                    renderCast.playSound(when {
+                        random < 0.20f -> "hurt1.wav"
+                        random < 0.40f -> "hurt2.wav"
+                        random < 0.60f -> "hurt3.wav"
+                        random < 0.80f -> "hurt4.wav"
+                        else -> "hurt5.wav"
+                    }, volume = 0.65f)
+                } else {
+                    renderCast.playSound("hurt6.wav", volume = 0.65f)
+                }
                 active = false
+                lightSource?.let { lightSources.remove(it) } // Remove light source on player hit
                 if (playerHealth <= 0) {
                     playerHealth = 0
                 }
+            }
+
+            // Update light source position
+            lightSource?.let {
+                it.x = x / tileSize
+                it.y = y / tileSize
             }
         }
 
         fun render(g2: Graphics2D) {
             if (!active) return
-            // Assuming top-down 2D rendering similar to Mappingmap
             val playerGridX = positionX / tileSize
             val playerGridY = positionY / tileSize
             val miniMapSize = 200
@@ -198,7 +230,17 @@ class Enemy(
         if (distance > 0) {
             val directionX = dx / distance
             val directionY = dy / distance
-            projectiles.add(Projectile(x, y, directionX, directionY))
+            // Create a light source for the projectile
+            val lightSource = LightSource(
+                x = x / tileSize,
+                y = y / tileSize,
+                color = Color(255, 100, 100), // Reddish light for enemy projectiles
+                intensity = 0.5,
+                range = 0.5,
+                owner = "projectile_${this.hashCode()}_${System.nanoTime()}"
+            )
+            lightSources.add(lightSource)
+            projectiles.add(Projectile(x, y, directionX, directionY, lightSource = lightSource))
         }
     }
 
@@ -256,7 +298,7 @@ class Enemy(
         if (startY !in map.grid.indices || startX !in map.grid[0].indices ||
             goalY !in map.grid.indices || goalX !in map.grid[0].indices ||
             ((map.grid[goalY][goalX] != 0) && (map.grid[goalY][goalX] != 5) &&
-                    (map.grid[goalY][goalX] != 3) && (map.grid[goalY][goalX] != 6))
+                    (map.grid[goalY][goalX] != 3) && (map.grid[goalY][goalX] != 6) && (map.grid[goalY][goalX] != 7))
         ) {
             return emptyList()
         }
@@ -361,6 +403,7 @@ class Enemy(
             lastX = x
             lastY = y
             projectiles.clear()
+            lightSources.removeIf { it.owner == this.toString() }
             return
         }
 
@@ -759,8 +802,11 @@ class Map(var renderCast: RenderCast? = null) {
     var currentRooms = 0
     var enemyTextureId: BufferedImage? = ImageIO.read(this::class.java.classLoader.getResource("textures/boguch.jpg"))
     data class GridPoint(val x: Int, val y: Int)
-    data class RoomTemplate(val grid: Array<IntArray>, val entrances: List<GridPoint>)
     enum class Direction { UP, DOWN, LEFT, RIGHT }
+    data class RoomTemplate(
+        val grid: Array<IntArray>,
+        val entrances: List<Pair<GridPoint, Direction>> // Changed to include direction
+    )
 
     // Room templates
     private val templates = listOf(
@@ -770,90 +816,90 @@ class Map(var renderCast: RenderCast? = null) {
                 intArrayOf(2, 2, 0, 2, 2),
                 intArrayOf(2, 0, 0, 0, 2),
                 intArrayOf(2, 0, 6, 0, 2),
-                intArrayOf(2, 0, 0, 0, 2),
+                intArrayOf(2, 0, 7, 0, 2),
                 intArrayOf(2, 2, 2, 2, 2)
             ),
-            entrances = listOf(GridPoint(2, -2))
+            entrances = listOf(Pair(GridPoint(2, -2), Direction.DOWN))
         ),
         RoomTemplate(
             grid = arrayOf(
                 intArrayOf(1, 1, 1, 1, 1),
-                intArrayOf(1, 0, 0, 0, 1),
+                intArrayOf(1, 0, 7, 0, 1),
                 intArrayOf(1, 0, 6, 0, 1),
                 intArrayOf(1, 0, 0, 0, 1),
                 intArrayOf(1, 1, 0, 1, 1)
             ),
-            entrances = listOf(GridPoint(2, 6))
+            entrances = listOf(Pair(GridPoint(2, 6), Direction.UP))
         ),
         RoomTemplate(
             grid = arrayOf(
                 intArrayOf(2, 2, 2, 2, 2),
                 intArrayOf(2, 0, 0, 0, 2),
-                intArrayOf(2, 0, 6, 0, 0),
+                intArrayOf(0, 0, 6, 7, 2),
                 intArrayOf(2, 0, 0, 0, 2),
                 intArrayOf(2, 2, 2, 2, 2)
             ),
-            entrances = listOf(GridPoint(6, 2))
+            entrances = listOf(Pair(GridPoint(6, 2), Direction.RIGHT))
         ),
         RoomTemplate(
             grid = arrayOf(
                 intArrayOf(1, 1, 1, 1, 1),
                 intArrayOf(1, 0, 0, 0, 1),
-                intArrayOf(0, 0, 6, 0, 1),
+                intArrayOf(1, 7, 6, 0, 0),
                 intArrayOf(1, 0, 0, 0, 1),
                 intArrayOf(1, 1, 1, 1, 1)
             ),
-            entrances = listOf(GridPoint(-2, 2))
+            entrances = listOf(Pair(GridPoint(-2, 2), Direction.LEFT))
         ),
 
         // Template 2: Medium 7x7 room, entrances: left, right, bottom
         RoomTemplate(
             grid = arrayOf(
-                intArrayOf(2, 2, 2, 5, 2, 2, 2),
+                intArrayOf(2, 2, 2, 0, 2, 2, 2),
                 intArrayOf(2, 0, 0, 0, 0, 0, 2),
                 intArrayOf(2, 0, 6, 0, 6, 0, 2),
-                intArrayOf(0, 0, 0, 3, 0, 3, 5),
+                intArrayOf(5, 0, 0, 3, 0, 3, 5),
                 intArrayOf(2, 0, 6, 0, 6, 0, 2),
                 intArrayOf(2, 0, 0, 0, 0, 0, 2),
                 intArrayOf(2, 2, 2, 5, 2, 2, 2)
             ),
-            entrances = listOf(GridPoint(-2, 3))
+            entrances = listOf(Pair(GridPoint(-2, 3), Direction.DOWN))
         ),
         RoomTemplate(
             grid = arrayOf(
                 intArrayOf(1, 1, 1, 5, 1, 1, 1),
                 intArrayOf(1, 0, 0, 0, 0, 0, 1),
                 intArrayOf(1, 0, 0, 6, 0, 0, 1),
-                intArrayOf(5, 3, 6, 3, 6, 0, 0),
+                intArrayOf(5, 3, 6, 3, 6, 0, 5),
                 intArrayOf(1, 0, 0, 6, 0, 0, 1),
                 intArrayOf(1, 0, 0, 0, 0, 0, 1),
-                intArrayOf(1, 1, 1, 5, 1, 1, 1)
+                intArrayOf(1, 1, 1, 0, 1, 1, 1)
             ),
-            entrances = listOf(GridPoint(8, 3))
+            entrances = listOf(Pair(GridPoint(8, 3), Direction.UP))
         ),
         RoomTemplate(
             grid = arrayOf(
-                intArrayOf(2, 2, 2, 0, 2, 2, 2),
+                intArrayOf(2, 2, 2, 5, 2, 2, 2),
                 intArrayOf(2, 0, 0, 0, 0, 0, 2),
                 intArrayOf(2, 0, 0, 6, 0, 0, 2),
-                intArrayOf(5, 0, 6, 3, 6, 0, 5),
+                intArrayOf(0, 0, 6, 3, 6, 0, 5),
                 intArrayOf(2, 0, 0, 6, 0, 0, 2),
                 intArrayOf(2, 0, 0, 3, 0, 0, 2),
                 intArrayOf(2, 2, 2, 5, 2, 2, 2)
             ),
-            entrances = listOf(GridPoint(3, -2))
+            entrances = listOf(Pair(GridPoint(3, -2), Direction.RIGHT))
         ),
         RoomTemplate(
             grid = arrayOf(
                 intArrayOf(1, 1, 1, 5, 1, 1, 1),
                 intArrayOf(1, 0, 0, 3, 0, 0, 1),
                 intArrayOf(1, 0, 0, 6, 0, 0, 1),
-                intArrayOf(5, 0, 6, 3, 6, 0, 5),
+                intArrayOf(5, 0, 6, 3, 6, 0, 0),
                 intArrayOf(1, 0, 0, 6, 0, 0, 1),
                 intArrayOf(1, 0, 0, 0, 0, 0, 1),
-                intArrayOf(1, 1, 1, 0, 1, 1, 1)
+                intArrayOf(1, 1, 1, 5, 1, 1, 1)
             ),
-            entrances = listOf(GridPoint(3, 8))
+            entrances = listOf(Pair(GridPoint(3, 8), Direction.LEFT))
         ),
 
         // Template 3: Large 9x9 room, entrances: top, bottom
@@ -869,7 +915,7 @@ class Map(var renderCast: RenderCast? = null) {
                 intArrayOf(1, 0, 0, 0, 0, 0, 0, 0, 1),
                 intArrayOf(1, 1, 1, 1, 1, 1, 1, 1, 1)
             ),
-            entrances = listOf(GridPoint(4, -2))
+            entrances = listOf(Pair(GridPoint(4, -2), Direction.DOWN))
         ),
         RoomTemplate(
             grid = arrayOf(
@@ -883,7 +929,7 @@ class Map(var renderCast: RenderCast? = null) {
                 intArrayOf(2, 0, 0, 0, 0, 0, 0, 0, 2),
                 intArrayOf(2, 2, 2, 2, 0, 2, 2, 2, 2)
             ),
-            entrances = listOf(GridPoint(4, 10))
+            entrances = listOf(Pair(GridPoint(4, 10), Direction.UP))
         ),
         RoomTemplate(
             grid = arrayOf(
@@ -897,7 +943,7 @@ class Map(var renderCast: RenderCast? = null) {
                 intArrayOf(1, 0, 0, 0, 0, 0, 0, 0, 1),
                 intArrayOf(1, 1, 1, 1, 5, 1, 1, 1, 1)
             ),
-            entrances = listOf(GridPoint(-2, 4))
+            entrances = listOf(Pair(GridPoint(-2, 4), Direction.RIGHT))
         ),
         RoomTemplate(
             grid = arrayOf(
@@ -911,53 +957,53 @@ class Map(var renderCast: RenderCast? = null) {
                 intArrayOf(2, 0, 0, 0, 0, 0, 0, 0, 2),
                 intArrayOf(2, 2, 2, 2, 5, 2, 2, 2, 2)
             ),
-            entrances = listOf(GridPoint(10, 4))
+            entrances = listOf(Pair(GridPoint(10, 4), Direction.LEFT))
         ),
 
         // Template 4: Rectangular 6x8 room, entrances: left, top
         RoomTemplate(
             grid = arrayOf(
-                intArrayOf(1, 1, 1, 1, 1, 5, 1, 1),
-                intArrayOf(1, 0, 0, 0, 0, 0, 0, 1),
-                intArrayOf(0, 0, 0, 0, 0, 0, 0, 1),
-                intArrayOf(1, 0, 0, 0, 0, 0, 0, 1),
-                intArrayOf(1, 0, 0, 0, 0, 0, 0, 1),
-                intArrayOf(1, 1, 1, 5, 1, 1, 1, 1)
-            ),
-            entrances = listOf(GridPoint(-2, 2))
-        ),
-        RoomTemplate(
-            grid = arrayOf(
                 intArrayOf(1, 1, 1, 1, 1, 0, 1, 1),
                 intArrayOf(1, 0, 0, 0, 0, 0, 0, 1),
-                intArrayOf(1, 0, 0, 0, 0, 0, 0, 1),
+                intArrayOf(1, 0, 0, 0, 7, 0, 0, 1),
                 intArrayOf(1, 0, 0, 0, 0, 0, 0, 5),
                 intArrayOf(1, 0, 0, 0, 0, 0, 0, 1),
                 intArrayOf(1, 1, 1, 5, 1, 1, 1, 1)
             ),
-            entrances = listOf(GridPoint(5, -2))
+            entrances = listOf(Pair(GridPoint(5, -2), Direction.DOWN))
         ),
         RoomTemplate(
             grid = arrayOf(
                 intArrayOf(1, 1, 1, 1, 1, 5, 1, 1),
                 intArrayOf(1, 0, 0, 0, 0, 0, 0, 1),
-                intArrayOf(1, 0, 0, 0, 0, 0, 0, 1),
-                intArrayOf(1, 0, 0, 0, 0, 0, 0, 0),
-                intArrayOf(1, 0, 0, 0, 0, 0, 0, 1),
-                intArrayOf(1, 1, 1, 5, 1, 1, 1, 1)
-            ),
-            entrances = listOf(GridPoint(9, 3))
-        ),
-        RoomTemplate(
-            grid = arrayOf(
-                intArrayOf(1, 1, 1, 1, 1, 5, 1, 1),
-                intArrayOf(1, 0, 0, 0, 0, 0, 0, 1),
-                intArrayOf(5, 0, 0, 0, 0, 0, 0, 1),
+                intArrayOf(5, 0, 0, 0, 7, 0, 0, 1),
                 intArrayOf(1, 0, 0, 0, 0, 0, 0, 1),
                 intArrayOf(1, 0, 0, 0, 0, 0, 0, 1),
                 intArrayOf(1, 1, 1, 0, 1, 1, 1, 1)
             ),
-            entrances = listOf(GridPoint(3, 7))
+            entrances = listOf(Pair(GridPoint(3, 7), Direction.UP))
+        ),
+        RoomTemplate(
+            grid = arrayOf(
+                intArrayOf(1, 1, 1, 1, 1, 5, 1, 1),
+                intArrayOf(1, 0, 0, 0, 0, 0, 0, 1),
+                intArrayOf(0, 0, 0, 0, 7, 0, 0, 1),
+                intArrayOf(1, 0, 0, 0, 0, 0, 0, 1),
+                intArrayOf(1, 0, 0, 0, 0, 0, 0, 1),
+                intArrayOf(1, 1, 1, 5, 1, 1, 1, 1)
+            ),
+            entrances = listOf(Pair(GridPoint(-2, 2), Direction.RIGHT))
+        ),
+        RoomTemplate(
+            grid = arrayOf(
+                intArrayOf(1, 1, 1, 1, 1, 5, 1, 1),
+                intArrayOf(1, 0, 0, 0, 0, 0, 0, 1),
+                intArrayOf(1, 0, 0, 0, 7, 0, 0, 1),
+                intArrayOf(1, 0, 0, 0, 0, 0, 0, 0),
+                intArrayOf(1, 0, 0, 0, 0, 0, 0, 1),
+                intArrayOf(1, 1, 1, 5, 1, 1, 1, 1)
+            ),
+            entrances = listOf(Pair(GridPoint(9, 3), Direction.LEFT))
         )
     )
 
@@ -1064,26 +1110,31 @@ class Map(var renderCast: RenderCast? = null) {
                 Direction.RIGHT -> GridPoint(triggerPoint.x + 1, triggerPoint.y)
             }
 
-            // Prefer entrances that align with the entry direction
-            val preferredEntrances = when (entryDirection) {
-                Direction.UP -> { entrance: GridPoint -> entrance.y == templates[0].grid.size - 1 } // Bottom entrance
-                Direction.DOWN -> { entrance: GridPoint -> entrance.y == 0 } // Top entrance
-                Direction.LEFT -> { entrance: GridPoint -> entrance.x == templates[0].grid[0].size - 1 } // Right entrance
-                Direction.RIGHT -> { entrance: GridPoint -> entrance.x == 0 } // Left entrance
+            // Map entry direction to the required entrance direction (opposite)
+            fun oppositeDirection(dir: Direction): Direction {
+                return when (dir) {
+                    Direction.UP -> Direction.DOWN
+                    Direction.DOWN -> Direction.UP
+                    Direction.LEFT -> Direction.RIGHT
+                    Direction.RIGHT -> Direction.LEFT
+                }
             }
 
+            val requiredEntranceDirection = oppositeDirection(entryDirection)
             val shuffledTemplates = templates.shuffled()
             var selectedTemplate: RoomTemplate? = null
-            var alignedEntrance: GridPoint? = null
-            var offsetX = 1
+            var alignedEntrance: Pair<GridPoint, Direction>? = null
+            var offsetX = 0
             var offsetY = 0
 
-            // First pass: try preferred entrances
+            // First pass: try templates with entrances matching the required direction
             for (template in shuffledTemplates) {
-                val validEntrances = template.entrances.filter(preferredEntrances).shuffled()
+                val validEntrances = template.entrances
+                    .filter { it.second == requiredEntranceDirection }
+                    .shuffled()
                 for (entrance in validEntrances) {
-                    offsetX = connectionPoint.x - entrance.x
-                    offsetY = connectionPoint.y - entrance.y
+                    offsetX = connectionPoint.x - entrance.first.x
+                    offsetY = connectionPoint.y - entrance.first.y
                     if (checkOverlap(offsetX, offsetY, template, triggerPoint, connectionPoint)) {
                         selectedTemplate = template
                         alignedEntrance = entrance
@@ -1093,13 +1144,13 @@ class Map(var renderCast: RenderCast? = null) {
                 if (selectedTemplate != null) break
             }
 
-            // Second pass: try any entrance if no preferred ones work
+            // Second pass: try any entrance if no matching direction works
             if (selectedTemplate == null) {
                 for (template in shuffledTemplates) {
                     val shuffledEntrances = template.entrances.shuffled()
                     for (entrance in shuffledEntrances) {
-                        offsetX = connectionPoint.x - entrance.x
-                        offsetY = connectionPoint.y - entrance.y
+                        offsetX = connectionPoint.x - entrance.first.x
+                        offsetY = connectionPoint.y - entrance.first.y
                         if (checkOverlap(offsetX, offsetY, template, triggerPoint, connectionPoint)) {
                             selectedTemplate = template
                             alignedEntrance = entrance
@@ -1118,8 +1169,8 @@ class Map(var renderCast: RenderCast? = null) {
                         Pair(0, 0), Pair(1, 0), Pair(-1, 0), Pair(0, 1), Pair(0, -1)
                     ).shuffled()
                     for ((dx, dy) in offsets) {
-                        offsetX = connectionPoint.x - entrance.x + dx
-                        offsetY = connectionPoint.y - entrance.y + dy
+                        offsetX = connectionPoint.x - entrance.first.x + dx
+                        offsetY = connectionPoint.y - entrance.first.y + dy
                         if (checkOverlap(offsetX, offsetY, template, triggerPoint, connectionPoint)) {
                             selectedTemplate = template
                             alignedEntrance = entrance
@@ -1139,7 +1190,7 @@ class Map(var renderCast: RenderCast? = null) {
 
             expandGridIfNeeded(offsetX, offsetY, roomWidth, roomHeight)
 
-            // Copy a template to the grid
+            // Copy the template to the grid
             for (y in 0 until roomHeight) {
                 for (x in 0 until roomWidth) {
                     val mapX = offsetX + x
@@ -1150,7 +1201,7 @@ class Map(var renderCast: RenderCast? = null) {
                 }
             }
 
-            // Adding enemies and light sources for squares 3 and 6
+            // Add enemies and light sources for squares 3, 6, and 7
             for (y in 0 until roomHeight) {
                 for (x in 0 until roomWidth) {
                     val mapX = offsetX + x
@@ -1158,36 +1209,55 @@ class Map(var renderCast: RenderCast? = null) {
                     if (mapY in grid.indices && mapX in grid[0].indices) {
                         if (selectedTemplate.grid[y][x] == 3) {
                             renderCast?.let {
-                                enemies.add(Enemy(
-                                    (tileSize * mapX) - (tileSize / 2),
-                                    (tileSize * mapY) - (tileSize / 2),
-                                    (100+(level*7.5)*2).toInt(),
-                                    enemyTextureId!!,
-                                    renderCast = it,
-                                    this,
-                                    speed = (2.0 * ((10..15).random() / 10.0))
-                                ))
-                                lightSources.add(LightSource(
-                                    (mapX + 0.5),
-                                    (mapY + 0.5),
-                                    color = Color(20, 20, 200),
-                                    intensity = 0.25,
-                                    range = 1.0,
-                                    owner = "${enemies[enemies.size - 1]}"
-                                ))
-                                println(lightSources.get(lightSources.size - 1).owner)
-                            } ?: throw IllegalStateException("skip it")
+                                enemies.add(
+                                    Enemy(
+                                        (tileSize * mapX) - (tileSize / 2),
+                                        (tileSize * mapY) - (tileSize / 2),
+                                        (100 + (level * 7.5) * 2).toInt(),
+                                        enemyTextureId!!,
+                                        renderCast = it,
+                                        this,
+                                        speed = (2.0 * ((10..15).random() / 10.0))
+                                    )
+                                )
+                                lightSources.add(
+                                    LightSource(
+                                        (mapX + 0.5),
+                                        (mapY + 0.5),
+                                        color = Color(20, 20, 200),
+                                        intensity = 0.25,
+                                        range = 1.0,
+                                        owner = "${enemies[enemies.size - 1]}"
+                                    )
+                                )
+                                println(lightSources[lightSources.size - 1].owner)
+                            } ?: throw IllegalStateException("renderCast is null")
                         }
                         if (selectedTemplate.grid[y][x] == 6) {
                             renderCast?.let {
-                                lightSources.add(LightSource(
-                                    (mapX + 0.5),
-                                    (mapY + 0.5),
-                                    color = Color(200, 20, 20),
-                                    intensity = 0.25,
-                                    range = 3.0,
-                                    owner = "skun"
-                                ))
+                                lightSources.add(
+                                    LightSource(
+                                        (mapX + 0.5),
+                                        (mapY + 0.5),
+                                        color = Color(200, 20, 20),
+                                        intensity = 0.25,
+                                        range = 3.0,
+                                        owner = "skun"
+                                    )
+                                )
+                                it.repaint()
+                            }
+                        }
+                        if (selectedTemplate.grid[y][x] == 7) {
+                            renderCast?.let {
+                                medicationsList.add(
+                                    Medication(
+                                        (tileSize * mapX) - (tileSize / 2),
+                                        (tileSize * mapY) - (tileSize / 2),
+                                        renderCast?.medicationTextureID!!,
+                                        heal = 100
+                                    )
+                                )
                                 it.repaint()
                             }
                         }
@@ -1195,7 +1265,7 @@ class Map(var renderCast: RenderCast? = null) {
                 }
             }
 
-            // setting triggerPoint i lastEntrance
+            // Set triggerPoint and lastEntrance
             grid[triggerPoint.y][triggerPoint.x] = 0
 
             lastEntrance?.let {
@@ -1204,10 +1274,11 @@ class Map(var renderCast: RenderCast? = null) {
                 }
             }
 
+            // Select a new entrance (excluding the aligned one)
             val newEntrances = selectedTemplate.entrances.filter { it != alignedEntrance }
             val newEntrance = newEntrances.randomOrNull()
             if (newEntrance != null) {
-                val newEntrancePoint = GridPoint(offsetX + newEntrance.x, offsetY + newEntrance.y)
+                val newEntrancePoint = GridPoint(offsetX + newEntrance.first.x, offsetY + newEntrance.first.y)
                 grid[newEntrancePoint.y][newEntrancePoint.x] = 5
                 lastEntrance = newEntrancePoint
                 roomConnections.add(Pair(triggerPoint, newEntrancePoint))
@@ -1221,36 +1292,40 @@ class Map(var renderCast: RenderCast? = null) {
             updateWallDistances()
             return null
         } else if ((currentRooms >= limitRooms) and (keys > 0)) {
-            positionX = (tileSize*2)-(tileSize/2)  //tile*positon - (half tile)
-            positionY = (tileSize*2)-(tileSize/2)
+            positionX = (tileSize * 2) - (tileSize / 2)
+            positionY = (tileSize * 2) - (tileSize / 2)
             keys += 1
             currentRooms = 0
             enemies = mutableListOf<Enemy>()
             lightSources = mutableListOf<LightSource>()
             keysList = mutableListOf<Key>()
-            lightSources.add(LightSource(0.0, 0.0, color = Color(200, 200, 100), intensity = 0.75, range = 0.15, owner = "player"))
-            renderCast
+            lightSources.add(
+                LightSource(
+                    0.0, 0.0, color = Color(200, 200, 100), intensity = 0.75, range = 0.15, owner = "player"
+                )
+            )
+            renderCast?.repaint()
             grid = arrayOf(
-                intArrayOf(1,1,1,1,1,1,1,1,1,1,1,1,1,1),
-                intArrayOf(1,0,0,0,0,0,0,0,0,0,0,0,0,1),
-                intArrayOf(1,0,1,0,1,0,1,1,1,0,1,0,0,1),
-                intArrayOf(1,0,1,0,1,0,0,0,1,0,1,0,0,1),
-                intArrayOf(1,0,1,1,1,0,1,0,1,0,1,0,0,1),
-                intArrayOf(1,0,1,0,0,0,1,0,0,0,1,0,0,1),
-                intArrayOf(1,0,1,1,1,1,1,0,1,1,1,1,0,5),
-                intArrayOf(1,0,0,0,0,0,1,0,1,0,0,0,0,1),
-                intArrayOf(1,0,1,0,1,0,1,0,1,1,1,0,0,5),
-                intArrayOf(1,0,1,0,1,0,0,0,0,0,1,0,0,1),
-                intArrayOf(1,0,1,1,1,1,1,1,1,1,1,0,0,5),
-                intArrayOf(1,0,0,0,1,0,0,0,0,0,0,0,0,1),
-                intArrayOf(1,1,1,0,1,1,1,1,1,0,1,1,0,5),
-                intArrayOf(1,0,0,0,1,0,1,0,1,0,0,0,0,1),
-                intArrayOf(1,0,1,0,1,0,1,0,1,1,1,1,0,5),
-                intArrayOf(1,0,1,0,1,0,1,0,0,0,0,0,0,1),
-                intArrayOf(1,0,1,1,1,0,1,1,1,1,1,1,0,5),
-                intArrayOf(1,0,0,0,0,0,1,0,0,0,0,0,0,1),
-                intArrayOf(1,0,0,0,0,0,0,0,0,0,0,0,0,5),
-                intArrayOf(1,1,1,1,5,1,5,1,5,1,5,1,5,1)
+                intArrayOf(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1),
+                intArrayOf(1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1),
+                intArrayOf(1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 0, 1),
+                intArrayOf(1, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 1),
+                intArrayOf(1, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 0, 1),
+                intArrayOf(1, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1),
+                intArrayOf(1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 5),
+                intArrayOf(1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 1),
+                intArrayOf(1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 5),
+                intArrayOf(1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1),
+                intArrayOf(1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 5),
+                intArrayOf(1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1),
+                intArrayOf(1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 0, 5),
+                intArrayOf(1, 0, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0, 0, 1),
+                intArrayOf(1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 0, 5),
+                intArrayOf(1, 0, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 1),
+                intArrayOf(1, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0, 5),
+                intArrayOf(1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1),
+                intArrayOf(1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5),
+                intArrayOf(1, 1, 1, 1, 5, 1, 5, 1, 5, 1, 5, 1, 5, 1)
             )
         }
 
@@ -1409,6 +1484,19 @@ class Mappingmap(private val map: Map, private val renderCast: RenderCast) : JPa
             }
         }
 
+        medicationsList.forEach { medication ->
+            if (medication.active) {
+                val relativeX = (medication.x / tileSize) - playerGridX
+                val relativeY = (medication.y / tileSize) - playerGridY
+                val medX = (playerMapX + relativeX * tileScale).toInt()
+                val medY = (playerMapY + relativeY * tileScale).toInt()
+                if (medX >= offsetX && medX < miniMapSize + offsetX && medY >= offsetY && medY < miniMapSize + offsetY) {
+                    g2.color = Color.GREEN // Green for medications
+                    g2.fillOval(medX - 3, medY - 3, 6, 6)
+                }
+            }
+        }
+
         // draw player
         val angleRad = Math.toRadians(currentangle.toDouble())
         val lineLength = 10.0
@@ -1429,9 +1517,9 @@ class Mappingmap(private val map: Map, private val renderCast: RenderCast) : JPa
 
         g2.drawString("${renderCast.getRenderFps()*2}", 1366 - 50, 20)
 
-        g2.drawString("HEAL: ${playerHealth}", 10, 240)
-        g2.drawString("LEVEL: ${level}", 10, 260)
-        g2.drawString("POINTS: ${points}", 10, 280)
+        g2.drawString("HEAL: ${playerHealth}", 10, 340)
+        g2.drawString("LEVEL: ${level}", 10, 360)
+        g2.drawString("POINTS: ${points}", 10, 380)
         g2.font = font?.deriveFont(Font.BOLD, 50f) ?: Font("Arial", Font.BOLD, 50)
         g2.drawString("${keys}", 85, 290)
     }

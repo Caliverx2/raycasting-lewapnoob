@@ -4,6 +4,7 @@ import java.awt.Color
 import java.awt.Font
 import java.awt.Graphics
 import java.awt.Graphics2D
+import java.awt.GraphicsEnvironment
 import java.awt.image.BufferedImage
 import javax.imageio.ImageIO
 import javax.swing.JPanel
@@ -33,9 +34,10 @@ class RenderCast(private val map: Map) : JPanel() {
 
     private val textureMap: MutableMap<Int, BufferedImage> = mutableMapOf()
     private val wallIndices: Set<Int> = setOf(1, 2, 5)
-    var enemyTextureId: BufferedImage? = null //ENEMY
-    var keyTextureId: BufferedImage? = null //KEYS
-    private val accessibleTiles: Set<Int> = setOf(0, 3, 6) // KEYS-GRID
+    var enemyTextureId: BufferedImage? = null
+    var keyTextureId: BufferedImage? = null
+    var medicationTextureID: BufferedImage? = null
+    private val accessibleTiles: Set<Int> = setOf(0, 3, 6)
     private var floorTexture: BufferedImage? = null
     private var ceilingTexture: BufferedImage? = null
     private val buffer: BufferedImage
@@ -53,8 +55,9 @@ class RenderCast(private val map: Map) : JPanel() {
     private val rayCosines = DoubleArray(rayCount)
     private val raySines = DoubleArray(rayCount)
     private val rayAngles = DoubleArray(rayCount)
-    private var visibleEnemies = mutableListOf<Triple<Enemy, Int, Double>>() //ENEMY
-    private var visibleKeys = mutableListOf<Triple<Key, Int, Double>>() //KEYS
+    private var visibleEnemies = mutableListOf<Triple<Enemy, Int, Double>>()
+    private var visibleKeys = mutableListOf<Triple<Key, Int, Double>>()
+    private var visibleMedications = mutableListOf<Triple<Medication, Int, Double>>()
     private val zBuffer = DoubleArray(rayCount) { Double.MAX_VALUE }
     private var lastShotTime = 0L
     private val SHOT_COOLDOWN = 500_000_000L
@@ -62,16 +65,22 @@ class RenderCast(private val map: Map) : JPanel() {
     private val LIGHT_MOVE_INTERVAL = 250_000_000L / 4
     private var lightMoveDirection = 0.0
     private var isLightMoving = false
+    private var font: Font? = null
+    val fontStream = this::class.java.classLoader.getResourceAsStream("font/mojangles.ttf")
+        ?: throw IllegalArgumentException("Font file not found: mojangles.ttf")
 
     fun getEnemies(): List<Enemy> = enemies
 
     init {
         isOpaque = true
+        font = Font.createFont(Font.TRUETYPE_FONT, fontStream)
+        GraphicsEnvironment.getLocalGraphicsEnvironment().registerFont(font)
         try {
             enemyTextureId = ImageIO.read(this::class.java.classLoader.getResource("textures/boguch.jpg"))
             floorTexture = ImageIO.read(this::class.java.classLoader.getResource("textures/floor.jpg"))
             ceilingTexture = ImageIO.read(this::class.java.classLoader.getResource("textures/ceiling.jpg"))
             keyTextureId = ImageIO.read(this::class.java.classLoader.getResource("textures/key.png"))
+            medicationTextureID = ImageIO.read(this::class.java.classLoader.getResource("textures/medication.png"))
 
             loadTexture(1, "textures/bricks.jpg")
             loadTexture(2, "textures/black_bricks.png")
@@ -85,6 +94,7 @@ class RenderCast(private val map: Map) : JPanel() {
             textureMap[5] = createTexture(Color(255, 215, 0))
             enemyTextureId = createTexture(Color(255, 68, 68))
             keyTextureId = createTexture(Color(255, 255, 0))
+            medicationTextureID = createTexture(Color(20, 255, 20))
         }
 
         lightSources.add(LightSource(0.0, 0.0, color = Color(200, 200, 100), intensity = 0.75, range = 0.15, owner = "player"))
@@ -140,7 +150,6 @@ class RenderCast(private val map: Map) : JPanel() {
         try {
             renderWallsToBuffer()
         } catch (e: Exception) {
-
         }
         val g2d = g as Graphics2D
         val scaleX = width.toDouble() / screenWidth
@@ -230,11 +239,16 @@ class RenderCast(private val map: Map) : JPanel() {
         var currentTime = System.nanoTime()
         var elapsedTime = currentTime - lastRenderFrameTime
 
+        // Update light sources for enemies
         lightSources.forEach { light ->
-            if (light.owner != "player") {
+            if (light.owner != "player" && !light.owner.startsWith("projectile_")) {
                 enemies.find { enemy -> light.owner == enemy.toString() }?.let { matchedEnemy ->
-                    light.x = matchedEnemy.x / tileSize
-                    light.y = matchedEnemy.y / tileSize
+                    if (matchedEnemy.health > 0) {
+                        light.x = matchedEnemy.x / tileSize
+                        light.y = matchedEnemy.y / tileSize
+                    } else {
+                        lightSources.remove(light)
+                    }
                 }
             }
         }
@@ -279,6 +293,7 @@ class RenderCast(private val map: Map) : JPanel() {
         zBuffer.fill(Double.MAX_VALUE)
         visibleEnemies.clear()
         visibleKeys.clear()
+        visibleMedications.clear()
 
         for (ray in 0 until rayCount) {
             val rayAngle = currentangle + rayAngles[ray]
@@ -433,6 +448,38 @@ class RenderCast(private val map: Map) : JPanel() {
                 }
             }
 
+            medicationsList.forEach { medication ->
+                if (!medication.active) return@forEach
+                val halfSize = medication.size / tileSize / 2
+                val medLeft = medication.x / tileSize - halfSize
+                val medRight = medication.x / tileSize + halfSize
+                val medTop = medication.y / tileSize - halfSize
+                val medBottom = medication.y / tileSize + halfSize
+
+                val closestX = clamp(medication.x / tileSize, medLeft, medRight)
+                val closestY = clamp(medication.y / tileSize, medTop, medBottom)
+                val dx = closestX - playerPosX
+                val dy = closestY - playerPosY
+
+                val rayLength = dx * rayDirX + dy * rayDirY
+                if (rayLength > 0 && rayLength <= maxRayDistance) {
+                    val perpendicularDistance = abs(dx * rayDirY - dy * rayDirX)
+                    if (perpendicularDistance < halfSize + 0.05) {
+                        val centerDx = medication.x / tileSize - playerPosX
+                        val centerDy = medication.y / tileSize - playerPosY
+                        val angleToMed = atan2(centerDy, centerDx)
+                        val relativeAngle = normalizeAngle(Math.toDegrees(angleToMed) - currentangle)
+                        if (abs(relativeAngle) <= fov / 2 + 10) {
+                            val angleRatio = relativeAngle / (fov / 2)
+                            val screenX = (screenWidth / 2 + angleRatio * screenWidth / 2).toInt()
+                            if (visibleMedications.none { it.first === medication }) {
+                                visibleMedications.add(Triple(medication, screenX, rayLength))
+                            }
+                        }
+                    }
+                }
+            }
+
             val lineHeight = if (hitWall && distance <= maxRayDistance) {
                 ((wallHeight * screenHeight) / (distance * tileSize)).toInt().coerceIn(0, screenHeight * 2)
             } else {
@@ -571,8 +618,10 @@ class RenderCast(private val map: Map) : JPanel() {
             renderFrameCount = 0
             lastRenderFpsUpdate = currentTime
         }
+
         renderEnemies()
         renderKeys()
+        renderMedications()
     }
 
     private fun renderEnemies() {
@@ -593,7 +642,6 @@ class RenderCast(private val map: Map) : JPanel() {
             val drawStartX = fullSpriteLeftX.coerceAtLeast(0.0).toInt()
             val drawEndX = fullSpriteRightX.coerceAtMost(screenWidth - 1.0).toInt()
 
-            // Render enemy sprite
             for (x in drawStartX until drawEndX) {
                 if (x < 0 || x >= zBuffer.size) continue
                 if (distance < zBuffer[x]) {
@@ -619,39 +667,35 @@ class RenderCast(private val map: Map) : JPanel() {
                 }
             }
 
-            // Render health text above the enemy
             if (enemy.health > 0) {
                 val healthText = "${enemy.health}"
                 val textSize = (spriteSize / 3.0).coerceIn(16.0, 26.0).toInt()
-                val textFont = Font("BOLD", Font.BOLD, textSize)
+                val textFont = font?.deriveFont(Font.BOLD, textSize.toFloat()) ?: Font("Arial", Font.BOLD, textSize)
                 val metrics = bufferGraphics.getFontMetrics(textFont)
                 val textWidth = metrics.stringWidth(healthText)
                 val textHeight = metrics.height
 
-                // Create a BufferedImage for the text
                 val textImage = BufferedImage(textWidth, textHeight, BufferedImage.TYPE_INT_ARGB)
                 val textGraphics = textImage.createGraphics()
                 textGraphics.font = textFont
-                textGraphics.color = Color.LIGHT_GRAY // White text with alpha for transparency
-                textGraphics.setBackground(Color(0, 0, 0, 0)) // Transparent background
+                textGraphics.color = Color.LIGHT_GRAY
+                textGraphics.setBackground(Color(0, 0, 0, 0))
                 textGraphics.drawString(healthText, 0, metrics.ascent)
                 textGraphics.dispose()
 
-                // Calculate text sprite dimensions and position
-                val textSpriteWidth = (spriteSize / 2.0).coerceIn(4.0, maxOf(spriteSize.toDouble(), 4.0)).toInt() // Ensure valid range
+                val textSpriteWidth = (spriteSize / 2.0).coerceIn(4.0, maxOf(spriteSize.toDouble(), 4.0)).toInt()
                 val textSpriteHeight = if (textWidth > 0) {
                     (textSpriteWidth * (textHeight.toDouble() / textWidth)).toInt().coerceAtLeast(1)
                 } else {
-                    1 // Fallback to avoid division by zero
+                    1
                 }
-                val textDrawStartY = (drawStartY - textSpriteHeight - 2).coerceIn(0, screenHeight - 1) // Slightly above enemy
+                val textDrawStartY = (drawStartY - textSpriteHeight - 2).coerceIn(0, screenHeight - 1)
                 val textDrawEndY = (textDrawStartY + textSpriteHeight).coerceIn(0, screenHeight - 1)
                 val textFullLeftX = screenX - textSpriteWidth / 2.0
                 val textFullRightX = screenX + textSpriteWidth / 2.0
                 val textDrawStartX = textFullLeftX.coerceAtLeast(0.0).toInt()
                 val textDrawEndX = textFullRightX.coerceAtMost(screenWidth - 1.0).toInt()
 
-                // Render text sprite pixel-by-pixel
                 for (x in textDrawStartX until textDrawEndX) {
                     if (x < 0 || x >= zBuffer.size) continue
                     if (distance < zBuffer[x]) {
@@ -660,7 +704,7 @@ class RenderCast(private val map: Map) : JPanel() {
                         for (y in textDrawStartY until textDrawEndY) {
                             val textTextureY = ((y - textDrawStartY).toDouble() * textImage.height / textSpriteHeight).coerceIn(0.0, textImage.height - 1.0)
                             val color = textImage.getRGB(textTextureX.toInt(), textTextureY.toInt())
-                            if ((color and 0xFF000000.toInt()) != 0) { // Check alpha channel for non-transparent pixels
+                            if ((color and 0xFF000000.toInt()) != 0) {
                                 val originalColor = Color(color)
                                 val worldX = enemy.x / tileSize
                                 val worldY = enemy.y / tileSize
@@ -684,7 +728,7 @@ class RenderCast(private val map: Map) : JPanel() {
         visibleKeys.sortByDescending { it.third }
 
         visibleKeys.forEach { (key, screenX, distance) ->
-            val keyHeight = wallHeight / 4 // Smaller size for keys
+            val keyHeight = wallHeight / 4
             val minSize = 0.001
             val maxSize = 64.0
             val spriteSize = ((keyHeight * screenHeight) / (distance * tileSize)).coerceIn(minSize, maxSize).toInt()
@@ -698,7 +742,6 @@ class RenderCast(private val map: Map) : JPanel() {
             val drawStartX = fullSpriteLeftX.coerceAtLeast(0.0).toInt()
             val drawEndX = fullSpriteRightX.coerceAtMost(screenWidth - 1.0).toInt()
 
-            // Render key sprite
             for (x in drawStartX until drawEndX) {
                 if (x < 0 || x >= zBuffer.size) continue
                 if (distance < zBuffer[x]) {
@@ -711,6 +754,51 @@ class RenderCast(private val map: Map) : JPanel() {
                             val originalColor = Color(color)
                             val worldX = key.x / tileSize
                             val worldY = key.y / tileSize
+                            val litColor = calculateLightContribution(worldX, worldY, originalColor)
+                            val fogFactor = 1.0 - exp(-fogDensity * distance)
+                            val finalColor = Color(
+                                ((1.0 - fogFactor) * litColor.red + fogFactor * fogColor.red).toInt().coerceIn(0, 255),
+                                ((1.0 - fogFactor) * litColor.green + fogFactor * fogColor.green).toInt().coerceIn(0, 255),
+                                ((1.0 - fogFactor) * litColor.blue + fogFactor * fogColor.blue).toInt().coerceIn(0, 255)
+                            )
+                            buffer.setRGB(x, y, finalColor.rgb)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private fun renderMedications() {
+        visibleMedications.sortByDescending { it.third }
+
+        visibleMedications.forEach { (medication, screenX, distance) ->
+            val medHeight = wallHeight / 4
+            val minSize = 0.001
+            val maxSize = 64.0
+            val spriteSize = ((medHeight * screenHeight) / (distance * tileSize)).coerceIn(minSize, maxSize).toInt()
+
+            val floorY = (screenHeight / 2 + (wallHeight * screenHeight) / (2 * distance * tileSize)).toInt()
+            val drawStartY = (floorY - spriteSize).coerceIn(0, screenHeight - 1)
+            val drawEndY = floorY.coerceIn(0, screenHeight - 1)
+
+            val fullSpriteLeftX = screenX - spriteSize / 2.0
+            val fullSpriteRightX = screenX + spriteSize / 2.0
+            val drawStartX = fullSpriteLeftX.coerceAtLeast(0.0).toInt()
+            val drawEndX = fullSpriteRightX.coerceAtMost(screenWidth - 1.0).toInt()
+
+            for (x in drawStartX until drawEndX) {
+                if (x < 0 || x >= zBuffer.size) continue
+                if (distance < zBuffer[x]) {
+                    val textureFraction = (x - fullSpriteLeftX) / (fullSpriteRightX - fullSpriteLeftX)
+                    val textureX = (textureFraction * medication.texture.width).coerceIn(0.0, medication.texture.width - 1.0)
+                    for (y in drawStartY until drawEndY) {
+                        val textureY = ((y - drawStartY).toDouble() * medication.texture.height / spriteSize).coerceIn(0.0, medication.texture.height - 1.0)
+                        val color = medication.texture.getRGB(textureX.toInt(), textureY.toInt())
+                        if ((color and 0xFF000000.toInt()) != 0) {
+                            val originalColor = Color(color)
+                            val worldX = medication.x / tileSize
+                            val worldY = medication.y / tileSize
                             val litColor = calculateLightContribution(worldX, worldY, originalColor)
                             val fogFactor = 1.0 - exp(-fogDensity * distance)
                             val finalColor = Color(
@@ -929,6 +1017,19 @@ class RenderCast(private val map: Map) : JPanel() {
                 }
             }
         }
+        medicationsList.forEach { medication ->
+            if (medication.active) {
+                val dx = positionX - medication.x
+                val dy = positionY - medication.y
+                val distance = sqrt(dx * dx + dy * dy)
+                if (distance < medication.pickupDistance) {
+                    medication.active = false
+                    playerHealth = minOf(playerHealth + medication.heal, 100) // Cap health at 100
+                    playSound("pickup.wav", 0.65f)
+                }
+            }
+        }
         keysList.removeIf { !it.active }
+        medicationsList.removeIf { !it.active }
     }
 }

@@ -30,7 +30,7 @@ class Player(private val renderCast: RenderCast, private val map: Map) {
 
         for (gridY in gridTop..gridBottom) {
             for (gridX in gridLeft..gridRight) {
-                if (gridY !in map.grid.indices || gridX !in map.grid[0].indices || ((map.grid[gridY][gridX] != 0) and (map.grid[gridY][gridX] != 5) and (map.grid[gridY][gridX] != 3) and (map.grid[gridY][gridX] != 6))) {
+                if (gridY !in map.grid.indices || gridX !in map.grid[0].indices || ((map.grid[gridY][gridX] != 0) and (map.grid[gridY][gridX] != 5) and (map.grid[gridY][gridX] != 3) and (map.grid[gridY][gridX] != 7) and (map.grid[gridY][gridX] != 6))) {
                     return Pair(false, null)
                 }
             }
@@ -124,8 +124,19 @@ class Player(private val renderCast: RenderCast, private val map: Map) {
                     if (distance < key.pickupDistance) {
                         key.active = false
                         keys += 1
-                        renderCast.playSound("8exp.wav", volume = 0.65f) // Optional: Add pickup sound
+                        renderCast.playSound("8exp.wav", volume = 0.65f)
                     }
+                }
+            }
+
+            medicationsList.forEach { medication ->
+                val dx = positionX - medication.x
+                val dy = positionY - medication.y
+                val distance = sqrt(dx * dx + dy * dy)
+                if (distance < medication.pickupDistance) {
+                    medication.active = false
+                    playerHealth += medication.heal
+                    renderCast.playSound("8exp.wav", volume = 0.65f)
                 }
             }
         } catch (e: Exception) {
