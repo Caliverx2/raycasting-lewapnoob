@@ -1,6 +1,7 @@
 package org.example.MainKt
 
 import java.awt.Color
+import java.awt.Font
 import java.awt.Graphics
 import java.awt.Graphics2D
 import java.awt.image.BufferedImage
@@ -16,9 +17,10 @@ import kotlin.math.sqrt
 import kotlin.random.Random
 import javax.sound.sampled.AudioSystem
 import javax.sound.sampled.FloatControl
-import kotlin.math.floor
+import kotlin.jvm.java
 import kotlin.math.min
 import kotlin.math.pow
+
 
 class RenderCast(private val map: Map) : JPanel() {
     private val screenWidth = 320
@@ -27,11 +29,10 @@ class RenderCast(private val map: Map) : JPanel() {
     private val textureSize = 64
     private val rayCount = screenWidth
     private val wallHeight = 32.0
-    private val maxRayDistance = 22.0//22.0
+    private val maxRayDistance = 22.0
 
     private val textureMap: MutableMap<Int, BufferedImage> = mutableMapOf()
-    // Nowy zbiór indeksów reprezentujących ściany
-    private val wallIndices: Set<Int> = setOf(1, 2, 5) // Ściany to indeksy 1, 2, 5
+    private val wallIndices: Set<Int> = setOf(1, 2, 5)
     var enemyTextureId: BufferedImage? = null
     private var floorTexture: BufferedImage? = null
     private var ceilingTexture: BufferedImage? = null
@@ -69,7 +70,7 @@ class RenderCast(private val map: Map) : JPanel() {
             ceilingTexture = ImageIO.read(this::class.java.classLoader.getResource("textures/ceiling.jpg"))
 
             loadTexture(1, "textures/bricks.jpg")
-            loadTexture(2, "textures/black_bricks.png")//Color(20, 50, 50))
+            loadTexture(2, "textures/black_bricks.png")
             loadTexture(5, "textures/gold.jpg")
         } catch (e: Exception) {
             println("Error loading textures: ${e.message}")
@@ -83,9 +84,9 @@ class RenderCast(private val map: Map) : JPanel() {
 
         lightSources.add(LightSource(0.0, 0.0, color = Color(200, 200, 100), intensity = 0.75, range = 0.15, owner = "player"))
 
-        enemies.add(Enemy((tileSize * 2) - (tileSize / 2), (tileSize * 6) - (tileSize / 2), 100, enemyTextureId!!, this, map, speed = (2.0 * ((18..19).random() / 10.0))))
-        enemies.add(Enemy((tileSize * 12) - (tileSize / 2), (tileSize * 18) - (tileSize / 2), 100, enemyTextureId!!, this, map, speed = (2.0 * ((18..19).random() / 10.0))))
-        enemies.add(Enemy((tileSize * 2) - (tileSize / 2), (tileSize * 16) - (tileSize / 2), 100, enemyTextureId!!, this, map, speed = (2.0 * ((18..19).random() / 10.0))))
+        enemies.add(Enemy((tileSize * 2) - (tileSize / 2), (tileSize * 6) - (tileSize / 2), 100*level, enemyTextureId!!, this, map, speed = (2.0 * ((18..19).random() / 10.0))))
+        enemies.add(Enemy((tileSize * 12) - (tileSize / 2), (tileSize * 18) - (tileSize / 2), 100*level, enemyTextureId!!, this, map, speed = (2.0 * ((18..19).random() / 10.0))))
+        enemies.add(Enemy((tileSize * 2) - (tileSize / 2), (tileSize * 16) - (tileSize / 2), 100*level, enemyTextureId!!, this, map, speed = (2.0 * ((18..19).random() / 10.0))))
 
         lightSources.add(LightSource((enemies[0].x / tileSize), (enemies[0].y / tileSize), color = Color(20, 255, 20), intensity = 0.35, range = 1.5, owner = "${enemies[0]}"))
         lightSources.add(LightSource((enemies[1].x / tileSize), (enemies[1].y / tileSize), color = Color(255, 22, 20), intensity = 0.35, range = 1.5, owner = "${enemies[1]}"))
@@ -153,15 +154,13 @@ class RenderCast(private val map: Map) : JPanel() {
             if (distanceSquared <= rangeSquared) {
                 val distance = sqrt(distanceSquared)
                 if (isLightVisible(light, worldX, worldY, distance)) {
-                    // Smooth damping curve with smoothing, the average of the adjacent points for smoothing
                     val attenuation = light.intensity * (1.0 - (distance / light.range).pow(2)).coerceAtLeast(0.0)
-                    val smoothingFactor = 0.2 // Smoothing strength (0.0 - none, 1.0 - full smoothing)
-                    val smoothedAttenuation = attenuation * (1.0 - smoothingFactor) + smoothingFactor * 0.5 // Average of nominal value
+                    val smoothingFactor = 0.2
+                    val smoothedAttenuation = attenuation * (1.0 - smoothingFactor) + smoothingFactor * 0.5
                     totalRed += light.color.red * smoothedAttenuation
                     totalGreen += light.color.green * smoothedAttenuation
                     totalBlue += light.color.blue * smoothedAttenuation
                 } else {
-                    // Minimal ambient lighting for shadowed areas
                     val ambientFactor = 0.1
                     totalRed += light.color.red * ambientFactor * light.intensity
                     totalGreen += light.color.green * ambientFactor * light.intensity
@@ -224,7 +223,7 @@ class RenderCast(private val map: Map) : JPanel() {
         enemies.forEach { it.update() }
 
         lightSources.forEach { light ->
-            if (light.owner != "player") { // Pomijamy źródło gracza
+            if (light.owner != "player") {
                 enemies.find { enemy -> light.owner == enemy.toString() }?.let { matchedEnemy ->
                     light.x = matchedEnemy.x / tileSize
                     light.y = matchedEnemy.y / tileSize
@@ -247,8 +246,15 @@ class RenderCast(private val map: Map) : JPanel() {
                     it.x = newX
                     it.y = newY
                 } else {
-                    it.intensity = 0.0
+                    val random = Random.nextFloat()
+                    playSound(when {
+                        random < 0.50f -> "8exp.wav"
+                        else -> "impact.wav"
+                    }, volume = 0.65f)
                     isLightMoving = false
+                    it.x = 0.0
+                    it.y = 0.0
+                    it.intensity = 0.0
                 }
             }
         }
@@ -259,7 +265,7 @@ class RenderCast(private val map: Map) : JPanel() {
         val playerPosX = positionX / tileSize
         val playerPosY = positionY / tileSize
 
-        bufferGraphics.color = fogColor // Ustaw kolor tła na kolor mgły
+        bufferGraphics.color = fogColor
         bufferGraphics.fillRect(0, 0, screenWidth, screenHeight)
 
         zBuffer.fill(Double.MAX_VALUE)
@@ -306,7 +312,6 @@ class RenderCast(private val map: Map) : JPanel() {
             var hitX = 0.0
             var hitY = 0.0
 
-            // Raycasting with maximum distance limitation
             while (!hitWall) {
                 if (sideDistX < sideDistY) {
                     sideDistX += deltaDistX
@@ -319,9 +324,8 @@ class RenderCast(private val map: Map) : JPanel() {
                     side = 1
                     distance = (mapY - playerPosY + (1 - stepY) / 2.0) / rayDirY
                 }
-                // Check if the distance has exceeded the maximum
                 if (distance > maxRayDistance || mapY !in map.grid.indices || mapX !in map.grid[0].indices) {
-                    distance = maxRayDistance // Limit the distance to the maximum
+                    distance = maxRayDistance
                     break
                 }
                 if (wallIndices.contains(map.grid[mapY][mapX])) {
@@ -353,7 +357,7 @@ class RenderCast(private val map: Map) : JPanel() {
                 }
                 zBuffer[ray] = distance
             } else {
-                distance = maxRayDistance // If a wall is not hit, set the maximum distance
+                distance = maxRayDistance
                 zBuffer[ray] = distance
             }
 
@@ -451,7 +455,6 @@ class RenderCast(private val map: Map) : JPanel() {
                 } else {
                     (playerHeight * screenHeight / 2) / (10.0 * (y - (screenHeight / 2.0 + horizonOffset) + 0.0))
                 }
-                // Limit the render distance of floors and ceilings to maxRayDistance
                 if (rowDistance < 0.01 || rowDistance > maxRayDistance) {
                     buffer.setRGB(ray, y, fogColor.rgb)
                     continue
@@ -460,7 +463,6 @@ class RenderCast(private val map: Map) : JPanel() {
                 val floorX = playerPosX + rowDistance * rayDirX + 100
                 val floorY = playerPosY + rowDistance * rayDirY + 100
 
-                // Check if the pixel belongs to the opponent's shadow, shadows only on the floor
                 var isShadow = false
                 var shadowColor = Color(50, 50, 50)
                 if (!isCeiling) {
@@ -473,7 +475,7 @@ class RenderCast(private val map: Map) : JPanel() {
                         val distanceToEnemy = sqrt(dx * dx + dy * dy)
                         if (distanceToEnemy <= shadowRadius) {
                             isShadow = true
-                            val shadowFactor = 1.0 - (distanceToEnemy / shadowRadius) // 1.0 in the middle, 0.0 in the edge
+                            val shadowFactor = 1.0 - (distanceToEnemy / shadowRadius)
                             shadowColor = Color(
                                 (50 * shadowFactor).toInt().coerceIn(0, 255),
                                 (50 * shadowFactor).toInt().coerceIn(0, 255),
@@ -484,7 +486,6 @@ class RenderCast(private val map: Map) : JPanel() {
                 }
 
                 if (isShadow) {
-                    // Shadow rendering
                     val worldX = playerPosX + rowDistance * rayDirX
                     val worldY = playerPosY + rowDistance * rayDirY
                     val litColor = calculateLightContribution(worldX, worldY, shadowColor)
@@ -496,13 +497,12 @@ class RenderCast(private val map: Map) : JPanel() {
                     )
                     buffer.setRGB(ray, y, finalColor.rgb)
                 } else {
-                    // Normal Floor Rendering
                     val textureScale = 2.0
                     val textureX = ((floorY / textureScale * textureSize) % textureSize).toInt().coerceIn(0, textureSize - 1)
                     val textureY = ((floorX / textureScale * textureSize) % textureSize).toInt().coerceIn(0, textureSize - 1)
 
                     val color = texture.getRGB(textureX, textureY)
-                    val shadeFactor = (1.0 - (rowDistance / shadeDistanceScale)).coerceIn(minBrightness, maxBrightness)
+                    val shadeFactor = (1.0 - (distance / shadeDistanceScale)).coerceIn(minBrightness, maxBrightness)
                     val originalColor = Color(color)
                     val shadedColor = Color(
                         (originalColor.red * shadeFactor).toInt().coerceIn(0, 255),
@@ -551,6 +551,7 @@ class RenderCast(private val map: Map) : JPanel() {
             val drawStartX = fullSpriteLeftX.coerceAtLeast(0.0).toInt()
             val drawEndX = fullSpriteRightX.coerceAtMost(screenWidth - 1.0).toInt()
 
+            // Render enemy sprite
             for (x in drawStartX until drawEndX) {
                 if (x < 0 || x >= zBuffer.size) continue
                 if (distance < zBuffer[x]) {
@@ -575,6 +576,65 @@ class RenderCast(private val map: Map) : JPanel() {
                     }
                 }
             }
+
+            // Render health text above the enemy
+            if (enemy.health > 0) {
+                val healthText = "${enemy.health}"
+                val textSize = (spriteSize / 3.0).coerceIn(16.0, 26.0).toInt()
+                val textFont = Font("BOLD", Font.BOLD, textSize)
+                val metrics = bufferGraphics.getFontMetrics(textFont)
+                val textWidth = metrics.stringWidth(healthText)
+                val textHeight = metrics.height
+
+                // Create a BufferedImage for the text
+                val textImage = BufferedImage(textWidth, textHeight, BufferedImage.TYPE_INT_ARGB)
+                val textGraphics = textImage.createGraphics()
+                textGraphics.font = textFont
+                textGraphics.color = Color.LIGHT_GRAY // White text with alpha for transparency
+                textGraphics.setBackground(Color(0, 0, 0, 0)) // Transparent background
+                textGraphics.drawString(healthText, 0, metrics.ascent)
+                textGraphics.dispose()
+
+                // Calculate text sprite dimensions and position
+                val textSpriteWidth = (spriteSize / 2.0).coerceIn(4.0, maxOf(spriteSize.toDouble(), 4.0)).toInt() // Ensure valid range
+                val textSpriteHeight = if (textWidth > 0) {
+                    (textSpriteWidth * (textHeight.toDouble() / textWidth)).toInt().coerceAtLeast(1)
+                } else {
+                    1 // Fallback to avoid division by zero
+                }
+                val textDrawStartY = (drawStartY - textSpriteHeight - 2).coerceIn(0, screenHeight - 1) // Slightly above enemy
+                val textDrawEndY = (textDrawStartY + textSpriteHeight).coerceIn(0, screenHeight - 1)
+                val textFullLeftX = screenX - textSpriteWidth / 2.0
+                val textFullRightX = screenX + textSpriteWidth / 2.0
+                val textDrawStartX = textFullLeftX.coerceAtLeast(0.0).toInt()
+                val textDrawEndX = textFullRightX.coerceAtMost(screenWidth - 1.0).toInt()
+
+                // Render text sprite pixel-by-pixel
+                for (x in textDrawStartX until textDrawEndX) {
+                    if (x < 0 || x >= zBuffer.size) continue
+                    if (distance < zBuffer[x]) {
+                        val textTextureFraction = (x - textFullLeftX) / (textFullRightX - textFullLeftX)
+                        val textTextureX = (textTextureFraction * textImage.width).coerceIn(0.0, textImage.width - 1.0)
+                        for (y in textDrawStartY until textDrawEndY) {
+                            val textTextureY = ((y - textDrawStartY).toDouble() * textImage.height / textSpriteHeight).coerceIn(0.0, textImage.height - 1.0)
+                            val color = textImage.getRGB(textTextureX.toInt(), textTextureY.toInt())
+                            if ((color and 0xFF000000.toInt()) != 0) { // Check alpha channel for non-transparent pixels
+                                val originalColor = Color(color)
+                                val worldX = enemy.x / tileSize
+                                val worldY = enemy.y / tileSize
+                                val litColor = calculateLightContribution(worldX, worldY, originalColor)
+                                val fogFactor = 1.0 - exp(-fogDensity * distance)
+                                val finalColor = Color(
+                                    ((1.0 - fogFactor) * litColor.red + fogFactor * fogColor.red).toInt().coerceIn(0, 255),
+                                    ((1.0 - fogFactor) * litColor.green + fogFactor * fogColor.green).toInt().coerceIn(0, 255),
+                                    ((1.0 - fogFactor) * litColor.blue + fogFactor * fogColor.blue).toInt().coerceIn(0, 255)
+                                )
+                                buffer.setRGB(x, y, finalColor.rgb)
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -589,7 +649,7 @@ class RenderCast(private val map: Map) : JPanel() {
                     clip.open(AudioSystem.getAudioInputStream(resource))
                     val gainControl = clip.getControl(FloatControl.Type.MASTER_GAIN) as FloatControl
                     val maxGain = gainControl.maximum
-                    val minGain = gainControl.minimum
+                    var minGain = gainControl.minimum
                     val gainRange = maxGain - minGain
                     val gain = minGain + (gainRange * volume.coerceIn(0.0f, 1.0f))
                     gainControl.value = gain
@@ -665,7 +725,6 @@ class RenderCast(private val map: Map) : JPanel() {
                 if (mapY !in map.grid.indices || mapX !in map.grid[0].indices) {
                     break
                 }
-                // Using wallIndices to detect walls
                 if (wallIndices.contains(map.grid[mapY][mapX])) {
                     hitWall = true
                     wallDistance = if (side == 0) {
@@ -704,6 +763,13 @@ class RenderCast(private val map: Map) : JPanel() {
                             enemy.health -= 25
                             println("enemy: ${enemy} heal: ${enemy.health}")
                             if (enemy.health <= 0) {
+                                keys += 1
+                                points = ((points) + (100/level))
+                                if (points >= 100) {
+                                    level += 1
+                                    points = 0
+                                }
+                                println("level: ${level} points: ${points} keys: ${keys}")
                                 playSound(when {
                                     random < 0.16f -> "scream1.wav"
                                     random < 0.32f -> "scream2.wav"

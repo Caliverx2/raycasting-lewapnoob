@@ -27,6 +27,10 @@ import javax.imageio.ImageIO
 import javax.swing.JLayeredPane
 import kotlin.math.*
 
+var playerHealth: Int = 100
+var level: Int = 1
+var points: Int = 0
+var keys: Int = 1
 
 var map = true
 var currentangle = 45
@@ -68,7 +72,7 @@ class Enemy(var x: Double, var y: Double, var health: Int = 10, var texture: Buf
     private var smoothedMoveX = 0.0
     private var smoothedMoveY = 0.0
     private val smoothingFactor = 0.1//0.05
-    private val MIN_PLAYER_DISTANCE = 1.5 * tileSize
+    private val MIN_PLAYER_DISTANCE = 0.5 * tileSize
     private var lastPlayerX = 0.0
     private var lastPlayerY = 0.0
 
@@ -615,7 +619,7 @@ class Map(var renderCast: RenderCast? = null) {
             grid = arrayOf(
                 intArrayOf(1, 1, 1, 1, 1),
                 intArrayOf(1, 0, 0, 0, 1),
-                intArrayOf(1, 0, 3, 0, 1),
+                intArrayOf(1, 0, 6, 0, 1),
                 intArrayOf(1, 0, 0, 0, 1),
                 intArrayOf(1, 1, 0, 1, 1)
             ),
@@ -635,7 +639,7 @@ class Map(var renderCast: RenderCast? = null) {
             grid = arrayOf(
                 intArrayOf(1, 1, 1, 1, 1),
                 intArrayOf(1, 0, 0, 0, 1),
-                intArrayOf(0, 0, 3, 0, 1),
+                intArrayOf(0, 0, 6, 0, 1),
                 intArrayOf(1, 0, 0, 0, 1),
                 intArrayOf(1, 1, 1, 1, 1)
             ),
@@ -659,9 +663,9 @@ class Map(var renderCast: RenderCast? = null) {
             grid = arrayOf(
                 intArrayOf(1, 1, 1, 5, 1, 1, 1),
                 intArrayOf(1, 0, 0, 0, 0, 0, 1),
-                intArrayOf(1, 0, 6, 0, 6, 0, 1),
-                intArrayOf(5, 3, 0, 3, 0, 0, 0),
-                intArrayOf(1, 0, 6, 0, 6, 0, 1),
+                intArrayOf(1, 0, 0, 6, 0, 0, 1),
+                intArrayOf(5, 3, 6, 3, 6, 0, 0),
+                intArrayOf(1, 0, 0, 6, 0, 0, 1),
                 intArrayOf(1, 0, 0, 0, 0, 0, 1),
                 intArrayOf(1, 1, 1, 5, 1, 1, 1)
             ),
@@ -671,9 +675,9 @@ class Map(var renderCast: RenderCast? = null) {
             grid = arrayOf(
                 intArrayOf(2, 2, 2, 0, 2, 2, 2),
                 intArrayOf(2, 0, 0, 0, 0, 0, 2),
-                intArrayOf(2, 0, 6, 0, 6, 0, 2),
-                intArrayOf(5, 0, 0, 3, 0, 0, 5),
-                intArrayOf(2, 0, 6, 0, 6, 0, 2),
+                intArrayOf(2, 0, 0, 6, 0, 0, 2),
+                intArrayOf(5, 0, 6, 3, 6, 0, 5),
+                intArrayOf(2, 0, 0, 6, 0, 0, 2),
                 intArrayOf(2, 0, 0, 3, 0, 0, 2),
                 intArrayOf(2, 2, 2, 5, 2, 2, 2)
             ),
@@ -683,9 +687,9 @@ class Map(var renderCast: RenderCast? = null) {
             grid = arrayOf(
                 intArrayOf(1, 1, 1, 5, 1, 1, 1),
                 intArrayOf(1, 0, 0, 3, 0, 0, 1),
-                intArrayOf(1, 0, 6, 0, 6, 0, 1),
-                intArrayOf(5, 0, 0, 3, 0, 0, 5),
-                intArrayOf(1, 0, 6, 0, 6, 0, 1),
+                intArrayOf(1, 0, 0, 6, 0, 0, 1),
+                intArrayOf(5, 0, 6, 3, 6, 0, 5),
+                intArrayOf(1, 0, 0, 6, 0, 0, 1),
                 intArrayOf(1, 0, 0, 0, 0, 0, 1),
                 intArrayOf(1, 1, 1, 0, 1, 1, 1)
             ),
@@ -697,11 +701,11 @@ class Map(var renderCast: RenderCast? = null) {
             grid = arrayOf(
                 intArrayOf(1, 1, 1, 1, 0, 1, 1, 1, 1),
                 intArrayOf(1, 0, 0, 0, 0, 0, 0, 0, 1),
-                intArrayOf(1, 0, 6, 0, 0, 0, 6, 0, 1),
+                intArrayOf(1, 0, 6, 0, 3, 0, 6, 0, 1),
                 intArrayOf(1, 0, 0, 0, 0, 0, 0, 0, 1),
-                intArrayOf(5, 0, 0, 0, 0, 0, 0, 0, 5),
+                intArrayOf(5, 0, 3, 0, 0, 0, 3, 0, 5),
                 intArrayOf(1, 0, 0, 0, 0, 0, 0, 0, 1),
-                intArrayOf(1, 0, 6, 0, 0, 0, 6, 0, 1),
+                intArrayOf(1, 0, 6, 0, 3, 0, 6, 0, 1),
                 intArrayOf(1, 0, 0, 0, 0, 0, 0, 0, 1),
                 intArrayOf(1, 1, 1, 1, 1, 1, 1, 1, 1)
             ),
@@ -711,11 +715,11 @@ class Map(var renderCast: RenderCast? = null) {
             grid = arrayOf(
                 intArrayOf(2, 2, 2, 2, 2, 2, 2, 2, 2),
                 intArrayOf(2, 0, 0, 0, 0, 0, 0, 0, 2),
-                intArrayOf(2, 0, 6, 0, 0, 0, 6, 0, 2),
+                intArrayOf(2, 0, 6, 0, 3, 0, 6, 0, 2),
                 intArrayOf(2, 0, 0, 0, 0, 0, 0, 0, 2),
-                intArrayOf(5, 0, 0, 0, 0, 0, 0, 0, 5),
+                intArrayOf(5, 0, 3, 0, 0, 0, 3, 0, 5),
                 intArrayOf(2, 0, 0, 0, 0, 0, 0, 0, 2),
-                intArrayOf(2, 0, 6, 0, 0, 0, 6, 0, 2),
+                intArrayOf(2, 0, 6, 0, 3, 0, 6, 0, 2),
                 intArrayOf(2, 0, 0, 0, 0, 0, 0, 0, 2),
                 intArrayOf(2, 2, 2, 2, 0, 2, 2, 2, 2)
             ),
@@ -727,7 +731,7 @@ class Map(var renderCast: RenderCast? = null) {
                 intArrayOf(1, 0, 0, 0, 0, 0, 0, 0, 1),
                 intArrayOf(1, 0, 6, 0, 0, 0, 6, 0, 1),
                 intArrayOf(1, 0, 0, 0, 0, 0, 0, 0, 1),
-                intArrayOf(0, 0, 0, 0, 0, 0, 0, 0, 1),
+                intArrayOf(0, 0, 0, 0, 3, 0, 0, 0, 1),
                 intArrayOf(1, 0, 0, 0, 0, 0, 0, 0, 1),
                 intArrayOf(1, 0, 6, 0, 0, 0, 6, 0, 1),
                 intArrayOf(1, 0, 0, 0, 0, 0, 0, 0, 1),
@@ -741,7 +745,7 @@ class Map(var renderCast: RenderCast? = null) {
                 intArrayOf(2, 0, 0, 0, 0, 0, 0, 0, 2),
                 intArrayOf(2, 0, 6, 0, 0, 0, 6, 0, 2),
                 intArrayOf(2, 0, 0, 0, 0, 0, 0, 0, 2),
-                intArrayOf(2, 0, 0, 0, 0, 0, 0, 0, 0),
+                intArrayOf(2, 0, 0, 0, 3, 0, 0, 0, 0),
                 intArrayOf(2, 0, 0, 0, 0, 0, 0, 0, 2),
                 intArrayOf(2, 0, 6, 0, 0, 0, 6, 0, 2),
                 intArrayOf(2, 0, 0, 0, 0, 0, 0, 0, 2),
@@ -755,7 +759,7 @@ class Map(var renderCast: RenderCast? = null) {
             grid = arrayOf(
                 intArrayOf(1, 1, 1, 1, 1, 5, 1, 1),
                 intArrayOf(1, 0, 0, 0, 0, 0, 0, 1),
-                intArrayOf(0, 0, 0, 0, 3, 0, 0, 1),
+                intArrayOf(0, 0, 0, 0, 0, 0, 0, 1),
                 intArrayOf(1, 0, 0, 0, 0, 0, 0, 1),
                 intArrayOf(1, 0, 0, 0, 0, 0, 0, 1),
                 intArrayOf(1, 1, 1, 5, 1, 1, 1, 1)
@@ -767,7 +771,7 @@ class Map(var renderCast: RenderCast? = null) {
                 intArrayOf(1, 1, 1, 1, 1, 0, 1, 1),
                 intArrayOf(1, 0, 0, 0, 0, 0, 0, 1),
                 intArrayOf(1, 0, 0, 0, 0, 0, 0, 1),
-                intArrayOf(1, 0, 3, 0, 0, 0, 0, 5),
+                intArrayOf(1, 0, 0, 0, 0, 0, 0, 5),
                 intArrayOf(1, 0, 0, 0, 0, 0, 0, 1),
                 intArrayOf(1, 1, 1, 5, 1, 1, 1, 1)
             ),
@@ -777,7 +781,7 @@ class Map(var renderCast: RenderCast? = null) {
             grid = arrayOf(
                 intArrayOf(1, 1, 1, 1, 1, 5, 1, 1),
                 intArrayOf(1, 0, 0, 0, 0, 0, 0, 1),
-                intArrayOf(1, 0, 3, 0, 0, 0, 0, 1),
+                intArrayOf(1, 0, 0, 0, 0, 0, 0, 1),
                 intArrayOf(1, 0, 0, 0, 0, 0, 0, 0),
                 intArrayOf(1, 0, 0, 0, 0, 0, 0, 1),
                 intArrayOf(1, 1, 1, 5, 1, 1, 1, 1)
@@ -789,7 +793,7 @@ class Map(var renderCast: RenderCast? = null) {
                 intArrayOf(1, 1, 1, 1, 1, 5, 1, 1),
                 intArrayOf(1, 0, 0, 0, 0, 0, 0, 1),
                 intArrayOf(5, 0, 0, 0, 0, 0, 0, 1),
-                intArrayOf(1, 0, 0, 0, 0, 3, 0, 1),
+                intArrayOf(1, 0, 0, 0, 0, 0, 0, 1),
                 intArrayOf(1, 0, 0, 0, 0, 0, 0, 1),
                 intArrayOf(1, 1, 1, 0, 1, 1, 1, 1)
             ),
@@ -852,7 +856,7 @@ class Map(var renderCast: RenderCast? = null) {
         val offsetXInNewGrid = -minX
         val offsetYInNewGrid = -minY
 
-        val newGrid = Array(newHeight) { IntArray(newWidth) { 1 } }
+        val newGrid = Array(newHeight+1) { IntArray(newWidth+1) { 1 } }
 
         for (y in 0 until currentHeight) {
             for (x in 0 until currentWidth) {
@@ -892,7 +896,7 @@ class Map(var renderCast: RenderCast? = null) {
     }
 
     fun generateRoom(triggerPoint: GridPoint, entryDirection: Direction): GridPoint? {
-        if (currentRooms < limitRooms) {
+        if ((currentRooms < limitRooms) and (keys > 0)) {
             val connectionPoint = when (entryDirection) {
                 Direction.UP -> GridPoint(triggerPoint.x, triggerPoint.y - 1)
                 Direction.DOWN -> GridPoint(triggerPoint.x, triggerPoint.y + 1)
@@ -997,7 +1001,7 @@ class Map(var renderCast: RenderCast? = null) {
                                 enemies.add(Enemy(
                                     (tileSize * mapX) - (tileSize / 2),
                                     (tileSize * mapY) - (tileSize / 2),
-                                    100,
+                                    100*level,
                                     enemyTextureId!!,
                                     renderCast = it,
                                     this,
@@ -1052,6 +1056,7 @@ class Map(var renderCast: RenderCast? = null) {
             }
 
             currentRooms += 1
+            keys -= 1
 
             updateWallDistances()
             return null
@@ -1193,6 +1198,10 @@ class Mappingmap(private val map: Map, private val renderCast: RenderCast) : JPa
         g2.color = Color.YELLOW
         g2.font = Font("BOLD", Font.BOLD, 17)
         g2.drawString("FPS: ${renderCast.getRenderFps()*2}", 1366 - 90, 20)
+        g2.drawString("HEAL: ${playerHealth}", 10, 240)
+        g2.drawString("LEVEL: ${level}", 10, 260)
+        g2.drawString("POINTS: ${points}", 10, 280)
+        g2.drawString("KEYS: ${keys}", 10, 300)
     }
 
     override fun getPreferredSize(): Dimension {

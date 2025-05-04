@@ -12,7 +12,6 @@ class Player(private val renderCast: RenderCast, private val map: Map) {
     private var movementSpeed = 1.5
     private val rotationSpeed = 2
     private val sensitivity = 0.07
-    var playerHealth = 100
 
     private var lastGridX = (positionX / tileSize).toInt()
     private var lastGridY = (positionY / tileSize).toInt()
