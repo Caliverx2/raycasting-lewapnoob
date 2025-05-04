@@ -113,6 +113,25 @@ class Player(private val renderCast: RenderCast, private val map: Map) {
         }
     }
 
+    private fun checkKeyPickup() {
+        try {
+            keysList.forEach { key ->
+                if (key.active) {
+                    val dx = positionX - key.x
+                    val dy = positionY - key.y
+                    val distance = sqrt(dx * dx + dy * dy)
+                    if (distance < key.pickupDistance) {
+                        key.active = false
+                        keys += 1
+                        renderCast.playSound("8exp.wav", volume = 0.65f) // Optional: Add pickup sound
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            println("CO XD?")
+        }
+    }
+
     fun w() {
         val deltaX = movementSpeed * cos(Math.toRadians(currentangle.toDouble())) * deltaTime * TARGET_FPS
         val deltaY = movementSpeed * sin(Math.toRadians(currentangle.toDouble())) * deltaTime * TARGET_FPS
@@ -185,5 +204,6 @@ class Player(private val renderCast: RenderCast, private val map: Map) {
             lastGridX = gridX
             lastGridY = gridY
         }
+        checkKeyPickup()
     }
 }

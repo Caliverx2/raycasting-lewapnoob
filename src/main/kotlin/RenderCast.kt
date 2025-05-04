@@ -33,7 +33,9 @@ class RenderCast(private val map: Map) : JPanel() {
 
     private val textureMap: MutableMap<Int, BufferedImage> = mutableMapOf()
     private val wallIndices: Set<Int> = setOf(1, 2, 5)
-    var enemyTextureId: BufferedImage? = null
+    var enemyTextureId: BufferedImage? = null //ENEMY
+    var keyTextureId: BufferedImage? = null //KEYS
+    private val accessibleTiles: Set<Int> = setOf(0, 3, 6) // KEYS-GRID
     private var floorTexture: BufferedImage? = null
     private var ceilingTexture: BufferedImage? = null
     private val buffer: BufferedImage
@@ -51,7 +53,8 @@ class RenderCast(private val map: Map) : JPanel() {
     private val rayCosines = DoubleArray(rayCount)
     private val raySines = DoubleArray(rayCount)
     private val rayAngles = DoubleArray(rayCount)
-    private var visibleEnemies = mutableListOf<Triple<Enemy, Int, Double>>()
+    private var visibleEnemies = mutableListOf<Triple<Enemy, Int, Double>>() //ENEMY
+    private var visibleKeys = mutableListOf<Triple<Key, Int, Double>>() //KEYS
     private val zBuffer = DoubleArray(rayCount) { Double.MAX_VALUE }
     private var lastShotTime = 0L
     private val SHOT_COOLDOWN = 500_000_000L
@@ -68,6 +71,7 @@ class RenderCast(private val map: Map) : JPanel() {
             enemyTextureId = ImageIO.read(this::class.java.classLoader.getResource("textures/boguch.jpg"))
             floorTexture = ImageIO.read(this::class.java.classLoader.getResource("textures/floor.jpg"))
             ceilingTexture = ImageIO.read(this::class.java.classLoader.getResource("textures/ceiling.jpg"))
+            keyTextureId = ImageIO.read(this::class.java.classLoader.getResource("textures/key.png"))
 
             loadTexture(1, "textures/bricks.jpg")
             loadTexture(2, "textures/black_bricks.png")
@@ -80,6 +84,7 @@ class RenderCast(private val map: Map) : JPanel() {
             textureMap[2] = createTexture(Color(20, 50, 50))
             textureMap[5] = createTexture(Color(255, 215, 0))
             enemyTextureId = createTexture(Color(255, 68, 68))
+            keyTextureId = createTexture(Color(255, 255, 0))
         }
 
         lightSources.add(LightSource(0.0, 0.0, color = Color(200, 200, 100), intensity = 0.75, range = 0.15, owner = "player"))
@@ -131,7 +136,12 @@ class RenderCast(private val map: Map) : JPanel() {
 
     override fun paintComponent(g: Graphics) {
         super.paintComponent(g)
-        renderWallsToBuffer()
+        update()
+        try {
+            renderWallsToBuffer()
+        } catch (e: Exception) {
+
+        }
         val g2d = g as Graphics2D
         val scaleX = width.toDouble() / screenWidth
         val scaleY = height.toDouble() / screenHeight
@@ -220,8 +230,6 @@ class RenderCast(private val map: Map) : JPanel() {
         var currentTime = System.nanoTime()
         var elapsedTime = currentTime - lastRenderFrameTime
 
-        enemies.forEach { it.update() }
-
         lightSources.forEach { light ->
             if (light.owner != "player") {
                 enemies.find { enemy -> light.owner == enemy.toString() }?.let { matchedEnemy ->
@@ -270,6 +278,7 @@ class RenderCast(private val map: Map) : JPanel() {
 
         zBuffer.fill(Double.MAX_VALUE)
         visibleEnemies.clear()
+        visibleKeys.clear()
 
         for (ray in 0 until rayCount) {
             val rayAngle = currentangle + rayAngles[ray]
@@ -386,6 +395,38 @@ class RenderCast(private val map: Map) : JPanel() {
                             val screenX = (screenWidth / 2 + angleRatio * screenWidth / 2).toInt()
                             if (visibleEnemies.none { it.first === enemy }) {
                                 visibleEnemies.add(Triple(enemy, screenX, rayLength))
+                            }
+                        }
+                    }
+                }
+            }
+
+            keysList.forEach { key ->
+                if (!key.active) return@forEach
+                val halfSize = key.size / tileSize / 2
+                val keyLeft = key.x / tileSize - halfSize
+                val keyRight = key.x / tileSize + halfSize
+                val keyTop = key.y / tileSize - halfSize
+                val keyBottom = key.y / tileSize + halfSize
+
+                val closestX = clamp(key.x / tileSize, keyLeft, keyRight)
+                val closestY = clamp(key.y / tileSize, keyTop, keyBottom)
+                val dx = closestX - playerPosX
+                val dy = closestY - playerPosY
+
+                val rayLength = dx * rayDirX + dy * rayDirY
+                if (rayLength > 0 && rayLength <= maxRayDistance) {
+                    val perpendicularDistance = abs(dx * rayDirY - dy * rayDirX)
+                    if (perpendicularDistance < halfSize + 0.05) {
+                        val centerDx = key.x / tileSize - playerPosX
+                        val centerDy = key.y / tileSize - playerPosY
+                        val angleToEnemy = atan2(centerDy, centerDx)
+                        val relativeAngle = normalizeAngle(Math.toDegrees(angleToEnemy) - currentangle)
+                        if (abs(relativeAngle) <= fov / 2 + 10) {
+                            val angleRatio = relativeAngle / (fov / 2)
+                            val screenX = (screenWidth / 2 + angleRatio * screenWidth / 2).toInt()
+                            if (visibleKeys.none { it.first === key }) {
+                                visibleKeys.add(Triple(key, screenX, rayLength))
                             }
                         }
                     }
@@ -531,6 +572,7 @@ class RenderCast(private val map: Map) : JPanel() {
             lastRenderFpsUpdate = currentTime
         }
         renderEnemies()
+        renderKeys()
     }
 
     private fun renderEnemies() {
@@ -631,6 +673,52 @@ class RenderCast(private val map: Map) : JPanel() {
                                 )
                                 buffer.setRGB(x, y, finalColor.rgb)
                             }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private fun renderKeys() {
+        visibleKeys.sortByDescending { it.third }
+
+        visibleKeys.forEach { (key, screenX, distance) ->
+            val keyHeight = wallHeight / 4 // Smaller size for keys
+            val minSize = 0.001
+            val maxSize = 64.0
+            val spriteSize = ((keyHeight * screenHeight) / (distance * tileSize)).coerceIn(minSize, maxSize).toInt()
+
+            val floorY = (screenHeight / 2 + (wallHeight * screenHeight) / (2 * distance * tileSize)).toInt()
+            val drawStartY = (floorY - spriteSize).coerceIn(0, screenHeight - 1)
+            val drawEndY = floorY.coerceIn(0, screenHeight - 1)
+
+            val fullSpriteLeftX = screenX - spriteSize / 2.0
+            val fullSpriteRightX = screenX + spriteSize / 2.0
+            val drawStartX = fullSpriteLeftX.coerceAtLeast(0.0).toInt()
+            val drawEndX = fullSpriteRightX.coerceAtMost(screenWidth - 1.0).toInt()
+
+            // Render key sprite
+            for (x in drawStartX until drawEndX) {
+                if (x < 0 || x >= zBuffer.size) continue
+                if (distance < zBuffer[x]) {
+                    val textureFraction = (x - fullSpriteLeftX) / (fullSpriteRightX - fullSpriteLeftX)
+                    val textureX = (textureFraction * key.texture.width).coerceIn(0.0, key.texture.width - 1.0)
+                    for (y in drawStartY until drawEndY) {
+                        val textureY = ((y - drawStartY).toDouble() * key.texture.height / spriteSize).coerceIn(0.0, key.texture.height - 1.0)
+                        val color = key.texture.getRGB(textureX.toInt(), textureY.toInt())
+                        if ((color and 0xFF000000.toInt()) != 0) {
+                            val originalColor = Color(color)
+                            val worldX = key.x / tileSize
+                            val worldY = key.y / tileSize
+                            val litColor = calculateLightContribution(worldX, worldY, originalColor)
+                            val fogFactor = 1.0 - exp(-fogDensity * distance)
+                            val finalColor = Color(
+                                ((1.0 - fogFactor) * litColor.red + fogFactor * fogColor.red).toInt().coerceIn(0, 255),
+                                ((1.0 - fogFactor) * litColor.green + fogFactor * fogColor.green).toInt().coerceIn(0, 255),
+                                ((1.0 - fogFactor) * litColor.blue + fogFactor * fogColor.blue).toInt().coerceIn(0, 255)
+                            )
+                            buffer.setRGB(x, y, finalColor.rgb)
                         }
                     }
                 }
@@ -763,7 +851,29 @@ class RenderCast(private val map: Map) : JPanel() {
                             enemy.health -= 25
                             println("enemy: ${enemy} heal: ${enemy.health}")
                             if (enemy.health <= 0) {
-                                keys += 1
+                                val spawnRadius = 1.0 * tileSize
+                                var keyX = enemy.x
+                                var keyY = enemy.y
+                                var validPosition = false
+                                val maxAttempts = 10
+
+                                for (attempt in 0 until maxAttempts) {
+                                    val randomAngle = Random.nextDouble(0.0, 2 * PI)
+                                    val randomDistance = Random.nextDouble(0.0, spawnRadius)
+                                    val tryX = enemy.x + randomDistance * cos(randomAngle)
+                                    val tryY = enemy.y + randomDistance * sin(randomAngle)
+
+                                    val mapX = (tryX / tileSize).toInt()
+                                    val mapY = (tryY / tileSize).toInt()
+
+                                    if (mapY in map.grid.indices && mapX in map.grid[0].indices && accessibleTiles.contains(map.grid[mapY][mapX])) {
+                                        keyX = tryX
+                                        keyY = tryY
+                                        validPosition = true
+                                        break
+                                    }
+                                }
+                                keysList.add(Key(keyX, keyY, keyTextureId!!))
                                 points = ((points) + (100/level))
                                 if (points >= 100) {
                                     level += 1
@@ -803,5 +913,22 @@ class RenderCast(private val map: Map) : JPanel() {
 
     private fun clamp(value: Double, min: Double, max: Double): Double {
         return maxOf(min, minOf(max, value))
+    }
+
+    private fun update() {
+        enemies.forEach { it.update() }
+        keysList.forEach { key ->
+            if (key.active) {
+                val dx = positionX - key.x
+                val dy = positionY - key.y
+                val distance = sqrt(dx * dx + dy * dy)
+                if (distance < key.pickupDistance) {
+                    key.active = false
+                    keys += 1
+                    playSound("pickup.wav", 0.65f)
+                }
+            }
+        }
+        keysList.removeIf { !it.active }
     }
 }

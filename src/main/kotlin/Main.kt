@@ -14,6 +14,7 @@ import java.awt.Dimension
 import java.awt.Font
 import java.awt.Graphics
 import java.awt.Graphics2D
+import java.awt.GraphicsEnvironment
 import java.awt.Point
 import java.awt.RenderingHints
 import java.awt.Toolkit
@@ -23,6 +24,7 @@ import java.awt.event.MouseMotionAdapter
 import java.awt.event.ComponentAdapter
 import java.awt.event.ComponentEvent
 import java.awt.image.BufferedImage
+import java.util.PriorityQueue
 import javax.imageio.ImageIO
 import javax.swing.JLayeredPane
 import kotlin.math.*
@@ -46,8 +48,18 @@ var positionX = (tileSize*2)-(tileSize/2)  //tile*positon - (half tile)
 var positionY = (tileSize*2)-(tileSize/2)  //tile*positon - (half tile)
 var enemies = mutableListOf<Enemy>()
 var lightSources = mutableListOf<LightSource>()
+var keysList = mutableListOf<Key>()
 var isShooting = false
 
+class Key(
+    var x: Double,
+    var y: Double,
+    var texture: BufferedImage,
+    var active: Boolean = true
+) {
+    val size = 0.5 * tileSize // Key size (radius)
+    val pickupDistance = 0.5 * size // 0.25 of radius for pickup
+}
 
 class LightSource(
     var x: Double,
@@ -58,24 +70,31 @@ class LightSource(
     var owner: String = ""
 )
 
-class Enemy(var x: Double, var y: Double, var health: Int = 10, var texture: BufferedImage, private val renderCast: RenderCast, private val map: Map, var speed: Double = 0.9) {
+class Enemy(
+    var x: Double,
+    var y: Double,
+    var health: Int = 10,
+    var texture: BufferedImage,
+    private val renderCast: RenderCast,
+    private val map: Map,
+    var speed: Double = 0.9
+) {
     var path: List<Node> = emptyList()
     val size = 1.0
     private val margin = 1
     private var pathUpdateTimer = 30
-    private val pathUpdateInterval = 120
+    private val pathUpdateInterval = 60 // More frequent updates to adapt to enemy positions
     private var stuckCounter = 0
     private val maxStuckFrames = 60
     var lastMoveX = 0.0
     var lastMoveY = 0.0
     var isMoving = false
-    private var smoothedMoveX = 0.0
-    private var smoothedMoveY = 0.0
-    private val smoothingFactor = 0.1//0.05
+    private var smoothedMoveX = 0.3
+    private var smoothedMoveY = 0.3
+    private val smoothingFactor = 0.1
     private val MIN_PLAYER_DISTANCE = 0.5 * tileSize
     private var lastPlayerX = 0.0
     private var lastPlayerY = 0.0
-
     private var idleTimer = 0
     private val idleThreshold = (1.5 * TARGET_FPS).toInt()
     private var randomMoveTimer = 0
@@ -86,8 +105,11 @@ class Enemy(var x: Double, var y: Double, var health: Int = 10, var texture: Buf
     private var lastY = y
     private var accumulatedDistance = 0.0
     private var isChasing = true
-    private val CHASE_STOP_DISTANCE = 20.0 * tileSize // Odległość zatrzymania pościgu
-    private val CHASE_RESUME_DISTANCE = 15.0 * tileSize // Odległość wznowienia pościgu
+    private val CHASE_STOP_DISTANCE = 20.0 * tileSize
+    private val CHASE_RESUME_DISTANCE = 15.0 * tileSize
+    private val ENEMY_AVOIDANCE_RADIUS = 1.0 * tileSize // Distance to penalize other enemies
+    private val ENEMY_AVOIDANCE_COST = 10.0 // Cost penalty for being near another enemy
+    private val ALIGNMENT_PENALTY = 5.0 // Penalty for aligning with other enemies
 
     companion object {
         const val MIN_WALL_DISTANCE = 0.1
@@ -96,79 +118,54 @@ class Enemy(var x: Double, var y: Double, var health: Int = 10, var texture: Buf
         private var globalChaseTimer = 0
         private val pathCache = mutableMapOf<Pair<Node, Node>, List<Node>>()
 
-        fun updateGlobalChaseTimer() {
-            globalChaseTimer++
-        }
-
-        fun resetGlobalChaseTimer() {
-            globalChaseTimer = 0
-        }
-
+        fun updateGlobalChaseTimer() { globalChaseTimer++ }
+        fun resetGlobalChaseTimer() { globalChaseTimer = 0 }
         fun getGlobalChaseTimer(): Int = globalChaseTimer
     }
 
     data class Node(val x: Int, val y: Int)
 
-    fun canMoveTo(newX: Double, newY: Double, exclude: Enemy? = null): Pair<Boolean, Enemy?> {
-        val left = newX - size / 2
-        val right = newX + size / 2
-        val top = newY - size / 2
-        val bottom = newY + size / 2
-
-        val gridLeft = ((left - margin) / tileSize).toInt()
-        val gridRight = ((right + margin) / tileSize).toInt()
-        val gridTop = ((top - margin) / tileSize).toInt()
-        val gridBottom = ((bottom + margin) / tileSize).toInt()
-
-        for (gridY in gridTop..gridBottom) {
-            for (gridX in gridLeft..gridRight) {
-                if (gridY !in map.grid.indices || gridX !in map.grid[gridY].indices || ((map.grid[gridY][gridX] != 0) and (map.grid[gridY][gridX] != 5) and (map.grid[gridY][gridX] != 3) and (map.grid[gridY][gridX] != 6))) {
-                    return Pair(false, null)
-                }
-            }
-        }
-
-        renderCast.getEnemies().forEach { otherEnemy ->
-            if (otherEnemy !== this && otherEnemy !== exclude && otherEnemy.health > 0) {
-                val dx = newX - otherEnemy.x
-                val dy = newY - otherEnemy.y
-                val distance = sqrt(dx * dx + dy * dy)
-                if (distance < size) {
-                    return Pair(false, otherEnemy)
-                }
-            }
-        }
-
-        val dx = newX - positionX
-        val dy = newY - positionY
-        val newDistance = sqrt(dx * dx + dy * dy)
-        val currentDistance = sqrt((x - positionX) * (x - positionX) + (y - positionY) * (y - positionY))
-        if (newDistance < MIN_PLAYER_DISTANCE && newDistance < currentDistance) {
-            return Pair(false, null)
-        }
-
-        return Pair(true, null)
+    private fun heuristic(node: Node, goal: Node): Double {
+        return (abs(node.x - goal.x) + abs(node.y - goal.y)).toDouble()
     }
 
-    fun tryPush(otherEnemy: Enemy, moveX: Double, moveY: Double): Boolean {
-        if (otherEnemy.isMoving) {
-            val dotProduct = (moveX * otherEnemy.lastMoveX + moveY * otherEnemy.lastMoveY)
-            if (dotProduct < 0) {
-                return false
+    private fun isAlignedWithEnemies(node: Node, enemies: List<Enemy>): Boolean {
+        var sameRowCount = 0
+        var sameColCount = 0
+        val nodeX = (node.x + 0.5) * tileSize
+        val nodeY = (node.y + 0.5) * tileSize
+        enemies.forEach { other ->
+            if (other !== this && other.health > 0) {
+                val otherX = other.x
+                val otherY = other.y
+                if (abs(otherY - nodeY) < tileSize / 2) sameRowCount++
+                if (abs(otherX - nodeX) < tileSize / 2) sameColCount++
             }
         }
-        val newEnemyX = otherEnemy.x + moveX * 0.5
-        val newEnemyY = otherEnemy.y + moveY * 0.5
-        val (canMove, _) = otherEnemy.canMoveTo(newEnemyX, newEnemyY, this)
-        if (canMove) {
-            otherEnemy.x = newEnemyX
-            otherEnemy.y = newEnemyY
-            otherEnemy.lastMoveX = moveX
-            otherEnemy.lastMoveY = moveY
-            otherEnemy.isMoving = true
-            return true
+        return sameRowCount >= 2 || sameColCount >= 2 // Alignment with 2+ enemies
+    }
+
+    private fun calculateNodeCost(node: Node, enemies: List<Enemy>): Double {
+        var cost = 1.0 // Base cost
+        val nodeX = (node.x + 0.5) * tileSize
+        val nodeY = (node.y + 0.5) * tileSize
+
+        enemies.forEach { other ->
+            if (other !== this && other.health > 0) {
+                val dx = nodeX - other.x
+                val dy = nodeY - other.y
+                val distance = sqrt(dx * dx + dy * dy)
+                if (distance < ENEMY_AVOIDANCE_RADIUS) {
+                    cost += ENEMY_AVOIDANCE_COST * (1.0 - distance / ENEMY_AVOIDANCE_RADIUS)
+                }
+            }
         }
-        return false
+
+        if (isAlignedWithEnemies(node, enemies)) {
+            cost += ALIGNMENT_PENALTY
+        }
+
+        return cost
     }
 
     fun findPath(): List<Node> {
@@ -181,7 +178,8 @@ class Enemy(var x: Double, var y: Double, var health: Int = 10, var texture: Buf
 
         if (startY !in map.grid.indices || startX !in map.grid[0].indices ||
             goalY !in map.grid.indices || goalX !in map.grid[0].indices ||
-            ((map.grid[goalY][goalX] != 0) and (map.grid[goalY][goalX] != 5) and (map.grid[goalY][goalX] != 3) and (map.grid[goalY][goalX] != 6))
+            ((map.grid[goalY][goalX] != 0) && (map.grid[goalY][goalX] != 5) &&
+                    (map.grid[goalY][goalX] != 3) && (map.grid[goalY][goalX] != 6))
         ) {
             return emptyList()
         }
@@ -199,18 +197,25 @@ class Enemy(var x: Double, var y: Double, var health: Int = 10, var texture: Buf
         val cacheKey = Pair(Node(startX, startY), Node(goalX, goalY))
         pathCache[cacheKey]?.let { return it }
 
-        val queue = ArrayDeque<Node>().apply { add(Node(startX, startY)) }
-        val visited = Array(map.grid.size) { BooleanArray(map.grid[0].size) }
-        val cameFrom = Array(map.grid.size) { arrayOfNulls<Node>(map.grid[0].size) }
-        visited[startY][startX] = true
+        // A* algorithm
+        data class AStarNode(val node: Node, val fScore: Double, val gScore: Double)
 
-        while (queue.isNotEmpty()) {
-            val current = queue.removeFirst()
+        val openSet = PriorityQueue<AStarNode>(compareBy { it.fScore })
+        val startNode = Node(startX, startY)
+        openSet.add(AStarNode(startNode, heuristic(startNode, Node(goalX, goalY)), 0.0))
+
+        val cameFrom = mutableMapOf<Node, Node>()
+        val gScore = mutableMapOf(startNode to 0.0)
+        val fScore = mutableMapOf(startNode to heuristic(startNode, Node(goalX, goalY)))
+        val enemies = renderCast.getEnemies()
+
+        while (openSet.isNotEmpty()) {
+            val current = openSet.poll().node
             if (current.x == goalX && current.y == goalY) {
                 val path = mutableListOf(current)
                 var curr = current
-                while (cameFrom[curr.y][curr.x] != null) {
-                    curr = cameFrom[curr.y][curr.x]!!
+                while (curr in cameFrom) {
+                    curr = cameFrom[curr]!!
                     path.add(curr)
                 }
                 val result = path.reversed()
@@ -219,10 +224,12 @@ class Enemy(var x: Double, var y: Double, var health: Int = 10, var texture: Buf
             }
 
             for (neighbor in getNeighbors(current)) {
-                if (!visited[neighbor.y][neighbor.x]) {
-                    visited[neighbor.y][neighbor.x] = true
-                    cameFrom[neighbor.y][neighbor.x] = current
-                    queue.add(neighbor)
+                val tentativeGScore = gScore[current]!! + calculateNodeCost(neighbor, enemies)
+                if (tentativeGScore < gScore.getOrDefault(neighbor, Double.MAX_VALUE)) {
+                    cameFrom[neighbor] = current
+                    gScore[neighbor] = tentativeGScore
+                    fScore[neighbor] = tentativeGScore + heuristic(neighbor, Node(goalX, goalY))
+                    openSet.add(AStarNode(neighbor, fScore[neighbor]!!, gScore[neighbor]!!))
                 }
             }
         }
@@ -250,6 +257,24 @@ class Enemy(var x: Double, var y: Double, var health: Int = 10, var texture: Buf
         return neighbors
     }
 
+    private fun calculateRepulsion(enemies: List<Enemy>): Pair<Double, Double> {
+        var repelX = 0.0
+        var repelY = 0.0
+        enemies.forEach { other ->
+            if (other !== this && other.health > 0) {
+                val dx = x - other.x
+                val dy = y - other.y
+                val distance = sqrt(dx * dx + dy * dy)
+                if (distance in 0.1..ENEMY_AVOIDANCE_RADIUS) {
+                    val force = (ENEMY_AVOIDANCE_RADIUS - distance) / ENEMY_AVOIDANCE_RADIUS
+                    repelX += (dx / distance) * force * speed
+                    repelY += (dy / distance) * force * speed
+                }
+            }
+        }
+        return Pair(repelX, repelY)
+    }
+
     fun update() {
         if (health <= 0) {
             path = emptyList()
@@ -263,7 +288,6 @@ class Enemy(var x: Double, var y: Double, var health: Int = 10, var texture: Buf
         }
 
         val deltaTime = 1.0 / TARGET_FPS
-
         val dx = x - lastX
         val dy = y - lastY
         val distanceMoved = sqrt(dx * dx + dy * dy)
@@ -282,7 +306,6 @@ class Enemy(var x: Double, var y: Double, var health: Int = 10, var texture: Buf
         val dyToPlayer = y - positionY
         val distanceToPlayer = sqrt(dxToPlayer * dxToPlayer + dyToPlayer * dyToPlayer)
 
-        // Logic for interrupting/resuming the chase
         if (isChasing && distanceToPlayer > CHASE_STOP_DISTANCE) {
             isChasing = false
             path = emptyList()
@@ -291,8 +314,7 @@ class Enemy(var x: Double, var y: Double, var health: Int = 10, var texture: Buf
             isChasing = true
         }
 
-        val playerMoved =
-            sqrt((positionX - lastPlayerX) * (positionX - lastPlayerX) + (positionY - lastPlayerY) * (positionY - lastPlayerY)) > PLAYER_MOVE_THRESHOLD
+        val playerMoved = sqrt((positionX - lastPlayerX) * (positionX - lastPlayerX) + (positionY - lastPlayerY) * (positionY - lastPlayerY)) > PLAYER_MOVE_THRESHOLD
         lastPlayerX = positionX
         lastPlayerY = positionY
 
@@ -313,20 +335,17 @@ class Enemy(var x: Double, var y: Double, var health: Int = 10, var texture: Buf
             smoothedMoveX = smoothedMoveX * (1.0 - smoothingFactor) + rawMoveX * smoothingFactor
             smoothedMoveY = smoothedMoveY * (1.0 - smoothingFactor) + rawMoveY * smoothingFactor
 
-            val newX = x + smoothedMoveX
-            val newY = y + smoothedMoveY
-
-            val (canMove, collidedEnemy) = canMoveTo(newX, newY)
+            val (canMove, collidedEnemy) = canMoveTo(x + smoothedMoveX, y + smoothedMoveY)
             if (canMove) {
-                x = newX
-                y = newY
+                x += smoothedMoveX
+                y += smoothedMoveY
                 lastMoveX = smoothedMoveX
                 lastMoveY = smoothedMoveY
                 isMoving = true
                 stuckCounter = 0
             } else if (collidedEnemy != null && tryPush(collidedEnemy, smoothedMoveX, smoothedMoveY)) {
-                x = newX
-                y = newY
+                x += smoothedMoveX
+                y += smoothedMoveY
                 lastMoveX = smoothedMoveX
                 lastMoveY = smoothedMoveY
                 isMoving = true
@@ -361,8 +380,9 @@ class Enemy(var x: Double, var y: Double, var health: Int = 10, var texture: Buf
                 val rawMoveX = if (distance > 0) (dx / distance) * moveSpeed else 0.0
                 val rawMoveY = if (distance > 0) (dy / distance) * moveSpeed else 0.0
 
-                smoothedMoveX = smoothedMoveX * (1.0 - smoothingFactor) + rawMoveX * smoothingFactor
-                smoothedMoveY = smoothedMoveY * (1.0 - smoothingFactor) + rawMoveY * smoothingFactor
+                val (repelX, repelY) = calculateRepulsion(renderCast.getEnemies())
+                smoothedMoveX = smoothedMoveX * (1.0 - smoothingFactor) + (rawMoveX + repelX) * smoothingFactor
+                smoothedMoveY = smoothedMoveY * (1.0 - smoothingFactor) + (rawMoveY + repelY) * smoothingFactor
 
                 val newX = x + smoothedMoveX
                 val newY = y + smoothedMoveY
@@ -409,10 +429,7 @@ class Enemy(var x: Double, var y: Double, var health: Int = 10, var texture: Buf
         randomMoveTimer++
         if (idleTimer >= idleThreshold && randomMoveTimer >= randomMoveInterval && isChasing) {
             val directions = listOf(
-                Pair(1.0, 0.0),
-                Pair(-1.0, 0.0),
-                Pair(0.0, 1.0),
-                Pair(0.0, -1.0)
+                Pair(1.0, 0.0), Pair(-1.0, 0.0), Pair(0.0, 1.0), Pair(0.0, -1.0)
             )
             val (moveX, moveY) = directions.random()
             val newX = x + moveX * randomMoveDistance
@@ -429,20 +446,72 @@ class Enemy(var x: Double, var y: Double, var health: Int = 10, var texture: Buf
                 idleTimer = 0
                 randomMoveTimer = 0
                 accumulatedDistance = 0.0
-            } else {
-                if (canMove) {
-                    x = newX
-                    y = newY
-                    lastMoveX = moveX * randomMoveDistance
-                    lastMoveY = moveY * randomMoveDistance
-                    path = findPath()
-                    isMoving = true
-                    idleTimer = 0
-                    randomMoveTimer = 0
-                    accumulatedDistance = 0.0
+            }
+        }
+    }
+
+    fun canMoveTo(newX: Double, newY: Double, exclude: Enemy? = null): Pair<Boolean, Enemy?> {
+        val left = newX - size / 2
+        val right = newX + size / 2
+        val top = newY - size / 2
+        val bottom = newY + size / 2
+
+        val gridLeft = ((left - margin) / tileSize).toInt()
+        val gridRight = ((right + margin) / tileSize).toInt()
+        val gridTop = ((top - margin) / tileSize).toInt()
+        val gridBottom = ((bottom + margin) / tileSize).toInt()
+
+        for (gridY in gridTop..gridBottom) {
+            for (gridX in gridLeft..gridRight) {
+                if (gridY !in map.grid.indices || gridX !in map.grid[gridY].indices ||
+                    ((map.grid[gridY][gridX] != 0) && (map.grid[gridY][gridX] != 5) &&
+                            (map.grid[gridY][gridX] != 3) && (map.grid[gridY][gridX] != 6))) {
+                    return Pair(false, null)
                 }
             }
         }
+
+        renderCast.getEnemies().forEach { otherEnemy ->
+            if (otherEnemy !== this && otherEnemy !== exclude && otherEnemy.health > 0) {
+                val dx = newX - otherEnemy.x
+                val dy = newY - otherEnemy.y
+                val distance = sqrt(dx * dx + dy * dy)
+                if (distance < size) {
+                    return Pair(false, otherEnemy)
+                }
+            }
+        }
+
+        val dx = newX - positionX
+        val dy = newY - positionY
+        val newDistance = sqrt(dx * dx + dy * dy)
+        val currentDistance = sqrt((x - positionX) * (x - positionX) + (y - positionY) * (y - positionY))
+        if (newDistance < MIN_PLAYER_DISTANCE && newDistance < currentDistance) {
+            return Pair(false, null)
+        }
+
+        return Pair(true, null)
+    }
+
+    fun tryPush(otherEnemy: Enemy, moveX: Double, moveY: Double): Boolean {
+        if (otherEnemy.isMoving) {
+            val dotProduct = (moveX * otherEnemy.lastMoveX + moveY * otherEnemy.lastMoveY)
+            if (dotProduct < 0) {
+                return false
+            }
+        }
+        val newEnemyX = otherEnemy.x + moveX * 0.5
+        val newEnemyY = otherEnemy.y + moveY * 0.5
+        val (canMove, _) = otherEnemy.canMoveTo(newEnemyX, newEnemyY, this)
+        if (canMove) {
+            otherEnemy.x = newEnemyX
+            otherEnemy.y = newEnemyY
+            otherEnemy.lastMoveX = moveX
+            otherEnemy.lastMoveY = moveY
+            otherEnemy.isMoving = true
+            return true
+        }
+        return false
     }
 }
 
@@ -595,7 +664,7 @@ class Map(var renderCast: RenderCast? = null) {
     )
 
     // Data classes and enum for room generation
-    val limitRooms = 9*9
+    val limitRooms = 2
     var currentRooms = 0
     var enemyTextureId: BufferedImage? = ImageIO.read(this::class.java.classLoader.getResource("textures/boguch.jpg"))
     data class GridPoint(val x: Int, val y: Int)
@@ -1001,7 +1070,7 @@ class Map(var renderCast: RenderCast? = null) {
                                 enemies.add(Enemy(
                                     (tileSize * mapX) - (tileSize / 2),
                                     (tileSize * mapY) - (tileSize / 2),
-                                    100*level,
+                                    (100+(level*7.5)*2).toInt(),
                                     enemyTextureId!!,
                                     renderCast = it,
                                     this,
@@ -1060,7 +1129,38 @@ class Map(var renderCast: RenderCast? = null) {
 
             updateWallDistances()
             return null
+        } else if ((currentRooms >= limitRooms) and (keys > 0)) {
+            positionX = (tileSize*2)-(tileSize/2)  //tile*positon - (half tile)
+            positionY = (tileSize*2)-(tileSize/2)
+            keys += 1
+            currentRooms = 0
+            enemies = mutableListOf<Enemy>()
+            lightSources = mutableListOf<LightSource>()
+            keysList = mutableListOf<Key>()
+            grid = arrayOf(
+                intArrayOf(1,1,1,1,1,1,1,1,1,1,1,1,1,1),
+                intArrayOf(1,0,0,0,0,0,0,0,0,0,0,0,0,1),
+                intArrayOf(1,0,1,0,1,0,1,1,1,0,1,0,0,1),
+                intArrayOf(1,0,1,0,1,0,0,0,1,0,1,0,0,1),
+                intArrayOf(1,0,1,1,1,0,1,0,1,0,1,0,0,1),
+                intArrayOf(1,0,1,0,0,0,1,0,0,0,1,0,0,1),
+                intArrayOf(1,0,1,1,1,1,1,0,1,1,1,1,0,5),
+                intArrayOf(1,0,0,0,0,0,1,0,1,0,0,0,0,1),
+                intArrayOf(1,0,1,0,1,0,1,0,1,1,1,0,0,5),
+                intArrayOf(1,0,1,0,1,0,0,0,0,0,1,0,0,1),
+                intArrayOf(1,0,1,1,1,1,1,1,1,1,1,0,0,5),
+                intArrayOf(1,0,0,0,1,0,0,0,0,0,0,0,0,1),
+                intArrayOf(1,1,1,0,1,1,1,1,1,0,1,1,0,5),
+                intArrayOf(1,0,0,0,1,0,1,0,1,0,0,0,0,1),
+                intArrayOf(1,0,1,0,1,0,1,0,1,1,1,1,0,5),
+                intArrayOf(1,0,1,0,1,0,1,0,0,0,0,0,0,1),
+                intArrayOf(1,0,1,1,1,0,1,1,1,1,1,1,0,5),
+                intArrayOf(1,0,0,0,0,0,1,0,0,0,0,0,0,1),
+                intArrayOf(1,0,0,0,0,0,0,0,0,0,0,0,0,5),
+                intArrayOf(1,1,1,1,5,1,5,1,5,1,5,1,5,1)
+            )
         }
+
         return null
     }
 }
@@ -1073,10 +1173,20 @@ class Mappingmap(private val map: Map, private val renderCast: RenderCast) : JPa
     private var lastGrid: Array<IntArray>? = null
     private val maxRenderTiles = 25
     private val enemyPathColors = mutableMapOf<Enemy, Color>()
+    var keypng: BufferedImage? = null
+    var sliderpng: BufferedImage? = null
+    private var font: Font? = null
 
     init {
         preferredSize = Dimension(miniMapSize + offsetX * 2, miniMapSize + offsetY * 2)
         isOpaque = false
+        val fontStream = this::class.java.classLoader.getResourceAsStream("font/mojangles.ttf")
+            ?: throw IllegalArgumentException("Font file not found: custom_font.ttf")
+        font = Font.createFont(Font.TRUETYPE_FONT, fontStream)
+        GraphicsEnvironment.getLocalGraphicsEnvironment().registerFont(font)
+
+        sliderpng = ImageIO.read(this::class.java.classLoader.getResource("textures/slide.png"))
+        keypng = ImageIO.read(this::class.java.classLoader.getResource("textures/key.png"))
     }
 
     override fun paintComponent(v: Graphics) {
@@ -1145,6 +1255,19 @@ class Mappingmap(private val map: Map, private val renderCast: RenderCast) : JPa
 
         g2.drawImage(bufferedImage, 0, 0, null)
 
+
+        sliderpng?.let {
+            val offsetx = 3
+            val offsety = 232
+            g2.drawImage(it, offsetx, offsety, (50*4)+offsetx, (20*4)+offsety, 0, 0, it.width, it.height, null)
+        }
+
+        keypng?.let {
+            val offsetx = 10
+            val offsety = 250
+            g2.drawImage(it, offsetx, offsety, (19*3)+offsetx, (16*3)+offsety, 0, 0, it.width, it.height, null)
+        }
+
         val enemies = renderCast.getEnemies()
         // Draw enemies and their enemy paths. Assign them a random color. Set the path color for this enemy
         enemies.forEach { enemy ->
@@ -1179,6 +1302,19 @@ class Mappingmap(private val map: Map, private val renderCast: RenderCast) : JPa
                 }
             }
         }
+        // draw keys
+        keysList.forEach { key ->
+            if (key.active) {
+                val relativeX = (key.x / tileSize) - playerGridX
+                val relativeY = (key.y / tileSize) - playerGridY
+                val keyX = (playerMapX + relativeX * tileScale).toInt()
+                val keyY = (playerMapY + relativeY * tileScale).toInt()
+                if (keyX >= offsetX && keyX < miniMapSize + offsetX && keyY >= offsetY && keyY < miniMapSize + offsetY) {
+                    g2.color = Color.YELLOW
+                    g2.fillOval(keyX - 3, keyY - 3, 6, 6)
+                }
+            }
+        }
 
         // draw player
         val angleRad = Math.toRadians(currentangle.toDouble())
@@ -1196,12 +1332,15 @@ class Mappingmap(private val map: Map, private val renderCast: RenderCast) : JPa
         g2.fillRect(683, 384, 3, 3)
 
         g2.color = Color.YELLOW
-        g2.font = Font("BOLD", Font.BOLD, 17)
-        g2.drawString("FPS: ${renderCast.getRenderFps()*2}", 1366 - 90, 20)
+        g2.font = font?.deriveFont(Font.BOLD, 17f) ?: Font("Arial", Font.BOLD, 17)
+
+        g2.drawString("${renderCast.getRenderFps()*2}", 1366 - 50, 20)
+        /*
         g2.drawString("HEAL: ${playerHealth}", 10, 240)
         g2.drawString("LEVEL: ${level}", 10, 260)
-        g2.drawString("POINTS: ${points}", 10, 280)
-        g2.drawString("KEYS: ${keys}", 10, 300)
+        g2.drawString("POINTS: ${points}", 10, 280)*/
+        g2.font = font?.deriveFont(Font.BOLD, 50f) ?: Font("Arial", Font.BOLD, 50)
+        g2.drawString("${keys}", 85, 290)
     }
 
     override fun getPreferredSize(): Dimension {
