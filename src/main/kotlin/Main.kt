@@ -45,8 +45,8 @@ val TARGET_FPS = 90
 val FRAME_TIME_NS = 1_000_000_000 / (90*1)
 var deltaTime = 1.0 / TARGET_FPS
 
-var positionX = (tileSize*2)-(tileSize/2)  //tile*positon - (half tile)
-var positionY = (tileSize*2)-(tileSize/2)  //tile*positon - (half tile)
+var positionX = (tileSize*11)-(tileSize/2)  //tile*positon - (half tile)
+var positionY = (tileSize*11)-(tileSize/2)  //tile*positon - (half tile)
 var enemies = mutableListOf<Enemy>()
 var lightSources = mutableListOf<LightSource>()
 var keysList = mutableListOf<Key>()
@@ -86,7 +86,7 @@ class LightSource(
 class Enemy(
     var x: Double,
     var y: Double,
-    var health: Int = 10,
+    var health: Int = 100,
     var texture: BufferedImage,
     private val renderCast: RenderCast,
     private val map: Map,
@@ -150,12 +150,15 @@ class Enemy(
         val dy: Double,
         val speed: Double = 5.0,
         val size: Double = 0.1 * tileSize,
-        val damage: Int = 2 * level,
+        val damage: Int = 5 * level,
         var active: Boolean = true,
         val lightSource: LightSource? = null // Add light source for projectile
     ) {
         fun update() {
-            if (!active) return
+            if (!active) {
+                lightSource?.let { lightSources.remove(it) }
+                return
+            }
             x += dx * speed * deltaTime * TARGET_FPS
             y += dy * speed * deltaTime * TARGET_FPS
 
@@ -164,7 +167,7 @@ class Enemy(
             if (gridY in map.grid.indices && gridX in map.grid[0].indices) {
                 if (map.grid[gridY][gridX] == 1 || map.grid[gridY][gridX] == 2) {
                     active = false
-                    lightSource?.let { lightSources.remove(it) } // Remove light source on wall hit
+                    lightSource?.let { lightSources.remove(it) }
                     return
                 }
             }
@@ -187,13 +190,12 @@ class Enemy(
                     renderCast.playSound("hurt6.wav", volume = 0.65f)
                 }
                 active = false
-                lightSource?.let { lightSources.remove(it) } // Remove light source on player hit
+                lightSource?.let { lightSources.remove(it) }
                 if (playerHealth <= 0) {
                     playerHealth = 0
                 }
             }
 
-            // Update light source position
             lightSource?.let {
                 it.x = x / tileSize
                 it.y = y / tileSize
@@ -236,7 +238,7 @@ class Enemy(
                 y = y / tileSize,
                 color = Color(255, 100, 100), // Reddish light for enemy projectiles
                 intensity = 0.5,
-                range = 0.5,
+                range = 0.2,
                 owner = "projectile_${this.hashCode()}_${System.nanoTime()}"
             )
             lightSources.add(lightSource)
@@ -298,7 +300,10 @@ class Enemy(
         if (startY !in map.grid.indices || startX !in map.grid[0].indices ||
             goalY !in map.grid.indices || goalX !in map.grid[0].indices ||
             ((map.grid[goalY][goalX] != 0) && (map.grid[goalY][goalX] != 5) &&
-                    (map.grid[goalY][goalX] != 3) && (map.grid[goalY][goalX] != 6) && (map.grid[goalY][goalX] != 7))
+                    (map.grid[goalY][goalX] != 3) &&
+                    (map.grid[goalY][goalX] != 6) &&
+                    (map.grid[goalY][goalX] != 7) &&
+                    (map.grid[goalY][goalX] != 8))
         ) {
             return emptyList()
         }
@@ -402,6 +407,10 @@ class Enemy(
             accumulatedDistance = 0.0
             lastX = x
             lastY = y
+            projectiles.forEach { projectile ->
+                projectile.active = false
+                projectile.lightSource?.let { lightSources.remove(it) }
+            }
             projectiles.clear()
             lightSources.removeIf { it.owner == this.toString() }
             return
@@ -775,26 +784,27 @@ fun main() = runBlocking {
 
 class Map(var renderCast: RenderCast? = null) {
     var grid: Array<IntArray> = arrayOf(
-        intArrayOf(1,1,1,1,1,1,1,1,1,1,1,1,1,1),
-        intArrayOf(1,0,0,0,0,0,0,0,0,0,0,0,0,1),
-        intArrayOf(1,0,1,0,1,0,1,1,1,0,1,0,0,1),
-        intArrayOf(1,0,1,0,1,0,0,0,1,0,1,0,0,1),
-        intArrayOf(1,0,1,1,1,0,1,0,1,0,1,0,0,1),
-        intArrayOf(1,0,1,0,0,0,1,0,0,0,1,0,0,1),
-        intArrayOf(1,0,1,1,1,1,1,0,1,1,1,1,0,5),
-        intArrayOf(1,0,0,0,0,0,1,0,1,0,0,0,0,1),
-        intArrayOf(1,0,1,0,1,0,1,0,1,1,1,0,0,5),
-        intArrayOf(1,0,1,0,1,0,0,0,0,0,1,0,0,1),
-        intArrayOf(1,0,1,1,1,1,1,1,1,1,1,0,0,5),
-        intArrayOf(1,0,0,0,1,0,0,0,0,0,0,0,0,1),
-        intArrayOf(1,1,1,0,1,1,1,1,1,0,1,1,0,5),
-        intArrayOf(1,0,0,0,1,0,1,0,1,0,0,0,0,1),
-        intArrayOf(1,0,1,0,1,0,1,0,1,1,1,1,0,5),
-        intArrayOf(1,0,1,0,1,0,1,0,0,0,0,0,0,1),
-        intArrayOf(1,0,1,1,1,0,1,1,1,1,1,1,0,5),
-        intArrayOf(1,0,0,0,0,0,1,0,0,0,0,0,0,1),
-        intArrayOf(1,0,0,0,0,0,0,0,0,0,0,0,0,5),
-        intArrayOf(1,1,1,1,5,1,5,1,5,1,5,1,5,1)
+        intArrayOf(2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2),
+        intArrayOf(2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2),
+        intArrayOf(2,0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2),
+        intArrayOf(2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2),
+        intArrayOf(2,0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2),
+        intArrayOf(2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2),
+        intArrayOf(2,0,2,0,2,0,1,0,1,0,1,0,1,0,1,0,2,0,2,0,2),
+        intArrayOf(2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2),
+        intArrayOf(2,0,2,0,2,0,1,0,1,1,0,1,1,0,1,0,2,0,2,0,2),
+        intArrayOf(2,0,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0,0,0,2),
+        intArrayOf(2,0,2,0,2,0,1,0,0,0,0,0,0,0,1,0,2,0,2,0,2),
+        intArrayOf(2,0,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0,0,0,2),
+        intArrayOf(2,0,2,0,2,0,1,0,1,1,0,1,1,0,1,0,2,0,2,0,2),
+        intArrayOf(2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2),
+        intArrayOf(2,0,2,0,2,0,1,0,1,0,1,0,1,0,1,0,2,0,2,0,2),
+        intArrayOf(2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2),
+        intArrayOf(2,0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2),
+        intArrayOf(2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2),
+        intArrayOf(2,0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2),
+        intArrayOf(2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2),
+        intArrayOf(2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2)
     )
 
     // Data classes and enum for room generation
@@ -965,7 +975,7 @@ class Map(var renderCast: RenderCast? = null) {
             grid = arrayOf(
                 intArrayOf(1, 1, 1, 1, 1, 0, 1, 1),
                 intArrayOf(1, 0, 0, 0, 0, 0, 0, 1),
-                intArrayOf(1, 0, 0, 0, 7, 0, 0, 1),
+                intArrayOf(1, 0, 0, 0, 8, 0, 0, 1),
                 intArrayOf(1, 0, 0, 0, 0, 0, 0, 5),
                 intArrayOf(1, 0, 0, 0, 0, 0, 0, 1),
                 intArrayOf(1, 1, 1, 5, 1, 1, 1, 1)
@@ -987,7 +997,7 @@ class Map(var renderCast: RenderCast? = null) {
             grid = arrayOf(
                 intArrayOf(1, 1, 1, 1, 1, 5, 1, 1),
                 intArrayOf(1, 0, 0, 0, 0, 0, 0, 1),
-                intArrayOf(0, 0, 0, 0, 7, 0, 0, 1),
+                intArrayOf(0, 0, 0, 0, 8, 0, 0, 1),
                 intArrayOf(1, 0, 0, 0, 0, 0, 0, 1),
                 intArrayOf(1, 0, 0, 0, 0, 0, 0, 1),
                 intArrayOf(1, 1, 1, 5, 1, 1, 1, 1)
@@ -1248,6 +1258,19 @@ class Map(var renderCast: RenderCast? = null) {
                                 it.repaint()
                             }
                         }
+
+                        //pre skrzynki
+                        if (selectedTemplate.grid[y][x] == 8) {
+                            keysList.add(
+                                Key(
+                                    (tileSize * mapX) - (tileSize / 2),
+                                    (tileSize * mapY) - (tileSize / 2),
+                                    texture = renderCast?.keyTextureId!!,
+                                    true
+                                )
+                            )
+                        }
+
                         if (selectedTemplate.grid[y][x] == 7) {
                             renderCast?.let {
                                 medicationsList.add(
@@ -1255,7 +1278,7 @@ class Map(var renderCast: RenderCast? = null) {
                                         (tileSize * mapX) - (tileSize / 2),
                                         (tileSize * mapY) - (tileSize / 2),
                                         renderCast?.medicationTextureID!!,
-                                        heal = 100
+                                        heal = 40
                                     )
                                 )
                                 it.repaint()
@@ -1299,6 +1322,7 @@ class Map(var renderCast: RenderCast? = null) {
             enemies = mutableListOf<Enemy>()
             lightSources = mutableListOf<LightSource>()
             keysList = mutableListOf<Key>()
+            medicationsList = mutableListOf<Medication>()
             lightSources.add(
                 LightSource(
                     0.0, 0.0, color = Color(200, 200, 100), intensity = 0.75, range = 0.15, owner = "player"
@@ -1328,7 +1352,6 @@ class Map(var renderCast: RenderCast? = null) {
                 intArrayOf(1, 1, 1, 1, 5, 1, 5, 1, 5, 1, 5, 1, 5, 1)
             )
         }
-
         return null
     }
 }

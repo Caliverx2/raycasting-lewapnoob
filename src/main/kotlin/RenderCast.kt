@@ -99,13 +99,15 @@ class RenderCast(private val map: Map) : JPanel() {
 
         lightSources.add(LightSource(0.0, 0.0, color = Color(200, 200, 100), intensity = 0.75, range = 0.15, owner = "player"))
 
-        enemies.add(Enemy((tileSize * 2) - (tileSize / 2), (tileSize * 6) - (tileSize / 2), 100*level, enemyTextureId!!, this, map, speed = (2.0 * ((18..19).random() / 10.0))))
-        enemies.add(Enemy((tileSize * 12) - (tileSize / 2), (tileSize * 18) - (tileSize / 2), 100*level, enemyTextureId!!, this, map, speed = (2.0 * ((18..19).random() / 10.0))))
-        enemies.add(Enemy((tileSize * 2) - (tileSize / 2), (tileSize * 16) - (tileSize / 2), 100*level, enemyTextureId!!, this, map, speed = (2.0 * ((18..19).random() / 10.0))))
+        enemies.add(Enemy((tileSize * 2) - (tileSize / 2), (tileSize * 2) - (tileSize / 2), health = 100, enemyTextureId!!, this, map, speed = (2.0 * ((18..19).random() / 10.0))))
+        enemies.add(Enemy((tileSize * 2) - (tileSize / 2), (tileSize * 20) - (tileSize / 2), health = 100, enemyTextureId!!, this, map, speed = (2.0 * ((18..19).random() / 10.0))))
+        enemies.add(Enemy((tileSize * 20) - (tileSize / 2), (tileSize * 20) - (tileSize / 2), health = 100, enemyTextureId!!, this, map, speed = (2.0 * ((18..19).random() / 10.0))))
+        enemies.add(Enemy((tileSize * 20) - (tileSize / 2), (tileSize * 2) - (tileSize / 2), health = 100, enemyTextureId!!, this, map, speed = (2.0 * ((18..19).random() / 10.0))))
 
-        lightSources.add(LightSource((enemies[0].x / tileSize), (enemies[0].y / tileSize), color = Color(20, 255, 20), intensity = 0.35, range = 1.5, owner = "${enemies[0]}"))
-        lightSources.add(LightSource((enemies[1].x / tileSize), (enemies[1].y / tileSize), color = Color(255, 22, 20), intensity = 0.35, range = 1.5, owner = "${enemies[1]}"))
-        lightSources.add(LightSource((enemies[2].x / tileSize), (enemies[2].y / tileSize), color = Color(22, 20, 255), intensity = 0.35, range = 1.5, owner = "${enemies[2]}"))
+        lightSources.add(LightSource((enemies[0].x / tileSize), (enemies[0].y / tileSize), color = Color(20, 22, 255), intensity = 0.35, range = 1.5, owner = "${enemies[0]}"))
+        lightSources.add(LightSource((enemies[1].x / tileSize), (enemies[1].y / tileSize), color = Color(255, 255, 22), intensity = 0.35, range = 1.5, owner = "${enemies[1]}"))
+        lightSources.add(LightSource((enemies[2].x / tileSize), (enemies[2].y / tileSize), color = Color(22, 255, 22), intensity = 0.35, range = 1.5, owner = "${enemies[2]}"))
+        lightSources.add(LightSource((enemies[3].x / tileSize), (enemies[3].y / tileSize), color = Color(255, 22, 22), intensity = 0.35, range = 1.5, owner = "${enemies[3]}"))
 
         buffer = BufferedImage(screenWidth, screenHeight, BufferedImage.TYPE_INT_RGB)
         bufferGraphics = buffer.createGraphics()
@@ -127,10 +129,6 @@ class RenderCast(private val map: Map) : JPanel() {
             println("Error loading texture $resourcePath: ${e.message}")
             textureMap[index] = createTexture(Color.gray)
         }
-    }
-
-    private fun loadTexture(index: Int, color: Color) {
-        textureMap[index] = createTexture(color)
     }
 
     private fun createTexture(color: Color): BufferedImage {
@@ -940,34 +938,53 @@ class RenderCast(private val map: Map) : JPanel() {
                             println("enemy: ${enemy} heal: ${enemy.health}")
                             if (enemy.health <= 0) {
                                 val spawnRadius = 1.0 * tileSize
-                                var keyX = enemy.x
-                                var keyY = enemy.y
-                                var validPosition = false
-                                val maxAttempts = 10
+                                val minKeys = 1
+                                val maxKeys = 3 + (level / 2) // Increase max keys based on level for progression
+                                val loots = Random.nextInt(minKeys, maxKeys + 1) // Random number of keys
 
-                                for (attempt in 0 until maxAttempts) {
-                                    val randomAngle = Random.nextDouble(0.0, 2 * PI)
-                                    val randomDistance = Random.nextDouble(0.0, spawnRadius)
-                                    val tryX = enemy.x + randomDistance * cos(randomAngle)
-                                    val tryY = enemy.y + randomDistance * sin(randomAngle)
+                                for (i in 1..loots) {
+                                    var keyX = enemy.x
+                                    var keyY = enemy.y
+                                    var validPosition = false
+                                    val maxAttempts = 10
 
-                                    val mapX = (tryX / tileSize).toInt()
-                                    val mapY = (tryY / tileSize).toInt()
+                                    for (attempt in 0 until maxAttempts) {
+                                        val randomAngle = Random.nextDouble(0.0, 2 * PI)
+                                        val randomDistance = Random.nextDouble(0.2 * spawnRadius, spawnRadius) // Start slightly away from enemy
+                                        keyX = enemy.x + randomDistance * cos(randomAngle)
+                                        keyY = enemy.y + randomDistance * sin(randomAngle)
 
-                                    if (mapY in map.grid.indices && mapX in map.grid[0].indices && accessibleTiles.contains(map.grid[mapY][mapX])) {
-                                        keyX = tryX
-                                        keyY = tryY
-                                        validPosition = true
-                                        break
+                                        val mapX = (keyX / tileSize).toInt()
+                                        val mapY = (keyY / tileSize).toInt()
+
+                                        if (mapY in map.grid.indices && mapX in map.grid[0].indices && accessibleTiles.contains(map.grid[mapY][mapX])) {
+                                            val tooClose = keysList.any { existingKey ->
+                                                if (!existingKey.active) false
+                                                else {
+                                                    val dx = keyX - existingKey.x
+                                                    val dy = keyY - existingKey.y
+                                                    sqrt(dx * dx + dy * dy) < 0.3 * tileSize
+                                                }
+                                            }
+                                            if (!tooClose) {
+                                                validPosition = true
+                                                break
+                                            }
+                                        }
                                     }
+                                    if (!validPosition) {
+                                        keyX = enemy.x
+                                        keyY = enemy.y
+                                    }
+
+                                    keysList.add(Key(keyX, keyY, keyTextureId!!))
                                 }
-                                keysList.add(Key(keyX, keyY, keyTextureId!!))
-                                points = ((points) + (100/level))
+                                points = points + (100 / level)
                                 if (points >= 100) {
                                     level += 1
                                     points = 0
                                 }
-                                println("level: ${level} points: ${points} keys: ${keys}")
+                                println("level: $level points: $points keys: $keys")
                                 playSound(when {
                                     random < 0.16f -> "scream1.wav"
                                     random < 0.32f -> "scream2.wav"
@@ -977,9 +994,7 @@ class RenderCast(private val map: Map) : JPanel() {
                                     else -> "scream6.wav"
                                 }, volume = 0.65f)
                                 try {
-                                    lightSources.find { it.owner == "${enemy}" }?.let {
-                                        lightSources[lightSources.indexOf(it)].color = Color(0, 0, 0)
-                                    }
+                                    lightSources.removeIf { it.owner == "$enemy" }
                                     enemy.texture = ImageIO.read(this::class.java.classLoader.getResource("textures/boguch_bochen_chlepa.jpg"))
                                 } catch (e: Exception) {
                                     enemy.texture = createTexture(Color.black)
@@ -1005,6 +1020,7 @@ class RenderCast(private val map: Map) : JPanel() {
 
     private fun update() {
         enemies.forEach { it.update() }
+        enemies.forEach { it.renderProjectiles(bufferGraphics as Graphics2D) }
         keysList.forEach { key ->
             if (key.active) {
                 val dx = positionX - key.x
@@ -1024,7 +1040,7 @@ class RenderCast(private val map: Map) : JPanel() {
                 val distance = sqrt(dx * dx + dy * dy)
                 if (distance < medication.pickupDistance) {
                     medication.active = false
-                    playerHealth = minOf(playerHealth + medication.heal, 100) // Cap health at 100
+                    playerHealth = minOf(playerHealth + medication.heal, 100)
                     playSound("pickup.wav", 0.65f)
                 }
             }

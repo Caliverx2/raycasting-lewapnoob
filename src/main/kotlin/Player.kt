@@ -30,7 +30,12 @@ class Player(private val renderCast: RenderCast, private val map: Map) {
 
         for (gridY in gridTop..gridBottom) {
             for (gridX in gridLeft..gridRight) {
-                if (gridY !in map.grid.indices || gridX !in map.grid[0].indices || ((map.grid[gridY][gridX] != 0) and (map.grid[gridY][gridX] != 5) and (map.grid[gridY][gridX] != 3) and (map.grid[gridY][gridX] != 7) and (map.grid[gridY][gridX] != 6))) {
+                if (gridY !in map.grid.indices || gridX !in map.grid[0].indices ||
+                            ((map.grid[gridY][gridX] != 0) and
+                            (map.grid[gridY][gridX] != 5) and
+                            (map.grid[gridY][gridX] != 3) and
+                            (map.grid[gridY][gridX] != 7) and
+                            (map.grid[gridY][gridX] != 6) and (map.grid[gridY][gridX] != 8))) {
                     return Pair(false, null)
                 }
             }
@@ -214,23 +219,32 @@ class Player(private val renderCast: RenderCast, private val map: Map) {
             lastGridX = gridX
             lastGridY = gridY
         }
+
         if (playerHealth <= 0) {
             positionX = (tileSize*2)-(tileSize/2)  //tile*positon - (half tile)
             positionY = (tileSize*2)-(tileSize/2)
             keys = 1
             playerHealth = 100
             map.currentRooms = 0
+
+            level = (level/2).toInt()
+            if (level <= 0) {
+                level = 1
+            }
+
             enemies = mutableListOf<Enemy>()
             lightSources = mutableListOf<LightSource>()
             keysList = mutableListOf<Key>()
+            medicationsList = mutableListOf<Medication>()
+
             lightSources.add(LightSource(0.0, 0.0, color = Color(200, 200, 100), intensity = 0.75, range = 0.15, owner = "player"))
-            enemies.add(Enemy((tileSize * 2) - (tileSize / 2), (tileSize * 6) - (tileSize / 2), 100*level, renderCast.enemyTextureId!!, renderCast, map, speed = (2.0 * ((18..19).random() / 10.0))))
-            enemies.add(Enemy((tileSize * 12) - (tileSize / 2), (tileSize * 18) - (tileSize / 2), 100*level, renderCast.enemyTextureId!!, renderCast, map, speed = (2.0 * ((18..19).random() / 10.0))))
-            enemies.add(Enemy((tileSize * 2) - (tileSize / 2), (tileSize * 16) - (tileSize / 2), 100*level, renderCast.enemyTextureId!!, renderCast, map, speed = (2.0 * ((18..19).random() / 10.0))))
+            enemies.add(Enemy((tileSize * 2) - (tileSize / 2), (tileSize * 6) - (tileSize / 2), health = 150, renderCast.enemyTextureId!!, renderCast, map, speed = (2.0 * ((18..19).random() / 10.0))))
+            enemies.add(Enemy((tileSize * 12) - (tileSize / 2), (tileSize * 18) - (tileSize / 2), health = 150, renderCast.enemyTextureId!!, renderCast, map, speed = (2.0 * ((18..19).random() / 10.0))))
+            enemies.add(Enemy((tileSize * 2) - (tileSize / 2), (tileSize * 16) - (tileSize / 2), health = 150, renderCast.enemyTextureId!!, renderCast, map, speed = (2.0 * ((18..19).random() / 10.0))))
             lightSources.add(LightSource((enemies[0].x / tileSize), (enemies[0].y / tileSize), color = Color(20, 255, 20), intensity = 0.35, range = 1.5, owner = "${enemies[0]}"))
             lightSources.add(LightSource((enemies[1].x / tileSize), (enemies[1].y / tileSize), color = Color(255, 22, 20), intensity = 0.35, range = 1.5, owner = "${enemies[1]}"))
             lightSources.add(LightSource((enemies[2].x / tileSize), (enemies[2].y / tileSize), color = Color(22, 20, 255), intensity = 0.35, range = 1.5, owner = "${enemies[2]}"))
-            renderCast
+           // renderCast
             map.grid = arrayOf(
                 intArrayOf(1,1,1,1,1,1,1,1,1,1,1,1,1,1),
                 intArrayOf(1,0,0,0,0,0,0,0,0,0,0,0,0,1),
