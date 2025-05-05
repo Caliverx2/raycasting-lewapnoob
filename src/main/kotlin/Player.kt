@@ -221,51 +221,53 @@ class Player(private val renderCast: RenderCast, private val map: Map) {
         }
 
         if (playerHealth <= 0) {
-            positionX = (tileSize*2)-(tileSize/2)  //tile*positon - (half tile)
-            positionY = (tileSize*2)-(tileSize/2)
+            positionX = (tileSize*11)-(tileSize/2)  //tile*positon - (half tile)
+            positionY = (tileSize*11)-(tileSize/2)
             keys = 1
             playerHealth = 100
             map.currentRooms = 0
 
-            level = (level/2).toInt()
+            level = (level/3)*2.toInt()
             if (level <= 0) {
                 level = 1
             }
-
             enemies = mutableListOf<Enemy>()
             lightSources = mutableListOf<LightSource>()
             keysList = mutableListOf<Key>()
             medicationsList = mutableListOf<Medication>()
 
             lightSources.add(LightSource(0.0, 0.0, color = Color(200, 200, 100), intensity = 0.75, range = 0.15, owner = "player"))
-            enemies.add(Enemy((tileSize * 2) - (tileSize / 2), (tileSize * 6) - (tileSize / 2), health = 150, renderCast.enemyTextureId!!, renderCast, map, speed = (2.0 * ((18..19).random() / 10.0))))
-            enemies.add(Enemy((tileSize * 12) - (tileSize / 2), (tileSize * 18) - (tileSize / 2), health = 150, renderCast.enemyTextureId!!, renderCast, map, speed = (2.0 * ((18..19).random() / 10.0))))
-            enemies.add(Enemy((tileSize * 2) - (tileSize / 2), (tileSize * 16) - (tileSize / 2), health = 150, renderCast.enemyTextureId!!, renderCast, map, speed = (2.0 * ((18..19).random() / 10.0))))
-            lightSources.add(LightSource((enemies[0].x / tileSize), (enemies[0].y / tileSize), color = Color(20, 255, 20), intensity = 0.35, range = 1.5, owner = "${enemies[0]}"))
-            lightSources.add(LightSource((enemies[1].x / tileSize), (enemies[1].y / tileSize), color = Color(255, 22, 20), intensity = 0.35, range = 1.5, owner = "${enemies[1]}"))
-            lightSources.add(LightSource((enemies[2].x / tileSize), (enemies[2].y / tileSize), color = Color(22, 20, 255), intensity = 0.35, range = 1.5, owner = "${enemies[2]}"))
+            enemies.add(Enemy((tileSize * 2) - (tileSize / 2), (tileSize * 2) - (tileSize / 2), health = 100, renderCast.enemyTextureId!!, renderCast, map, speed = (2.0 * ((18..19).random() / 10.0))))
+            enemies.add(Enemy((tileSize * 2) - (tileSize / 2), (tileSize * 20) - (tileSize / 2), health = 100, renderCast.enemyTextureId!!, renderCast , map, speed = (2.0 * ((18..19).random() / 10.0))))
+            enemies.add(Enemy((tileSize * 20) - (tileSize / 2), (tileSize * 20) - (tileSize / 2), health = 100, renderCast.enemyTextureId!!, renderCast, map, speed = (2.0 * ((18..19).random() / 10.0))))
+            enemies.add(Enemy((tileSize * 20) - (tileSize / 2), (tileSize * 2) - (tileSize / 2), health = 100, renderCast.enemyTextureId!!, renderCast, map, speed = (2.0 * ((18..19).random() / 10.0))))
+            lightSources.add(LightSource((enemies[0].x / tileSize), (enemies[0].y / tileSize), color = Color(20, 22, 255), intensity = 0.35, range = 1.5, owner = "${enemies[0]}"))
+            lightSources.add(LightSource((enemies[1].x / tileSize), (enemies[1].y / tileSize), color = Color(255, 255, 22), intensity = 0.35, range = 1.5, owner = "${enemies[1]}"))
+            lightSources.add(LightSource((enemies[2].x / tileSize), (enemies[2].y / tileSize), color = Color(22, 255, 22), intensity = 0.35, range = 1.5, owner = "${enemies[2]}"))
+            lightSources.add(LightSource((enemies[3].x / tileSize), (enemies[3].y / tileSize), color = Color(255, 22, 22), intensity = 0.35, range = 1.5, owner = "${enemies[3]}"))
            // renderCast
             map.grid = arrayOf(
-                intArrayOf(1,1,1,1,1,1,1,1,1,1,1,1,1,1),
-                intArrayOf(1,0,0,0,0,0,0,0,0,0,0,0,0,1),
-                intArrayOf(1,0,1,0,1,0,1,1,1,0,1,0,0,1),
-                intArrayOf(1,0,1,0,1,0,0,0,1,0,1,0,0,1),
-                intArrayOf(1,0,1,1,1,0,1,0,1,0,1,0,0,1),
-                intArrayOf(1,0,1,0,0,0,1,0,0,0,1,0,0,1),
-                intArrayOf(1,0,1,1,1,1,1,0,1,1,1,1,0,5),
-                intArrayOf(1,0,0,0,0,0,1,0,1,0,0,0,0,1),
-                intArrayOf(1,0,1,0,1,0,1,0,1,1,1,0,0,5),
-                intArrayOf(1,0,1,0,1,0,0,0,0,0,1,0,0,1),
-                intArrayOf(1,0,1,1,1,1,1,1,1,1,1,0,0,5),
-                intArrayOf(1,0,0,0,1,0,0,0,0,0,0,0,0,1),
-                intArrayOf(1,1,1,0,1,1,1,1,1,0,1,1,0,5),
-                intArrayOf(1,0,0,0,1,0,1,0,1,0,0,0,0,1),
-                intArrayOf(1,0,1,0,1,0,1,0,1,1,1,1,0,5),
-                intArrayOf(1,0,1,0,1,0,1,0,0,0,0,0,0,1),
-                intArrayOf(1,0,1,1,1,0,1,1,1,1,1,1,0,5),
-                intArrayOf(1,0,0,0,0,0,1,0,0,0,0,0,0,1),
-                intArrayOf(1,0,0,0,0,0,0,0,0,0,0,0,0,5),
-                intArrayOf(1,1,1,1,5,1,5,1,5,1,5,1,5,1)
+                intArrayOf(2,5,2,2,2,2,2,2,2,2,5,2,2,2,2,2,2,2,2,5,2),
+                intArrayOf(5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5),
+                intArrayOf(2,0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2),
+                intArrayOf(2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2),
+                intArrayOf(2,0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2),
+                intArrayOf(2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2),
+                intArrayOf(2,0,2,0,2,0,1,0,1,0,1,0,1,0,1,0,2,0,2,0,2),
+                intArrayOf(2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2),
+                intArrayOf(2,0,2,0,2,0,1,0,1,1,0,1,1,0,1,0,2,0,2,0,2),
+                intArrayOf(2,0,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0,0,0,2),
+                intArrayOf(5,0,2,0,2,0,1,0,0,0,0,0,0,0,1,0,2,0,2,0,5),
+                intArrayOf(2,0,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0,0,0,2),
+                intArrayOf(2,0,2,0,2,0,1,0,1,1,0,1,1,0,1,0,2,0,2,0,2),
+                intArrayOf(2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2),
+                intArrayOf(2,0,2,0,2,0,1,0,1,0,1,0,1,0,1,0,2,0,2,0,2),
+                intArrayOf(2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2),
+                intArrayOf(2,0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2),
+                intArrayOf(2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2),
+                intArrayOf(2,0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2),
+                intArrayOf(5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5),
+                intArrayOf(2,5,2,2,2,2,2,2,2,2,5,2,2,2,2,2,2,2,2,5,2)
             )
         }
         checkKeyPickup()

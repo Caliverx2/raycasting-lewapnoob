@@ -5,6 +5,7 @@ import java.awt.Font
 import java.awt.Graphics
 import java.awt.Graphics2D
 import java.awt.GraphicsEnvironment
+import java.awt.RenderingHints
 import java.awt.image.BufferedImage
 import javax.imageio.ImageIO
 import javax.swing.JPanel
@@ -237,7 +238,6 @@ class RenderCast(private val map: Map) : JPanel() {
         var currentTime = System.nanoTime()
         var elapsedTime = currentTime - lastRenderFrameTime
 
-        // Update light sources for enemies
         lightSources.forEach { light ->
             if (light.owner != "player" && !light.owner.startsWith("projectile_")) {
                 enemies.find { enemy -> light.owner == enemy.toString() }?.let { matchedEnemy ->
@@ -662,6 +662,7 @@ class RenderCast(private val map: Map) : JPanel() {
                             buffer.setRGB(x, y, finalColor.rgb)
                         }
                     }
+                    zBuffer[x] = distance
                 }
             }
 
@@ -696,7 +697,7 @@ class RenderCast(private val map: Map) : JPanel() {
 
                 for (x in textDrawStartX until textDrawEndX) {
                     if (x < 0 || x >= zBuffer.size) continue
-                    if (distance < zBuffer[x]) {
+                    if (distance <= zBuffer[x]) { // Relaxed condition to allow rendering at same depth
                         val textTextureFraction = (x - textFullLeftX) / (textFullRightX - textFullLeftX)
                         val textTextureX = (textTextureFraction * textImage.width).coerceIn(0.0, textImage.width - 1.0)
                         for (y in textDrawStartY until textDrawEndY) {
@@ -731,19 +732,53 @@ class RenderCast(private val map: Map) : JPanel() {
             val maxSize = 64.0
             val spriteSize = ((keyHeight * screenHeight) / (distance * tileSize)).coerceIn(minSize, maxSize).toInt()
 
+            // Calculate floor position for shadow (same as enemy)
             val floorY = (screenHeight / 2 + (wallHeight * screenHeight) / (2 * distance * tileSize)).toInt()
+            val shadowSize = (spriteSize * 1.2).toInt() // Slightly larger than key, matching enemy shadow scaling
+            val shadowStartY = floorY.coerceIn(0, screenHeight - 1)
+            val shadowEndY = (floorY + shadowSize / 4).coerceIn(0, screenHeight - 1) // Minimal vertical extent for floor shadow
+
+            val shadowLeftX = screenX - shadowSize / 2.0
+            val shadowRightX = screenX + shadowSize / 2.0
+            val shadowDrawStartX = shadowLeftX.coerceAtLeast(0.0).toInt()
+            val shadowDrawEndX = shadowRightX.coerceAtMost(screenWidth - 1.0).toInt()
+
+            // Render shadow
+            for (x in shadowDrawStartX until shadowDrawEndX) {
+                if (x < 0 || x >= zBuffer.size) continue
+                if (distance < zBuffer[x]) { // Only render shadow if closer than z-buffer
+                    val textureFraction = (x - shadowLeftX) / (shadowRightX - shadowLeftX)
+                    val textureX = (textureFraction * shadowTexture.width).coerceIn(0.0, shadowTexture.width - 1.0)
+                    for (y in shadowStartY until shadowEndY) {
+                        val textureY = ((y - shadowStartY).toDouble() * shadowTexture.height / (shadowEndY - shadowStartY)).coerceIn(0.0, shadowTexture.height - 1.0)
+                        val color = shadowTexture.getRGB(textureX.toInt(), textureY.toInt())
+                        if ((color and 0xFF000000.toInt()) != 0) {
+                            val originalColor = Color(color)
+                            // Apply fog but skip full lighting for shadow (as likely for enemies)
+                            val fogFactor = 1.0 - exp(-fogDensity * distance)
+                            val finalColor = Color(
+                                ((1.0 - fogFactor) * originalColor.red + fogFactor * fogColor.red).toInt().coerceIn(0, 255),
+                                ((1.0 - fogFactor) * originalColor.green + fogFactor * fogColor.green).toInt().coerceIn(0, 255),
+                                ((1.0 - fogFactor) * originalColor.blue + fogFactor * fogColor.blue).toInt().coerceIn(0, 255)
+                            )
+                            buffer.setRGB(x, y, finalColor.rgb)
+                        }
+                    }
+                }
+            }
+
+            // Render key sprite
             val drawStartY = (floorY - spriteSize).coerceIn(0, screenHeight - 1)
             val drawEndY = floorY.coerceIn(0, screenHeight - 1)
+            val keyLeftX = screenX - spriteSize / 2.0
+            val keyRightX = screenX + spriteSize / 2.0
+            val keyDrawStartX = keyLeftX.coerceAtLeast(0.0).toInt()
+            val keyDrawEndX = keyRightX.coerceAtMost(screenWidth - 1.0).toInt()
 
-            val fullSpriteLeftX = screenX - spriteSize / 2.0
-            val fullSpriteRightX = screenX + spriteSize / 2.0
-            val drawStartX = fullSpriteLeftX.coerceAtLeast(0.0).toInt()
-            val drawEndX = fullSpriteRightX.coerceAtMost(screenWidth - 1.0).toInt()
-
-            for (x in drawStartX until drawEndX) {
+            for (x in keyDrawStartX until keyDrawEndX) {
                 if (x < 0 || x >= zBuffer.size) continue
                 if (distance < zBuffer[x]) {
-                    val textureFraction = (x - fullSpriteLeftX) / (fullSpriteRightX - fullSpriteLeftX)
+                    val textureFraction = (x - keyLeftX) / (keyRightX - keyLeftX)
                     val textureX = (textureFraction * key.texture.width).coerceIn(0.0, key.texture.width - 1.0)
                     for (y in drawStartY until drawEndY) {
                         val textureY = ((y - drawStartY).toDouble() * key.texture.height / spriteSize).coerceIn(0.0, key.texture.height - 1.0)
@@ -762,6 +797,8 @@ class RenderCast(private val map: Map) : JPanel() {
                             buffer.setRGB(x, y, finalColor.rgb)
                         }
                     }
+                    // Update z-buffer for key sprite
+                    zBuffer[x] = distance
                 }
             }
         }
@@ -776,19 +813,53 @@ class RenderCast(private val map: Map) : JPanel() {
             val maxSize = 64.0
             val spriteSize = ((medHeight * screenHeight) / (distance * tileSize)).coerceIn(minSize, maxSize).toInt()
 
+            // Calculate floor position for shadow (same as enemy)
             val floorY = (screenHeight / 2 + (wallHeight * screenHeight) / (2 * distance * tileSize)).toInt()
+            val shadowSize = (spriteSize * 1.2).toInt() // Slightly larger than medication, matching enemy shadow scaling
+            val shadowStartY = floorY.coerceIn(0, screenHeight - 1)
+            val shadowEndY = (floorY + shadowSize / 4).coerceIn(0, screenHeight - 1) // Minimal vertical extent for floor shadow
+
+            val shadowLeftX = screenX - shadowSize / 2.0
+            val shadowRightX = screenX + shadowSize / 2.0
+            val shadowDrawStartX = shadowLeftX.coerceAtLeast(0.0).toInt()
+            val shadowDrawEndX = shadowRightX.coerceAtMost(screenWidth - 1.0).toInt()
+
+            // Render shadow
+            for (x in shadowDrawStartX until shadowDrawEndX) {
+                if (x < 0 || x >= zBuffer.size) continue
+                if (distance < zBuffer[x]) { // Only render shadow if closer than z-buffer
+                    val textureFraction = (x - shadowLeftX) / (shadowRightX - shadowLeftX)
+                    val textureX = (textureFraction * shadowTexture.width).coerceIn(0.0, shadowTexture.width - 1.0)
+                    for (y in shadowStartY until shadowEndY) {
+                        val textureY = ((y - shadowStartY).toDouble() * shadowTexture.height / (shadowEndY - shadowStartY)).coerceIn(0.0, shadowTexture.height - 1.0)
+                        val color = shadowTexture.getRGB(textureX.toInt(), textureY.toInt())
+                        if ((color and 0xFF000000.toInt()) != 0) {
+                            val originalColor = Color(color)
+                            // Apply fog but skip full lighting for shadow (as likely for enemies)
+                            val fogFactor = 1.0 - exp(-fogDensity * distance)
+                            val finalColor = Color(
+                                ((1.0 - fogFactor) * originalColor.red + fogFactor * fogColor.red).toInt().coerceIn(0, 255),
+                                ((1.0 - fogFactor) * originalColor.green + fogFactor * fogColor.green).toInt().coerceIn(0, 255),
+                                ((1.0 - fogFactor) * originalColor.blue + fogFactor * fogColor.blue).toInt().coerceIn(0, 255)
+                            )
+                            buffer.setRGB(x, y, finalColor.rgb)
+                        }
+                    }
+                }
+            }
+
+            // Render medication sprite
             val drawStartY = (floorY - spriteSize).coerceIn(0, screenHeight - 1)
             val drawEndY = floorY.coerceIn(0, screenHeight - 1)
+            val medLeftX = screenX - spriteSize / 2.0
+            val medRightX = screenX + spriteSize / 2.0
+            val medDrawStartX = medLeftX.coerceAtLeast(0.0).toInt()
+            val medDrawEndX = medRightX.coerceAtMost(screenWidth - 1.0).toInt()
 
-            val fullSpriteLeftX = screenX - spriteSize / 2.0
-            val fullSpriteRightX = screenX + spriteSize / 2.0
-            val drawStartX = fullSpriteLeftX.coerceAtLeast(0.0).toInt()
-            val drawEndX = fullSpriteRightX.coerceAtMost(screenWidth - 1.0).toInt()
-
-            for (x in drawStartX until drawEndX) {
+            for (x in medDrawStartX until medDrawEndX) {
                 if (x < 0 || x >= zBuffer.size) continue
                 if (distance < zBuffer[x]) {
-                    val textureFraction = (x - fullSpriteLeftX) / (fullSpriteRightX - fullSpriteLeftX)
+                    val textureFraction = (x - medLeftX) / (medRightX - medLeftX)
                     val textureX = (textureFraction * medication.texture.width).coerceIn(0.0, medication.texture.width - 1.0)
                     for (y in drawStartY until drawEndY) {
                         val textureY = ((y - drawStartY).toDouble() * medication.texture.height / spriteSize).coerceIn(0.0, medication.texture.height - 1.0)
@@ -807,6 +878,8 @@ class RenderCast(private val map: Map) : JPanel() {
                             buffer.setRGB(x, y, finalColor.rgb)
                         }
                     }
+                    // Update z-buffer for medication sprite
+                    zBuffer[x] = distance
                 }
             }
         }
@@ -837,6 +910,17 @@ class RenderCast(private val map: Map) : JPanel() {
         } catch (e: Exception) {
             println("Error loading audio $soundFile: ${e.message}")
         }
+    }
+
+    private val shadowTexture: BufferedImage by lazy {
+        val size = 16
+        val image = BufferedImage(size, size, BufferedImage.TYPE_INT_ARGB)
+        val g = image.createGraphics()
+        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
+        g.color = Color(0, 0, 0, 128) // 50% opacity, matching enemy shadow
+        g.fillOval(0, 0, size, size)
+        g.dispose()
+        image
     }
 
     fun shotgun() {
@@ -933,14 +1017,16 @@ class RenderCast(private val map: Map) : JPanel() {
                         var angleDiff = abs(angleToEnemy - shotAngleRad)
                         angleDiff = min(angleDiff, 2 * Math.PI - angleDiff)
 
-                        if (angleDiff < Math.toRadians(35.0)) {
+                        if (angleDiff < Math.toRadians(35.0/3)) { //35.0
                             enemy.health -= 25
                             println("enemy: ${enemy} heal: ${enemy.health}")
                             if (enemy.health <= 0) {
                                 val spawnRadius = 1.0 * tileSize
-                                val minKeys = 1
-                                val maxKeys = 3 + (level / 2) // Increase max keys based on level for progression
-                                val loots = Random.nextInt(minKeys, maxKeys + 1) // Random number of keys
+                                val loots = when {
+                                    random < 0.50f -> 1
+                                    random < 0.80f -> 2
+                                    else -> 3
+                                }
 
                                 for (i in 1..loots) {
                                     var keyX = enemy.x
@@ -950,7 +1036,7 @@ class RenderCast(private val map: Map) : JPanel() {
 
                                     for (attempt in 0 until maxAttempts) {
                                         val randomAngle = Random.nextDouble(0.0, 2 * PI)
-                                        val randomDistance = Random.nextDouble(0.2 * spawnRadius, spawnRadius) // Start slightly away from enemy
+                                        val randomDistance = Random.nextDouble(0.2 * spawnRadius, spawnRadius)
                                         keyX = enemy.x + randomDistance * cos(randomAngle)
                                         keyY = enemy.y + randomDistance * sin(randomAngle)
 

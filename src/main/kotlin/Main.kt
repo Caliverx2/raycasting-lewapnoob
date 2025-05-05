@@ -61,7 +61,7 @@ class Medication(
     var heal: Int = 100
 ) {
     val size = 0.5 * tileSize // Same size as Key (radius)
-    val pickupDistance = 0.5 * size // Same pickup distance as Key
+    val pickupDistance = 0.7 * size // Same pickup distance as Key
 }
 
 class Key(
@@ -71,7 +71,7 @@ class Key(
     var active: Boolean = true
 ) {
     val size = 0.5 * tileSize // Key size (radius)
-    val pickupDistance = 0.5 * size // 0.25 of radius for pickup
+    val pickupDistance = 0.7 * size // 0.25 of radius for pickup
 }
 
 class LightSource(
@@ -112,7 +112,7 @@ class Enemy(
     private val idleThreshold = (1.5 * TARGET_FPS).toInt()
     private var randomMoveTimer = 0
     private val randomMoveInterval = 300
-    private val randomMoveDistance = tileSize * 1.5
+    private val randomMoveDistance = tileSize * 0.5
     private val moveThreshold = tileSize * 3.5
     private var lastX = x
     private var lastY = y
@@ -150,9 +150,9 @@ class Enemy(
         val dy: Double,
         val speed: Double = 5.0,
         val size: Double = 0.1 * tileSize,
-        val damage: Int = 5 * level,
+        val damage: Int = (2.5 * level).toInt(),
         var active: Boolean = true,
-        val lightSource: LightSource? = null // Add light source for projectile
+        val lightSource: LightSource? = null
     ) {
         fun update() {
             if (!active) {
@@ -784,8 +784,8 @@ fun main() = runBlocking {
 
 class Map(var renderCast: RenderCast? = null) {
     var grid: Array<IntArray> = arrayOf(
-        intArrayOf(2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2),
-        intArrayOf(2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2),
+        intArrayOf(2,5,2,2,2,2,2,2,2,2,5,2,2,2,2,2,2,2,2,5,2),
+        intArrayOf(5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5),
         intArrayOf(2,0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2),
         intArrayOf(2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2),
         intArrayOf(2,0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2),
@@ -794,7 +794,7 @@ class Map(var renderCast: RenderCast? = null) {
         intArrayOf(2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2),
         intArrayOf(2,0,2,0,2,0,1,0,1,1,0,1,1,0,1,0,2,0,2,0,2),
         intArrayOf(2,0,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0,0,0,2),
-        intArrayOf(2,0,2,0,2,0,1,0,0,0,0,0,0,0,1,0,2,0,2,0,2),
+        intArrayOf(5,0,2,0,2,0,1,0,0,0,0,0,0,0,1,0,2,0,2,0,5),
         intArrayOf(2,0,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0,0,0,2),
         intArrayOf(2,0,2,0,2,0,1,0,1,1,0,1,1,0,1,0,2,0,2,0,2),
         intArrayOf(2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2),
@@ -803,8 +803,8 @@ class Map(var renderCast: RenderCast? = null) {
         intArrayOf(2,0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2),
         intArrayOf(2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2),
         intArrayOf(2,0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2),
-        intArrayOf(2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2),
-        intArrayOf(2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2)
+        intArrayOf(5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5),
+        intArrayOf(2,5,2,2,2,2,2,2,2,2,5,2,2,2,2,2,2,2,2,5,2)
     )
 
     // Data classes and enum for room generation
@@ -1315,8 +1315,8 @@ class Map(var renderCast: RenderCast? = null) {
             updateWallDistances()
             return null
         } else if ((currentRooms >= limitRooms) and (keys > 0)) {
-            positionX = (tileSize * 2) - (tileSize / 2)
-            positionY = (tileSize * 2) - (tileSize / 2)
+            positionX = (tileSize * 11) - (tileSize / 2)
+            positionY = (tileSize * 11) - (tileSize / 2)
             keys += 1
             currentRooms = 0
             enemies = mutableListOf<Enemy>()
@@ -1330,26 +1330,27 @@ class Map(var renderCast: RenderCast? = null) {
             )
             renderCast?.repaint()
             grid = arrayOf(
-                intArrayOf(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1),
-                intArrayOf(1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1),
-                intArrayOf(1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 0, 1),
-                intArrayOf(1, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 1),
-                intArrayOf(1, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 0, 1),
-                intArrayOf(1, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1),
-                intArrayOf(1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 5),
-                intArrayOf(1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 1),
-                intArrayOf(1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 5),
-                intArrayOf(1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1),
-                intArrayOf(1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 5),
-                intArrayOf(1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1),
-                intArrayOf(1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 0, 5),
-                intArrayOf(1, 0, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0, 0, 1),
-                intArrayOf(1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 0, 5),
-                intArrayOf(1, 0, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 1),
-                intArrayOf(1, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0, 5),
-                intArrayOf(1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1),
-                intArrayOf(1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5),
-                intArrayOf(1, 1, 1, 1, 5, 1, 5, 1, 5, 1, 5, 1, 5, 1)
+                intArrayOf(2,5,2,2,2,2,2,2,2,2,5,2,2,2,2,2,2,2,2,5,2),
+                intArrayOf(5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5),
+                intArrayOf(2,0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2),
+                intArrayOf(2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2),
+                intArrayOf(2,0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2),
+                intArrayOf(2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2),
+                intArrayOf(2,0,2,0,2,0,1,0,1,0,1,0,1,0,1,0,2,0,2,0,2),
+                intArrayOf(2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2),
+                intArrayOf(2,0,2,0,2,0,1,0,1,1,0,1,1,0,1,0,2,0,2,0,2),
+                intArrayOf(2,0,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0,0,0,2),
+                intArrayOf(5,0,2,0,2,0,1,0,0,0,0,0,0,0,1,0,2,0,2,0,5),
+                intArrayOf(2,0,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0,0,0,2),
+                intArrayOf(2,0,2,0,2,0,1,0,1,1,0,1,1,0,1,0,2,0,2,0,2),
+                intArrayOf(2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2),
+                intArrayOf(2,0,2,0,2,0,1,0,1,0,1,0,1,0,1,0,2,0,2,0,2),
+                intArrayOf(2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2),
+                intArrayOf(2,0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2),
+                intArrayOf(2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2),
+                intArrayOf(2,0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2),
+                intArrayOf(5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5),
+                intArrayOf(2,5,2,2,2,2,2,2,2,2,5,2,2,2,2,2,2,2,2,5,2)
             )
         }
         return null
