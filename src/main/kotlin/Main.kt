@@ -52,6 +52,46 @@ var lightSources = mutableListOf<LightSource>()
 var keysList = mutableListOf<Key>()
 var medicationsList = mutableListOf<Medication>()
 var isShooting = false
+var inventory = Inventory()
+var chests = mutableListOf<Chest>()
+
+class Chest(
+    var x: Double,
+    var y: Double,
+    var items: List<Item>,
+    var active: Boolean = true
+) {
+    val size = 0.5 * tileSize
+    val pickupDistance = 0.7 * size
+}
+
+class Item(
+    val type: ItemType,
+    var texture: BufferedImage
+)
+
+enum class ItemType {
+    AMMO, HEALTH_PACK, KEY, WEAPON
+}
+
+class Inventory {
+    val slots = arrayOfNulls<Item>(9)
+    var isVisible = false
+
+    fun addItem(item: Item): Boolean {
+        for (i in slots.indices) {
+            if (slots[i] == null) {
+                slots[i] = item
+                return true
+            }
+        }
+        return false
+    }
+
+    fun clear() {
+        slots.fill(null)
+    }
+}
 
 class Medication(
     var x: Double,
@@ -733,6 +773,24 @@ fun main() = runBlocking {
                 KeyEvent.VK_SPACE -> {
                     if (!isShooting) {
                         renderCast.shotgun()
+                    }
+                }
+                KeyEvent.VK_E -> {
+                    inventory.isVisible = !inventory.isVisible
+                    chests.forEach { chest ->
+                        if (chest.active) {
+                            val dx = positionX - chest.x
+                            val dy = positionY - chest.y
+                            val distance = sqrt(dx * dx + dy * dy)
+                            if (distance < chest.pickupDistance) {
+                                chest.items.forEach { item ->
+                                    if (inventory.addItem(item)) {
+                                        points += 10
+                                    }
+                                }
+                                chest.active = false
+                            }
+                        }
                     }
                 }
             }
@@ -1573,6 +1631,18 @@ class Map(var renderCast: RenderCast? = null) {
                                 )
                             )
                         }
+                        //`
+                        if (selectedTemplate.grid[y][x] == 10) {
+                            val chestX = (offsetX + x + 0.5) * tileSize
+                            val chestY = (offsetY + y + 0.5) * tileSize
+                            val loot = List(Random.nextInt(1, 4)) {
+                                val type = ItemType.values().random()
+                                Item(type, ImageIO.read(this::class.java.classLoader.getResource("textures/item_${type.name.lowercase()}.png")))
+                            }
+                            chests.add(Chest(chestX, chestY, loot))
+                        }
+                        //`
+
                         if (selectedTemplate.grid[y][x] == 7) {
                             renderCast?.let {
                                 medicationsList.add(
