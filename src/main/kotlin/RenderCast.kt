@@ -743,7 +743,7 @@ class RenderCast(private val map: Map) : JPanel() {
     fun getItemTexture(type: ItemType): BufferedImage {
         return when (type) {
             ItemType.MEDKIT -> ImageIO.read(this::class.java.classLoader.getResource("textures/medication.png"))
-            ItemType.AMMO -> ImageIO.read(this::class.java.classLoader.getResource("textures/bricks.jpg"))
+            ItemType.AMMO -> ImageIO.read(this::class.java.classLoader.getResource("textures/ammo.png"))
             ItemType.KEY -> ImageIO.read(this::class.java.classLoader.getResource("textures/key.png"))
         }
     }
