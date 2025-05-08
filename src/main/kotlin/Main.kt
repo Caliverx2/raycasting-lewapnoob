@@ -33,7 +33,7 @@ import kotlin.random.Random
 var playerHealth: Int = 100
 var level: Int = 1
 var points: Int = 0
-var keys: Int = 1
+var keys: Int = 100
 
 var map = true
 var currentangle = 45
@@ -51,47 +51,12 @@ var enemies = mutableListOf<Enemy>()
 var lightSources = mutableListOf<LightSource>()
 var keysList = mutableListOf<Key>()
 var medicationsList = mutableListOf<Medication>()
+val chestsList = mutableListOf<Chest>()
+var inventoryVisible = false
+var openChest: Chest? = null
+var playerInventory = MutableList<Item?>(9) { null }
 var isShooting = false
-var inventory = Inventory()
-var chests = mutableListOf<Chest>()
-
-class Chest(
-    var x: Double,
-    var y: Double,
-    var items: List<Item>,
-    var active: Boolean = true
-) {
-    val size = 0.5 * tileSize
-    val pickupDistance = 0.7 * size
-}
-
-class Item(
-    val type: ItemType,
-    var texture: BufferedImage
-)
-
-enum class ItemType {
-    AMMO, HEALTH_PACK, KEY, WEAPON
-}
-
-class Inventory {
-    val slots = arrayOfNulls<Item>(9)
-    var isVisible = false
-
-    fun addItem(item: Item): Boolean {
-        for (i in slots.indices) {
-            if (slots[i] == null) {
-                slots[i] = item
-                return true
-            }
-        }
-        return false
-    }
-
-    fun clear() {
-        slots.fill(null)
-    }
-}
+var currentAmmo = 45
 
 class Medication(
     var x: Double,
@@ -122,6 +87,23 @@ class LightSource(
     var range: Double,
     var owner: String = ""
 )
+
+class Chest(
+    var x: Double,
+    var y: Double,
+    var loot: MutableList<Item>,
+    var active: Boolean = true,
+) {
+    val size = 1.5 * tileSize
+    val pickupDistance = 1.3*2
+}
+
+data class Item(val type: ItemType)
+
+enum class ItemType {
+    MEDKIT, AMMO, KEY
+}
+
 
 class Enemy(
     var x: Double,
@@ -705,11 +687,11 @@ fun main() = runBlocking {
     frame.setSize(1366, 768)
     frame.setLocation(((Toolkit.getDefaultToolkit().screenSize.width - frame.width) / 2), ((Toolkit.getDefaultToolkit().screenSize.height - frame.height) / 2))
 
-    frame.cursor = frame.toolkit.createCustomCursor(
+    /*frame.cursor = frame.toolkit.createCustomCursor(
         BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB),
         Point(0, 0),
         "invisible"
-    )
+    )*/
 
     frame.isVisible = true
     val map = Map()
@@ -743,6 +725,10 @@ fun main() = runBlocking {
     frame.addMouseListener(object : MouseAdapter() {
         override fun mousePressed(event: MouseEvent) {
             if (event.button == MouseEvent.BUTTON1) {
+                if (inventoryVisible) {
+                    renderCast.handleInventoryClick(event.x, event.y)
+                    return
+                }
                 renderCast.shotgun()
             }
         }
@@ -770,27 +756,10 @@ fun main() = runBlocking {
         override fun keyPressed(event: KeyEvent) {
             keysPressed[event.keyCode] = true
             when (event.keyCode) {
+
                 KeyEvent.VK_SPACE -> {
                     if (!isShooting) {
                         renderCast.shotgun()
-                    }
-                }
-                KeyEvent.VK_E -> {
-                    inventory.isVisible = !inventory.isVisible
-                    chests.forEach { chest ->
-                        if (chest.active) {
-                            val dx = positionX - chest.x
-                            val dy = positionY - chest.y
-                            val distance = sqrt(dx * dx + dy * dy)
-                            if (distance < chest.pickupDistance) {
-                                chest.items.forEach { item ->
-                                    if (inventory.addItem(item)) {
-                                        points += 10
-                                    }
-                                }
-                                chest.active = false
-                            }
-                        }
                     }
                 }
             }
@@ -799,11 +768,11 @@ fun main() = runBlocking {
         override fun keyReleased(event: KeyEvent) {
             keysPressed[event.keyCode] = false
             when (event.keyCode) {
-                KeyEvent.VK_SPACE -> {
-                    isShooting = false
-                }
+                KeyEvent.VK_SPACE -> isShooting = false
+                KeyEvent.VK_E -> inventoryVisible = !inventoryVisible
             }
         }
+
     })
 
     frame.addComponentListener(object : ComponentAdapter() {
@@ -817,6 +786,12 @@ fun main() = runBlocking {
     var lastFpsUpdate = System.nanoTime()
 
     while (true) {
+        if (inventoryVisible) {
+            renderCast.updateOpenChest()
+        } else {
+            openChest = null
+        }
+
         val currentTime = System.nanoTime()
         val elapsedTime = currentTime - lastFrameTime
 
@@ -1153,7 +1128,7 @@ class Map(var renderCast: RenderCast? = null) {
             grid = arrayOf(
                 intArrayOf(2,2,0,2,2),
                 intArrayOf(2,2,0,2,2),
-                intArrayOf(2,2,6,2,2),
+                intArrayOf(2,2,10,2,2),
                 intArrayOf(2,2,2,2,2),
                 intArrayOf(2,2,2,2,2)
             ),
@@ -1163,7 +1138,7 @@ class Map(var renderCast: RenderCast? = null) {
             grid = arrayOf(
                 intArrayOf(1,1,1,1,1),
                 intArrayOf(1,1,1,1,1),
-                intArrayOf(1,1,6,1,1),
+                intArrayOf(1,1,10,1,1),
                 intArrayOf(1,1,0,1,1),
                 intArrayOf(1,1,0,1,1)
             ),
@@ -1173,7 +1148,7 @@ class Map(var renderCast: RenderCast? = null) {
             grid = arrayOf(
                 intArrayOf(2,2,2,2,2),
                 intArrayOf(2,2,2,2,2),
-                intArrayOf(0,0,6,2,2),
+                intArrayOf(0,0,10,2,2),
                 intArrayOf(2,2,2,2,2),
                 intArrayOf(2,2,2,2,2)
             ),
@@ -1183,7 +1158,7 @@ class Map(var renderCast: RenderCast? = null) {
             grid = arrayOf(
                 intArrayOf(1,1,1,1,1),
                 intArrayOf(1,1,1,1,1),
-                intArrayOf(1,1,6,0,0),
+                intArrayOf(1,1,10,0,0),
                 intArrayOf(1,1,1,1,1),
                 intArrayOf(1,1,1,1,1)
             ),
@@ -1195,7 +1170,7 @@ class Map(var renderCast: RenderCast? = null) {
             grid = arrayOf(
                 intArrayOf(2,2,0,2,2),
                 intArrayOf(2,2,0,2,2),
-                intArrayOf(2,2,6,2,2),
+                intArrayOf(2,2,10,2,2),
                 intArrayOf(2,2,7,2,2),
                 intArrayOf(2,2,5,2,2)
             ),
@@ -1205,7 +1180,7 @@ class Map(var renderCast: RenderCast? = null) {
             grid = arrayOf(
                 intArrayOf(1,1,5,1,1),
                 intArrayOf(1,1,7,1,1),
-                intArrayOf(1,1,6,1,1),
+                intArrayOf(1,1,10,1,1),
                 intArrayOf(1,1,0,1,1),
                 intArrayOf(1,1,0,1,1)
             ),
@@ -1215,7 +1190,7 @@ class Map(var renderCast: RenderCast? = null) {
             grid = arrayOf(
                 intArrayOf(2,2,2,2,2),
                 intArrayOf(2,2,2,2,2),
-                intArrayOf(0,0,6,7,5),
+                intArrayOf(0,0,10,7,5),
                 intArrayOf(2,2,2,2,2),
                 intArrayOf(2,2,2,2,2)
             ),
@@ -1225,7 +1200,7 @@ class Map(var renderCast: RenderCast? = null) {
             grid = arrayOf(
                 intArrayOf(1,1,1,1,1),
                 intArrayOf(1,1,1,1,1),
-                intArrayOf(5,7,6,0,0),
+                intArrayOf(5,7,10,0,0),
                 intArrayOf(1,1,1,1,1),
                 intArrayOf(1,1,1,1,1)
             ),
@@ -1237,7 +1212,7 @@ class Map(var renderCast: RenderCast? = null) {
             grid = arrayOf(
                 intArrayOf(2,2,0,2,2),
                 intArrayOf(2,2,0,2,2),
-                intArrayOf(2,2,6,0,5),
+                intArrayOf(2,2,10,0,5),
                 intArrayOf(2,2,0,2,2),
                 intArrayOf(2,2,5,2,2)
             ),
@@ -1247,7 +1222,7 @@ class Map(var renderCast: RenderCast? = null) {
             grid = arrayOf(
                 intArrayOf(1,1,5,1,1),
                 intArrayOf(1,1,0,1,1),
-                intArrayOf(1,1,6,0,5),
+                intArrayOf(1,1,10,0,5),
                 intArrayOf(1,1,0,1,1),
                 intArrayOf(1,1,0,1,1)
             ),
@@ -1257,7 +1232,7 @@ class Map(var renderCast: RenderCast? = null) {
             grid = arrayOf(
                 intArrayOf(2,2,2,2,2),
                 intArrayOf(2,2,2,2,2),
-                intArrayOf(0,0,6,0,5),
+                intArrayOf(0,0,10,0,5),
                 intArrayOf(2,2,0,2,2),
                 intArrayOf(2,2,5,2,2)
             ),
@@ -1267,7 +1242,7 @@ class Map(var renderCast: RenderCast? = null) {
             grid = arrayOf(
                 intArrayOf(1,1,5,1,1),
                 intArrayOf(1,1,0,1,1),
-                intArrayOf(5,0,6,0,0),
+                intArrayOf(5,0,10,0,0),
                 intArrayOf(1,1,1,1,1),
                 intArrayOf(1,1,1,1,1)
             ),
@@ -1279,7 +1254,7 @@ class Map(var renderCast: RenderCast? = null) {
             grid = arrayOf(
                 intArrayOf(2,2,0,2,2),
                 intArrayOf(2,2,0,2,2),
-                intArrayOf(5,0,6,0,5),
+                intArrayOf(5,0,10,0,5),
                 intArrayOf(2,2,0,2,2),
                 intArrayOf(2,2,5,2,2)
             ),
@@ -1289,7 +1264,7 @@ class Map(var renderCast: RenderCast? = null) {
             grid = arrayOf(
                 intArrayOf(1,1,5,1,1),
                 intArrayOf(1,1,0,1,1),
-                intArrayOf(5,0,6,0,5),
+                intArrayOf(5,0,10,0,5),
                 intArrayOf(1,1,0,1,1),
                 intArrayOf(1,1,0,1,1)
             ),
@@ -1299,7 +1274,7 @@ class Map(var renderCast: RenderCast? = null) {
             grid = arrayOf(
                 intArrayOf(2,2,5,2,2),
                 intArrayOf(2,2,0,2,2),
-                intArrayOf(0,0,6,0,5),
+                intArrayOf(0,0,10,0,5),
                 intArrayOf(2,2,0,2,2),
                 intArrayOf(2,2,5,2,2)
             ),
@@ -1309,7 +1284,7 @@ class Map(var renderCast: RenderCast? = null) {
             grid = arrayOf(
                 intArrayOf(1,1,5,1,1),
                 intArrayOf(1,1,0,1,1),
-                intArrayOf(5,0,6,0,0),
+                intArrayOf(5,0,10,0,0),
                 intArrayOf(1,1,0,1,1),
                 intArrayOf(1,1,5,1,1)
             ),
@@ -1466,7 +1441,36 @@ class Map(var renderCast: RenderCast? = null) {
             med.x += shiftX * tileSize
             med.y += shiftY * tileSize
         }
+
+        chestsList.forEach { chest ->
+            chest.x += shiftX * tileSize
+            chest.y += shiftY * tileSize
+        }
     }
+
+    fun generateRandomLoot(): MutableList<Item> {
+        val possibleItems = listOf(
+            ItemType.MEDKIT,
+            ItemType.AMMO,
+            ItemType.KEY
+        )
+
+        val loot = mutableListOf<Item>()
+        val shuffled = possibleItems.shuffled()
+
+        val maxItems = (1..3).random()
+        var itemIndex = 0
+
+        repeat(maxItems) {
+            loot.add(Item(shuffled[itemIndex]))
+            itemIndex = (itemIndex + 1) % shuffled.size
+        }
+        println(loot)
+        return loot
+    }
+
+
+
 
     fun generateRoom(triggerPoint: GridPoint, entryDirection: Direction): GridPoint? {
         if (generatedTriggers.contains(triggerPoint)) {
@@ -1621,6 +1625,16 @@ class Map(var renderCast: RenderCast? = null) {
                                 it.repaint()
                             }
                         }
+                        if (selectedTemplate.grid[y][x] == 10) {
+                            chestsList.add(
+                                Chest(
+                                    x = (tileSize * (mapX+1)) - (tileSize / 2),
+                                    y = (tileSize * (mapY+1)) - (tileSize / 2),
+                                    loot = generateRandomLoot()
+                                )
+                            )
+                        }
+
                         if (selectedTemplate.grid[y][x] == 8) {
                             keysList.add(
                                 Key(
@@ -1631,18 +1645,6 @@ class Map(var renderCast: RenderCast? = null) {
                                 )
                             )
                         }
-                        //`
-                        if (selectedTemplate.grid[y][x] == 10) {
-                            val chestX = (offsetX + x + 0.5) * tileSize
-                            val chestY = (offsetY + y + 0.5) * tileSize
-                            val loot = List(Random.nextInt(1, 4)) {
-                                val type = ItemType.values().random()
-                                Item(type, ImageIO.read(this::class.java.classLoader.getResource("textures/item_${type.name.lowercase()}.png")))
-                            }
-                            chests.add(Chest(chestX, chestY, loot))
-                        }
-                        //`
-
                         if (selectedTemplate.grid[y][x] == 7) {
                             renderCast?.let {
                                 medicationsList.add(
@@ -1882,6 +1884,20 @@ class Mappingmap(private val map: Map, private val renderCast: RenderCast) : JPa
             }
         }
 
+        chestsList.forEach { chest ->
+            if (chest.active) {
+                val relativeX = (chest.x / tileSize) - playerGridX
+                val relativeY = (chest.y / tileSize) - playerGridY
+                val chestX = (playerMapX + relativeX * tileScale).toInt()
+                val chestY = (playerMapY + relativeY * tileScale).toInt()
+                if (chestX >= offsetX && chestX < miniMapSize + offsetX && chestY >= offsetY && chestY < miniMapSize + offsetY) {
+                    g2.color = Color(150,75,0)
+                    g2.fillOval(chestX - 3, chestY - 3, 6, 6)
+                }
+            }
+        }
+
+        //draw medication
         medicationsList.forEach { medication ->
             if (medication.active) {
                 val relativeX = (medication.x / tileSize) - playerGridX
@@ -1889,7 +1905,7 @@ class Mappingmap(private val map: Map, private val renderCast: RenderCast) : JPa
                 val medX = (playerMapX + relativeX * tileScale).toInt()
                 val medY = (playerMapY + relativeY * tileScale).toInt()
                 if (medX >= offsetX && medX < miniMapSize + offsetX && medY >= offsetY && medY < miniMapSize + offsetY) {
-                    g2.color = Color.GREEN // Green for medications
+                    g2.color = Color.GREEN
                     g2.fillOval(medX - 3, medY - 3, 6, 6)
                 }
             }
@@ -1918,6 +1934,7 @@ class Mappingmap(private val map: Map, private val renderCast: RenderCast) : JPa
         g2.drawString("HEAL: ${playerHealth}", 10, 340)
         g2.drawString("LEVEL: ${level}", 10, 360)
         g2.drawString("POINTS: ${points}", 10, 380)
+        g2.drawString("AMMO: ${currentAmmo}", 10, 400)
         g2.font = font?.deriveFont(Font.BOLD, 50f) ?: Font("Arial", Font.BOLD, 50)
         g2.drawString("${keys}", 85, 290)
     }
@@ -1926,3 +1943,4 @@ class Mappingmap(private val map: Map, private val renderCast: RenderCast) : JPa
         return Dimension(miniMapSize + offsetX * 2, miniMapSize + offsetY * 2)
     }
 }
+

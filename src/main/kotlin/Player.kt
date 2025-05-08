@@ -31,11 +31,13 @@ class Player(private val renderCast: RenderCast, private val map: Map) {
         for (gridY in gridTop..gridBottom) {
             for (gridX in gridLeft..gridRight) {
                 if (gridY !in map.grid.indices || gridX !in map.grid[0].indices ||
-                            ((map.grid[gridY][gridX] != 0) and
+                    ((map.grid[gridY][gridX] != 0) and
                             (map.grid[gridY][gridX] != 5) and
                             (map.grid[gridY][gridX] != 3) and
                             (map.grid[gridY][gridX] != 7) and
-                            (map.grid[gridY][gridX] != 6) and (map.grid[gridY][gridX] != 8))) {
+                            (map.grid[gridY][gridX] != 6) and
+                            (map.grid[gridY][gridX] != 8) and
+                            (map.grid[gridY][gridX] != 10))) {
                     return Pair(false, null)
                 }
             }
@@ -245,7 +247,7 @@ class Player(private val renderCast: RenderCast, private val map: Map) {
             lightSources.add(LightSource((enemies[1].x / tileSize), (enemies[1].y / tileSize), color = Color(255, 255, 22), intensity = 0.35, range = 1.5, owner = "${enemies[1]}"))
             lightSources.add(LightSource((enemies[2].x / tileSize), (enemies[2].y / tileSize), color = Color(22, 255, 22), intensity = 0.35, range = 1.5, owner = "${enemies[2]}"))
             lightSources.add(LightSource((enemies[3].x / tileSize), (enemies[3].y / tileSize), color = Color(255, 22, 22), intensity = 0.35, range = 1.5, owner = "${enemies[3]}"))
-           // renderCast
+            // renderCast
             map.grid = arrayOf(
                 intArrayOf(2,5,2,2,2,2,2,2,2,2,5,2,2,2,2,2,2,2,2,5,2),
                 intArrayOf(5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5),
