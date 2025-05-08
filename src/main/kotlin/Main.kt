@@ -1,6 +1,7 @@
 package org.example.MainKt
 
 //./gradlew shadowJar
+//0-air 1-wall 2-black_wall 3-enemy 6-lightSource 7-medication 8-key 10-chest
 
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
@@ -33,7 +34,7 @@ import kotlin.random.Random
 var playerHealth: Int = 100
 var level: Int = 1
 var points: Int = 0
-var keys: Int = 100
+var keys: Int = 1
 
 var map = true
 var currentangle = 45
@@ -54,6 +55,7 @@ var medicationsList = mutableListOf<Medication>()
 val chestsList = mutableListOf<Chest>()
 var inventoryVisible = false
 var openChest: Chest? = null
+var lookchest = false
 var playerInventory = MutableList<Item?>(9) { null }
 var isShooting = false
 var currentAmmo = 45
@@ -850,7 +852,7 @@ class Map(var renderCast: RenderCast? = null) {
         val entrances: List<Pair<GridPoint, Direction>>
     )
     private val generatedTriggers = mutableSetOf<GridPoint>()
-
+    //0-air 1-wall 2-black_wall 3-enemy 6-lightSource 7-medication 8-key 10-chest
     // Room templates
     private val templates = listOf(
         // Template 1: Small 5x5 room
@@ -859,7 +861,7 @@ class Map(var renderCast: RenderCast? = null) {
                 intArrayOf(2, 2, 0, 2, 2),
                 intArrayOf(2, 0, 0, 0, 2),
                 intArrayOf(2, 0, 6, 0, 2),
-                intArrayOf(2, 0, 7, 0, 2),
+                intArrayOf(2, 0, 10, 0, 2),
                 intArrayOf(2, 2, 2, 2, 2)
             ),
             entrances = listOf(Pair(GridPoint(2, -2), Direction.DOWN))
@@ -867,7 +869,7 @@ class Map(var renderCast: RenderCast? = null) {
         RoomTemplate(
             grid = arrayOf(
                 intArrayOf(1, 1, 1, 1, 1),
-                intArrayOf(1, 0, 7, 0, 1),
+                intArrayOf(1, 0, 10, 0, 1),
                 intArrayOf(1, 0, 6, 0, 1),
                 intArrayOf(1, 0, 0, 0, 1),
                 intArrayOf(1, 1, 0, 1, 1)
@@ -878,7 +880,7 @@ class Map(var renderCast: RenderCast? = null) {
             grid = arrayOf(
                 intArrayOf(2, 2, 2, 2, 2),
                 intArrayOf(2, 0, 0, 0, 2),
-                intArrayOf(0, 0, 6, 7, 2),
+                intArrayOf(0, 0, 6, 10, 2),
                 intArrayOf(2, 0, 0, 0, 2),
                 intArrayOf(2, 2, 2, 2, 2)
             ),
@@ -888,7 +890,7 @@ class Map(var renderCast: RenderCast? = null) {
             grid = arrayOf(
                 intArrayOf(1, 1, 1, 1, 1),
                 intArrayOf(1, 0, 0, 0, 1),
-                intArrayOf(1, 7, 6, 0, 0),
+                intArrayOf(1, 10, 6, 0, 0),
                 intArrayOf(1, 0, 0, 0, 1),
                 intArrayOf(1, 1, 1, 1, 1)
             ),
@@ -1065,12 +1067,12 @@ class Map(var renderCast: RenderCast? = null) {
                 intArrayOf(1,0,1,1,1,1,1,0,1,0,1),
                 intArrayOf(1,0,0,0,0,0,0,0,1,0,1),
                 intArrayOf(1,1,1,0,1,1,1,1,1,0,1),
-                intArrayOf(1,0,1,0,1,0,1,0,0,0,1),
+                intArrayOf(1,10,1,0,1,0,1,0,0,0,1),
                 intArrayOf(1,0,1,0,1,0,1,0,1,1,1),
                 intArrayOf(1,0,1,0,0,0,0,0,0,0,1),
                 intArrayOf(1,0,1,0,1,0,1,1,1,1,1),
                 intArrayOf(1,0,0,0,1,0,0,0,0,0,1),
-                intArrayOf(1,1,1,1,1,5,1,1,1,0,1)
+                intArrayOf(1,1,1,1,1,5,1,1,1,1,1)
             ),
             entrances = listOf(Pair(GridPoint(3, -2), Direction.DOWN))
         ),
@@ -1079,7 +1081,7 @@ class Map(var renderCast: RenderCast? = null) {
                 intArrayOf(1,1,1,5,1,1,1,1,1,1,1),
                 intArrayOf(1,0,1,0,0,0,0,0,0,0,1),
                 intArrayOf(1,0,1,0,1,1,1,0,1,0,1),
-                intArrayOf(1,0,0,0,0,0,1,0,1,0,1),
+                intArrayOf(1,0,0,0,0,0,1,10,1,0,1),
                 intArrayOf(1,0,1,1,1,1,1,1,1,1,1),
                 intArrayOf(1,0,0,0,0,0,0,0,1,0,1),
                 intArrayOf(1,0,1,1,1,1,1,1,1,0,1),
@@ -1093,7 +1095,7 @@ class Map(var renderCast: RenderCast? = null) {
         RoomTemplate(
             grid = arrayOf(
                 intArrayOf(2,2,2,2,2,2,2,2,2,2,2),
-                intArrayOf(2,0,0,0,1,0,1,7,1,0,2),
+                intArrayOf(2,0,0,0,1,0,1,10,1,0,2),
                 intArrayOf(2,1,1,0,1,0,1,0,1,0,2),
                 intArrayOf(0,0,1,0,0,0,1,0,0,0,2),
                 intArrayOf(2,0,1,0,1,1,1,1,1,0,2),
@@ -1109,7 +1111,7 @@ class Map(var renderCast: RenderCast? = null) {
         RoomTemplate(
             grid = arrayOf(
                 intArrayOf(2,2,2,2,2,2,2,2,2,2,2),
-                intArrayOf(5,0,1,0,0,0,1,7,0,0,2),
+                intArrayOf(5,0,1,0,0,0,1,10,0,0,2),
                 intArrayOf(2,0,1,0,1,1,1,1,1,0,2),
                 intArrayOf(2,0,0,0,1,0,0,0,0,0,2),
                 intArrayOf(2,0,1,1,1,1,1,1,1,0,2),
@@ -1170,7 +1172,7 @@ class Map(var renderCast: RenderCast? = null) {
             grid = arrayOf(
                 intArrayOf(2,2,0,2,2),
                 intArrayOf(2,2,0,2,2),
-                intArrayOf(2,2,10,2,2),
+                intArrayOf(2,2,0,2,2),
                 intArrayOf(2,2,7,2,2),
                 intArrayOf(2,2,5,2,2)
             ),
@@ -1180,7 +1182,7 @@ class Map(var renderCast: RenderCast? = null) {
             grid = arrayOf(
                 intArrayOf(1,1,5,1,1),
                 intArrayOf(1,1,7,1,1),
-                intArrayOf(1,1,10,1,1),
+                intArrayOf(1,1,0,1,1),
                 intArrayOf(1,1,0,1,1),
                 intArrayOf(1,1,0,1,1)
             ),
@@ -1190,7 +1192,7 @@ class Map(var renderCast: RenderCast? = null) {
             grid = arrayOf(
                 intArrayOf(2,2,2,2,2),
                 intArrayOf(2,2,2,2,2),
-                intArrayOf(0,0,10,7,5),
+                intArrayOf(0,0,0,7,5),
                 intArrayOf(2,2,2,2,2),
                 intArrayOf(2,2,2,2,2)
             ),
@@ -1200,7 +1202,7 @@ class Map(var renderCast: RenderCast? = null) {
             grid = arrayOf(
                 intArrayOf(1,1,1,1,1),
                 intArrayOf(1,1,1,1,1),
-                intArrayOf(5,7,10,0,0),
+                intArrayOf(5,7,0,0,0),
                 intArrayOf(1,1,1,1,1),
                 intArrayOf(1,1,1,1,1)
             ),
@@ -1212,7 +1214,7 @@ class Map(var renderCast: RenderCast? = null) {
             grid = arrayOf(
                 intArrayOf(2,2,0,2,2),
                 intArrayOf(2,2,0,2,2),
-                intArrayOf(2,2,10,0,5),
+                intArrayOf(2,2,7,0,5),
                 intArrayOf(2,2,0,2,2),
                 intArrayOf(2,2,5,2,2)
             ),
@@ -1222,7 +1224,7 @@ class Map(var renderCast: RenderCast? = null) {
             grid = arrayOf(
                 intArrayOf(1,1,5,1,1),
                 intArrayOf(1,1,0,1,1),
-                intArrayOf(1,1,10,0,5),
+                intArrayOf(1,1,7,0,5),
                 intArrayOf(1,1,0,1,1),
                 intArrayOf(1,1,0,1,1)
             ),
@@ -1232,7 +1234,7 @@ class Map(var renderCast: RenderCast? = null) {
             grid = arrayOf(
                 intArrayOf(2,2,2,2,2),
                 intArrayOf(2,2,2,2,2),
-                intArrayOf(0,0,10,0,5),
+                intArrayOf(0,0,7,0,5),
                 intArrayOf(2,2,0,2,2),
                 intArrayOf(2,2,5,2,2)
             ),
@@ -1242,7 +1244,7 @@ class Map(var renderCast: RenderCast? = null) {
             grid = arrayOf(
                 intArrayOf(1,1,5,1,1),
                 intArrayOf(1,1,0,1,1),
-                intArrayOf(5,0,10,0,0),
+                intArrayOf(5,0,7,0,0),
                 intArrayOf(1,1,1,1,1),
                 intArrayOf(1,1,1,1,1)
             ),
@@ -1254,7 +1256,7 @@ class Map(var renderCast: RenderCast? = null) {
             grid = arrayOf(
                 intArrayOf(2,2,0,2,2),
                 intArrayOf(2,2,0,2,2),
-                intArrayOf(5,0,10,0,5),
+                intArrayOf(5,0,8,0,5),
                 intArrayOf(2,2,0,2,2),
                 intArrayOf(2,2,5,2,2)
             ),
@@ -1264,7 +1266,7 @@ class Map(var renderCast: RenderCast? = null) {
             grid = arrayOf(
                 intArrayOf(1,1,5,1,1),
                 intArrayOf(1,1,0,1,1),
-                intArrayOf(5,0,10,0,5),
+                intArrayOf(5,0,8,0,5),
                 intArrayOf(1,1,0,1,1),
                 intArrayOf(1,1,0,1,1)
             ),
@@ -1274,7 +1276,7 @@ class Map(var renderCast: RenderCast? = null) {
             grid = arrayOf(
                 intArrayOf(2,2,5,2,2),
                 intArrayOf(2,2,0,2,2),
-                intArrayOf(0,0,10,0,5),
+                intArrayOf(0,0,8,0,5),
                 intArrayOf(2,2,0,2,2),
                 intArrayOf(2,2,5,2,2)
             ),
@@ -1284,7 +1286,7 @@ class Map(var renderCast: RenderCast? = null) {
             grid = arrayOf(
                 intArrayOf(1,1,5,1,1),
                 intArrayOf(1,1,0,1,1),
-                intArrayOf(5,0,10,0,0),
+                intArrayOf(5,0,8,0,0),
                 intArrayOf(1,1,0,1,1),
                 intArrayOf(1,1,5,1,1)
             ),
@@ -1469,9 +1471,6 @@ class Map(var renderCast: RenderCast? = null) {
         return loot
     }
 
-
-
-
     fun generateRoom(triggerPoint: GridPoint, entryDirection: Direction): GridPoint? {
         if (generatedTriggers.contains(triggerPoint)) {
             return null
@@ -1638,8 +1637,8 @@ class Map(var renderCast: RenderCast? = null) {
                         if (selectedTemplate.grid[y][x] == 8) {
                             keysList.add(
                                 Key(
-                                    x = (tileSize * mapX) - (tileSize / 2),
-                                    y = (tileSize * mapY) - (tileSize / 2),
+                                    x = (tileSize * (mapX+1)) - (tileSize / 2),
+                                    y = (tileSize * (mapY+1)) - (tileSize / 2),
                                     texture = renderCast?.keyTextureId!!,
                                     true
                                 )
@@ -1935,6 +1934,9 @@ class Mappingmap(private val map: Map, private val renderCast: RenderCast) : JPa
         g2.drawString("LEVEL: ${level}", 10, 360)
         g2.drawString("POINTS: ${points}", 10, 380)
         g2.drawString("AMMO: ${currentAmmo}", 10, 400)
+        if (lookchest and !inventoryVisible) {
+            g2.drawString("Click E", (1366+g2.font.size)/2, (768+g2.font.size)/2)
+        }
         g2.font = font?.deriveFont(Font.BOLD, 50f) ?: Font("Arial", Font.BOLD, 50)
         g2.drawString("${keys}", 85, 290)
     }

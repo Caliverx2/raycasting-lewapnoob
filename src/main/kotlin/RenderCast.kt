@@ -19,6 +19,7 @@ import kotlin.math.sqrt
 import kotlin.random.Random
 import javax.sound.sampled.AudioSystem
 import javax.sound.sampled.FloatControl
+import kotlin.coroutines.Continuation
 import kotlin.jvm.java
 import kotlin.math.min
 import kotlin.math.pow
@@ -299,6 +300,7 @@ class RenderCast(private val map: Map) : JPanel() {
         visibleKeys.clear()
         visibleMedications.clear()
         visibleChests.clear()
+        lookchest = false
 
         for (ray in 0 until rayCount) {
             val rayAngle = currentangle + rayAngles[ray]
@@ -741,10 +743,18 @@ class RenderCast(private val map: Map) : JPanel() {
     }
 
     fun getItemTexture(type: ItemType): BufferedImage {
-        return when (type) {
-            ItemType.MEDKIT -> ImageIO.read(this::class.java.classLoader.getResource("textures/medication.png"))
-            ItemType.AMMO -> ImageIO.read(this::class.java.classLoader.getResource("textures/ammo.png"))
-            ItemType.KEY -> ImageIO.read(this::class.java.classLoader.getResource("textures/key.png"))
+        try {
+            return when (type) {
+                ItemType.MEDKIT -> ImageIO.read(this::class.java.classLoader.getResource("textures/medication.png"))
+                ItemType.AMMO -> ImageIO.read(this::class.java.classLoader.getResource("textures/ammo.png"))
+                ItemType.KEY -> ImageIO.read(this::class.java.classLoader.getResource("textures/key.png"))
+            }
+        } catch (e: Exception) {
+            return when (type) {
+                ItemType.MEDKIT -> createTexture(Color(20,220,20))
+                ItemType.AMMO -> createTexture(Color(80,80,80))
+                ItemType.KEY -> createTexture(Color(255, 215, 0))
+            }
         }
     }
 
@@ -802,6 +812,13 @@ class RenderCast(private val map: Map) : JPanel() {
             val shadowRightX = screenX + shadowSize / 2.0
             val shadowDrawStartX = shadowLeftX.coerceAtLeast(0.0).toInt()
             val shadowDrawEndX = shadowRightX.coerceAtMost(screenWidth - 1.0).toInt()
+
+            val dx = chest.x - positionX
+            val dy = chest.y - positionY
+            if (sqrt(dx * dx + dy * dy) < tileSize * chest.pickupDistance) {
+                lookchest = true
+            }
+
 
             // Render shadow
             for (x in shadowDrawStartX until shadowDrawEndX) {
