@@ -32,10 +32,11 @@ class Player(private val renderCast: RenderCast, private val map: Map) {
             for (gridX in gridLeft..gridRight) {
                 if (gridY !in map.grid.indices || gridX !in map.grid[0].indices ||
                     ((map.grid[gridY][gridX] != 0) and
-                            (map.grid[gridY][gridX] != 5) and
                             (map.grid[gridY][gridX] != 3) and
-                            (map.grid[gridY][gridX] != 7) and
+                            (map.grid[gridY][gridX] != 4) and
+                            (map.grid[gridY][gridX] != 5) and
                             (map.grid[gridY][gridX] != 6) and
+                            (map.grid[gridY][gridX] != 7) and
                             (map.grid[gridY][gridX] != 8) and
                             (map.grid[gridY][gridX] != 10))) {
                     return Pair(false, null)
@@ -131,6 +132,19 @@ class Player(private val renderCast: RenderCast, private val map: Map) {
                     if (distance < key.pickupDistance) {
                         key.active = false
                         keys += 1
+                        renderCast.playSound("8exp.wav", volume = 0.65f)
+                    }
+                }
+            }
+
+            ammoList.forEach { ammo ->
+                if (ammo.active) {
+                    val dx = positionX - ammo.x
+                    val dy = positionY - ammo.y
+                    val distance = sqrt(dx * dx + dy * dy)
+                    if (distance < ammo.pickupDistance) {
+                        ammo.active = false
+                        currentAmmo += 15
                         renderCast.playSound("8exp.wav", volume = 0.65f)
                     }
                 }

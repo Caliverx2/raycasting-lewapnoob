@@ -1,7 +1,7 @@
 package org.example.MainKt
 
 //./gradlew shadowJar
-//0-air 1-wall 2-black_wall 3-enemy 6-lightSource 7-medication 8-key 10-chest
+//0-air 1-wall 2-black_wall 3-enemy 4-ammo 6-lightSource 7-medication 8-key 10-chest
 
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
@@ -34,7 +34,7 @@ import kotlin.random.Random
 var playerHealth: Int = 100
 var level: Int = 1
 var points: Int = 0
-var keys: Int = 1
+var keys: Int = 100
 
 var map = true
 var currentangle = 45
@@ -52,7 +52,8 @@ var enemies = mutableListOf<Enemy>()
 var lightSources = mutableListOf<LightSource>()
 var keysList = mutableListOf<Key>()
 var medicationsList = mutableListOf<Medication>()
-val chestsList = mutableListOf<Chest>()
+var chestsList = mutableListOf<Chest>()
+var ammoList = mutableListOf<Ammo>()
 var inventoryVisible = false
 var openChest: Chest? = null
 var lookchest = false
@@ -79,6 +80,16 @@ class Key(
 ) {
     val size = 0.5 * tileSize // Key size (radius)
     val pickupDistance = 0.7 * size // radius for pickup
+}
+
+class Ammo(
+    var x: Double,
+    var y: Double,
+    var texture: BufferedImage,
+    var active: Boolean = true
+) {
+    val size = 0.5 * tileSize
+    val pickupDistance = 0.7 * size
 }
 
 class LightSource(
@@ -1172,8 +1183,8 @@ class Map(var renderCast: RenderCast? = null) {
             grid = arrayOf(
                 intArrayOf(2,2,0,2,2),
                 intArrayOf(2,2,0,2,2),
-                intArrayOf(2,2,0,2,2),
                 intArrayOf(2,2,7,2,2),
+                intArrayOf(2,2,0,2,2),
                 intArrayOf(2,2,5,2,2)
             ),
             entrances = listOf(Pair(GridPoint(2, -2), Direction.DOWN))
@@ -1181,8 +1192,8 @@ class Map(var renderCast: RenderCast? = null) {
         RoomTemplate(
             grid = arrayOf(
                 intArrayOf(1,1,5,1,1),
-                intArrayOf(1,1,7,1,1),
                 intArrayOf(1,1,0,1,1),
+                intArrayOf(1,1,7,1,1),
                 intArrayOf(1,1,0,1,1),
                 intArrayOf(1,1,0,1,1)
             ),
@@ -1192,7 +1203,7 @@ class Map(var renderCast: RenderCast? = null) {
             grid = arrayOf(
                 intArrayOf(2,2,2,2,2),
                 intArrayOf(2,2,2,2,2),
-                intArrayOf(0,0,0,7,5),
+                intArrayOf(0,0,7,0,5),
                 intArrayOf(2,2,2,2,2),
                 intArrayOf(2,2,2,2,2)
             ),
@@ -1202,7 +1213,7 @@ class Map(var renderCast: RenderCast? = null) {
             grid = arrayOf(
                 intArrayOf(1,1,1,1,1),
                 intArrayOf(1,1,1,1,1),
-                intArrayOf(5,7,0,0,0),
+                intArrayOf(5,0,7,0,0),
                 intArrayOf(1,1,1,1,1),
                 intArrayOf(1,1,1,1,1)
             ),
@@ -1214,7 +1225,7 @@ class Map(var renderCast: RenderCast? = null) {
             grid = arrayOf(
                 intArrayOf(2,2,0,2,2),
                 intArrayOf(2,2,0,2,2),
-                intArrayOf(2,2,7,0,5),
+                intArrayOf(2,2,4,0,5),
                 intArrayOf(2,2,0,2,2),
                 intArrayOf(2,2,5,2,2)
             ),
@@ -1224,7 +1235,7 @@ class Map(var renderCast: RenderCast? = null) {
             grid = arrayOf(
                 intArrayOf(1,1,5,1,1),
                 intArrayOf(1,1,0,1,1),
-                intArrayOf(1,1,7,0,5),
+                intArrayOf(1,1,4,0,5),
                 intArrayOf(1,1,0,1,1),
                 intArrayOf(1,1,0,1,1)
             ),
@@ -1234,7 +1245,7 @@ class Map(var renderCast: RenderCast? = null) {
             grid = arrayOf(
                 intArrayOf(2,2,2,2,2),
                 intArrayOf(2,2,2,2,2),
-                intArrayOf(0,0,7,0,5),
+                intArrayOf(0,0,4,0,5),
                 intArrayOf(2,2,0,2,2),
                 intArrayOf(2,2,5,2,2)
             ),
@@ -1244,7 +1255,7 @@ class Map(var renderCast: RenderCast? = null) {
             grid = arrayOf(
                 intArrayOf(1,1,5,1,1),
                 intArrayOf(1,1,0,1,1),
-                intArrayOf(5,0,7,0,0),
+                intArrayOf(5,0,4,0,0),
                 intArrayOf(1,1,1,1,1),
                 intArrayOf(1,1,1,1,1)
             ),
@@ -1439,6 +1450,11 @@ class Map(var renderCast: RenderCast? = null) {
             key.y += shiftY * tileSize
         }
 
+        ammoList.forEach { ammo ->
+            ammo.x += shiftX * tileSize
+            ammo.y += shiftY * tileSize
+        }
+
         medicationsList.forEach { med ->
             med.x += shiftX * tileSize
             med.y += shiftY * tileSize
@@ -1624,6 +1640,18 @@ class Map(var renderCast: RenderCast? = null) {
                                 it.repaint()
                             }
                         }
+
+                        if (selectedTemplate.grid[y][x] == 4) {
+                            ammoList.add(
+                                Ammo(
+                                    x = (tileSize * (mapX+1)) - (tileSize / 2),
+                                    y = (tileSize * (mapY+1)) - (tileSize / 2),
+                                    texture = renderCast?.ammoTextureID!!,
+                                    active = true
+                                )
+                            )
+                        }
+
                         if (selectedTemplate.grid[y][x] == 10) {
                             chestsList.add(
                                 Chest(
@@ -1640,7 +1668,7 @@ class Map(var renderCast: RenderCast? = null) {
                                     x = (tileSize * (mapX+1)) - (tileSize / 2),
                                     y = (tileSize * (mapY+1)) - (tileSize / 2),
                                     texture = renderCast?.keyTextureId!!,
-                                    true
+                                    active = true
                                 )
                             )
                         }
@@ -1696,6 +1724,7 @@ class Map(var renderCast: RenderCast? = null) {
             positionY = (tileSize * 11) - (tileSize / 2)
             keys += 1
             currentRooms = 0
+            currentAmmo += 45
             enemies = mutableListOf<Enemy>()
             lightSources = mutableListOf<LightSource>()
             keysList = mutableListOf<Key>()
@@ -1945,4 +1974,3 @@ class Mappingmap(private val map: Map, private val renderCast: RenderCast) : JPa
         return Dimension(miniMapSize + offsetX * 2, miniMapSize + offsetY * 2)
     }
 }
-

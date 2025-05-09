@@ -41,6 +41,7 @@ class RenderCast(private val map: Map) : JPanel() {
     var keyTextureId: BufferedImage? = null
     var medicationTextureID: BufferedImage? = null
     var chestTextureID: BufferedImage? = null
+    var ammoTextureID: BufferedImage? = null
     private val accessibleTiles: Set<Int> = setOf(0, 3, 6)
     private var floorTexture: BufferedImage? = null
     private var ceilingTexture: BufferedImage? = null
@@ -63,6 +64,7 @@ class RenderCast(private val map: Map) : JPanel() {
     private var visibleKeys = mutableListOf<Triple<Key, Int, Double>>()
     private var visibleMedications = mutableListOf<Triple<Medication, Int, Double>>()
     private var visibleChests = mutableListOf<Triple<Chest, Int, Double>>()
+    private var visibleAmmo = mutableListOf<Triple<Ammo, Int, Double>>()
     private val zBuffer = DoubleArray(rayCount) { Double.MAX_VALUE }
     private var lastShotTime = 0L
     private val SHOT_COOLDOWN = 500_000_000L
@@ -87,6 +89,7 @@ class RenderCast(private val map: Map) : JPanel() {
             keyTextureId = ImageIO.read(this::class.java.classLoader.getResource("textures/key.png"))
             medicationTextureID = ImageIO.read(this::class.java.classLoader.getResource("textures/medication.png"))
             chestTextureID = ImageIO.read(this::class.java.classLoader.getResource("textures/chest.png"))
+            ammoTextureID = ImageIO.read(this::class.java.classLoader.getResource("textures/ammo.png"))
 
             loadTexture(1, "textures/bricks.jpg")
             loadTexture(2, "textures/black_bricks.png")
@@ -102,6 +105,7 @@ class RenderCast(private val map: Map) : JPanel() {
             keyTextureId = createTexture(Color(255, 255, 0))
             medicationTextureID = createTexture(Color(20, 255, 20))
             chestTextureID = createTexture(Color(150,75,0))
+            ammoTextureID = createTexture(Color(90,90,90))
         }
 
         lightSources.add(LightSource(0.0, 0.0, color = Color(200, 200, 100), intensity = 0.75, range = 0.15, owner = "player"))
@@ -298,6 +302,7 @@ class RenderCast(private val map: Map) : JPanel() {
         zBuffer.fill(Double.MAX_VALUE)
         visibleEnemies.clear()
         visibleKeys.clear()
+        visibleAmmo.clear()
         visibleMedications.clear()
         visibleChests.clear()
         lookchest = false
@@ -457,8 +462,8 @@ class RenderCast(private val map: Map) : JPanel() {
 
             chestsList.forEach { chest ->
                 if (!chest.active) return@forEach
-                val halfSize = (chest.size) / tileSize / 2
-                val chestLeft = chest.x/ tileSize - halfSize
+                val halfSize = chest.size / tileSize / 2
+                val chestLeft = chest.x / tileSize - halfSize
                 val chestRight = chest.x / tileSize + halfSize
                 val chestTop = chest.y / tileSize - halfSize
                 val chestBottom = chest.y / tileSize + halfSize
@@ -481,6 +486,38 @@ class RenderCast(private val map: Map) : JPanel() {
                             val screenX = (screenWidth / 2 + angleRatio * screenWidth / 2).toInt()
                             if (visibleChests.none { it.first === chest }) {
                                 visibleChests.add(Triple(chest, screenX, rayLength))
+                            }
+                        }
+                    }
+                }
+            }
+
+            ammoList.forEach { ammo ->
+                if (!ammo.active) return@forEach
+                val halfSize = (ammo.size) / tileSize / 2
+                val ammoLeft = ammo.x/ tileSize - halfSize
+                val ammoRight = ammo.x / tileSize + halfSize
+                val ammoTop = ammo.y / tileSize - halfSize
+                val ammoBottom = ammo.y / tileSize + halfSize
+
+                val closestX = clamp(ammo.x / tileSize, ammoLeft, ammoRight)
+                val closestY = clamp(ammo.y / tileSize, ammoTop, ammoBottom)
+                val dx = closestX - playerPosX
+                val dy = closestY - playerPosY
+
+                val rayLength = dx * rayDirX + dy * rayDirY
+                if (rayLength > 0 && rayLength <= maxRayDistance) {
+                    val perpendicularDistance = abs(dx * rayDirY - dy * rayDirX)
+                    if (perpendicularDistance < halfSize + 0.05) {
+                        val centerDx = ammo.x / tileSize - playerPosX
+                        val centerDy = ammo.y / tileSize - playerPosY
+                        val angleToEnemy = atan2(centerDy, centerDx)
+                        val relativeAngle = normalizeAngle(Math.toDegrees(angleToEnemy) - currentangle)
+                        if (abs(relativeAngle) <= fov / 2 + 10) {
+                            val angleRatio = relativeAngle / (fov / 2)
+                            val screenX = (screenWidth / 2 + angleRatio * screenWidth / 2).toInt()
+                            if (visibleAmmo.none { it.first === ammo }) {
+                                visibleAmmo.add(Triple(ammo, screenX, rayLength))
                             }
                         }
                     }
@@ -661,6 +698,7 @@ class RenderCast(private val map: Map) : JPanel() {
         renderEnemies()
         renderKeys()
         renderMedications()
+        renderAmmo()
         renderChest()
     }
 
@@ -797,6 +835,8 @@ class RenderCast(private val map: Map) : JPanel() {
         visibleChests.sortByDescending { it.third }
 
         visibleChests.forEach { (chest, screenX, distance) ->
+            println("${chest.x} ${chest.y}")
+            println("${positionX} ${positionY}")
             val chestHeight = wallHeight / 4
             val minSize = 0.001
             val maxSize = 64.0
@@ -1127,6 +1167,86 @@ class RenderCast(private val map: Map) : JPanel() {
                             val originalColor = Color(color)
                             val worldX = medication.x / tileSize
                             val worldY = medication.y / tileSize
+                            val litColor = calculateLightContribution(worldX, worldY, originalColor)
+                            val fogFactor = 1.0 - exp(-fogDensity * distance)
+                            val finalColor = Color(
+                                ((1.0 - fogFactor) * litColor.red + fogFactor * fogColor.red).toInt().coerceIn(0, 255),
+                                ((1.0 - fogFactor) * litColor.green + fogFactor * fogColor.green).toInt().coerceIn(0, 255),
+                                ((1.0 - fogFactor) * litColor.blue + fogFactor * fogColor.blue).toInt().coerceIn(0, 255)
+                            )
+                            buffer.setRGB(x, y, finalColor.rgb)
+                        }
+                    }
+                    // Update z-buffer for medication sprite
+                    zBuffer[x] = distance
+                }
+            }
+        }
+    }
+
+    private fun renderAmmo() {
+        visibleAmmo.sortByDescending { it.third }
+
+        visibleAmmo.forEach { (ammo, screenX, distance) ->
+            val medHeight = wallHeight / 4
+            val minSize = 0.001
+            val maxSize = 64.0
+            val spriteSize = ((medHeight * screenHeight) / (distance * tileSize)).coerceIn(minSize, maxSize).toInt()
+
+            // Calculate floor position for shadow (same as enemy)
+            val floorY = (screenHeight / 2 + (wallHeight * screenHeight) / (2 * distance * tileSize)).toInt()
+            val shadowSize = (spriteSize * 1.2).toInt() // Slightly larger than medication, matching enemy shadow scaling
+            val shadowStartY = floorY.coerceIn(0, screenHeight - 1)
+            val shadowEndY = (floorY + shadowSize / 4).coerceIn(0, screenHeight - 1) // Minimal vertical extent for floor shadow
+
+            val shadowLeftX = screenX - shadowSize / 2.0
+            val shadowRightX = screenX + shadowSize / 2.0
+            val shadowDrawStartX = shadowLeftX.coerceAtLeast(0.0).toInt()
+            val shadowDrawEndX = shadowRightX.coerceAtMost(screenWidth - 1.0).toInt()
+
+            // Render shadow
+            for (x in shadowDrawStartX until shadowDrawEndX) {
+                if (x < 0 || x >= zBuffer.size) continue
+                if (distance < zBuffer[x]) { // Only render shadow if closer than z-buffer
+                    val textureFraction = (x - shadowLeftX) / (shadowRightX - shadowLeftX)
+                    val textureX = (textureFraction * shadowTexture.width).coerceIn(0.0, shadowTexture.width - 1.0)
+                    for (y in shadowStartY until shadowEndY) {
+                        val textureY = ((y - shadowStartY).toDouble() * shadowTexture.height / (shadowEndY - shadowStartY)).coerceIn(0.0, shadowTexture.height - 1.0)
+                        val color = shadowTexture.getRGB(textureX.toInt(), textureY.toInt())
+                        if ((color and 0xFF000000.toInt()) != 0) {
+                            val originalColor = Color(color)
+                            // Apply fog but skip full lighting for shadow (as likely for enemies)
+                            val fogFactor = 1.0 - exp(-fogDensity * distance)
+                            val finalColor = Color(
+                                ((1.0 - fogFactor) * originalColor.red + fogFactor * fogColor.red).toInt().coerceIn(0, 255),
+                                ((1.0 - fogFactor) * originalColor.green + fogFactor * fogColor.green).toInt().coerceIn(0, 255),
+                                ((1.0 - fogFactor) * originalColor.blue + fogFactor * fogColor.blue).toInt().coerceIn(0, 255)
+                            )
+                            buffer.setRGB(x, y, finalColor.rgb)
+                        }
+                    }
+                }
+            }
+
+            val drawStartY = (floorY - spriteSize).coerceIn(0, screenHeight - 1)
+            val drawEndY = floorY.coerceIn(0, screenHeight - 1)
+            val medLeftX = screenX - spriteSize / 2.0
+            val medRightX = screenX + spriteSize / 2.0
+            val medDrawStartX = medLeftX.coerceAtLeast(0.0).toInt()
+            val medDrawEndX = medRightX.coerceAtMost(screenWidth - 1.0).toInt()
+
+            for (x in medDrawStartX until medDrawEndX) {
+                if (x < 0 || x >= zBuffer.size) continue
+                if (distance < zBuffer[x]) {
+                    val textureFraction = (x - medLeftX) / (medRightX - medLeftX)
+                    val textureX = (textureFraction * ammo.texture.width).coerceIn(0.0, ammo.texture.width - 1.0)
+                    for (y in drawStartY until drawEndY) {
+                        val textureY = ((y - drawStartY).toDouble() * ammo.texture.height / spriteSize).coerceIn(0.0, ammo.texture.height - 1.0)
+                        val color = ammo.texture.getRGB(textureX.toInt(), textureY.toInt())
+                        if ((color and 0xFF000000.toInt()) != 0) {
+                            val originalColor = Color(color)
+                            val worldX = ammo.x / tileSize
+                            val worldY = ammo.y / tileSize
                             val litColor = calculateLightContribution(worldX, worldY, originalColor)
                             val fogFactor = 1.0 - exp(-fogDensity * distance)
                             val finalColor = Color(
