@@ -835,12 +835,10 @@ class RenderCast(private val map: Map) : JPanel() {
         visibleChests.sortByDescending { it.third }
 
         visibleChests.forEach { (chest, screenX, distance) ->
-            println("${chest.x} ${chest.y}")
-            println("${positionX} ${positionY}")
             val chestHeight = wallHeight / 4
             val minSize = 0.001
             val maxSize = 64.0
-            val spriteSize = ((chestHeight * screenHeight) / (distance * tileSize)).coerceIn(minSize, maxSize).toInt()
+            val spriteSize = (((chestHeight * screenHeight) / (distance * tileSize)).coerceIn(minSize, maxSize)*1.7).toInt()
 
             // Calculate floor position for shadow (same as enemy)
             val floorY = (screenHeight / 2 + (wallHeight * screenHeight) / (2 * distance * tileSize)).toInt()
@@ -1409,26 +1407,26 @@ class RenderCast(private val map: Map) : JPanel() {
                                 }
 
                                 for (i in 1..loots) {
-                                    var keyX = enemy.x
-                                    var keyY = enemy.y
+                                    var itemX = enemy.x
+                                    var itemY = enemy.y
                                     var validPosition = false
                                     val maxAttempts = 10
 
                                     for (attempt in 0 until maxAttempts) {
                                         val randomAngle = Random.nextDouble(0.0, 2 * PI)
                                         val randomDistance = Random.nextDouble(0.2 * spawnRadius, spawnRadius)
-                                        keyX = enemy.x + randomDistance * cos(randomAngle)
-                                        keyY = enemy.y + randomDistance * sin(randomAngle)
+                                        itemX = enemy.x + randomDistance * cos(randomAngle)
+                                        itemY = enemy.y + randomDistance * sin(randomAngle)
 
-                                        val mapX = (keyX / tileSize).toInt()
-                                        val mapY = (keyY / tileSize).toInt()
+                                        val mapX = (itemX / tileSize).toInt()
+                                        val mapY = (itemY / tileSize).toInt()
 
                                         if (mapY in map.grid.indices && mapX in map.grid[0].indices && accessibleTiles.contains(map.grid[mapY][mapX])) {
                                             val tooClose = keysList.any { existingKey ->
                                                 if (!existingKey.active) false
                                                 else {
-                                                    val dx = keyX - existingKey.x
-                                                    val dy = keyY - existingKey.y
+                                                    val dx = itemX - existingKey.x
+                                                    val dy = itemY - existingKey.y
                                                     sqrt(dx * dx + dy * dy) < 0.3 * tileSize
                                                 }
                                             }
@@ -1439,11 +1437,19 @@ class RenderCast(private val map: Map) : JPanel() {
                                         }
                                     }
                                     if (!validPosition) {
-                                        keyX = enemy.x
-                                        keyY = enemy.y
+                                        itemX = enemy.x
+                                        itemY = enemy.y
                                     }
 
-                                    keysList.add(Key(keyX, keyY, keyTextureId!!))
+                                    //keysList.add(Key(itemX, itemY, keyTextureId!!))
+
+                                    val random = Random.nextFloat()
+                                    val randomItem = when {
+                                        random < 0.80f -> keysList.add(Key(itemX, itemY, keyTextureId!!))
+                                        else -> ammoList.add(Ammo(itemX, itemY, ammoTextureID!!))
+                                    }
+
+                                    randomItem
                                 }
                                 points = points + (100 / level)
                                 if (points >= 100) {

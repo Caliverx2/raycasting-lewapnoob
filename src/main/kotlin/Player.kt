@@ -6,6 +6,7 @@ import java.awt.event.KeyEvent
 import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.math.sqrt
+import kotlin.random.Random
 
 class Player(private val renderCast: RenderCast, private val map: Map) {
     private val playerSize = 5.0
@@ -123,45 +124,69 @@ class Player(private val renderCast: RenderCast, private val map: Map) {
     }
 
     private fun checkKeyPickup() {
-        try {
-            keysList.forEach { key ->
-                if (key.active) {
-                    val dx = positionX - key.x
-                    val dy = positionY - key.y
-                    val distance = sqrt(dx * dx + dy * dy)
-                    if (distance < key.pickupDistance) {
-                        key.active = false
-                        keys += 1
-                        renderCast.playSound("8exp.wav", volume = 0.65f)
-                    }
+        val keysToDeactivate = mutableListOf<Key>()
+        val ammoToDeactivate = mutableListOf<Ammo>()
+        val medicationsToDeactivate = mutableListOf<Medication>()
+
+        // Collect keys to deactivate
+        keysList.forEach { key ->
+            if (key.active) {
+                val dx = positionX - key.x
+                val dy = positionY - key.y
+                val distance = sqrt(dx * dx + dy * dy)
+                if (distance < key.pickupDistance) {
+                    keysToDeactivate.add(key)
                 }
             }
+        }
 
-            ammoList.forEach { ammo ->
-                if (ammo.active) {
-                    val dx = positionX - ammo.x
-                    val dy = positionY - ammo.y
-                    val distance = sqrt(dx * dx + dy * dy)
-                    if (distance < ammo.pickupDistance) {
-                        ammo.active = false
-                        currentAmmo += 15
-                        renderCast.playSound("8exp.wav", volume = 0.65f)
-                    }
+        // Collect ammo to deactivate
+        ammoList.forEach { ammo ->
+            if (ammo.active) {
+                val dx = positionX - ammo.x
+                val dy = positionY - ammo.y
+                val distance = sqrt(dx * dx + dy * dy)
+                if (distance < ammo.pickupDistance) {
+                    ammoToDeactivate.add(ammo)
                 }
             }
+        }
 
-            medicationsList.forEach { medication ->
+        // Collect medications to deactivate
+        medicationsList.forEach { medication ->
+            if (medication.active) {
                 val dx = positionX - medication.x
                 val dy = positionY - medication.y
                 val distance = sqrt(dx * dx + dy * dy)
                 if (distance < medication.pickupDistance) {
-                    medication.active = false
-                    playerHealth += medication.heal
-                    renderCast.playSound("8exp.wav", volume = 0.65f)
+                    medicationsToDeactivate.add(medication)
                 }
             }
-        } catch (e: Exception) {
-            println("CO XD?")
+        }
+
+        // Apply changes after iteration
+        keysToDeactivate.forEach { key ->
+            key.active = false
+            keys += 1
+            renderCast.playSound("8exp.wav", volume = 0.65f)
+        }
+
+        ammoToDeactivate.forEach { ammo ->
+            ammo.active = false
+            val random = Random.nextFloat()
+            val ammoRNG = when {
+                random < 0.33f -> 6
+                random < 0.66f -> 10
+                else -> 14
+            }
+            currentAmmo += ammoRNG
+            renderCast.playSound("8exp.wav", volume = 0.65f)
+        }
+
+        medicationsToDeactivate.forEach { medication ->
+            medication.active = false
+            playerHealth += medication.heal
+            renderCast.playSound("8exp.wav", volume = 0.65f)
         }
     }
 

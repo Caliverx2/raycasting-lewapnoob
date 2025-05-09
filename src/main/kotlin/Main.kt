@@ -1,7 +1,7 @@
 package org.example.MainKt
 
 //./gradlew shadowJar
-//0-air 1-wall 2-black_wall 3-enemy 4-ammo 6-lightSource 7-medication 8-key 10-chest
+//0-air 1-wall 2-black_wall 3-enemy 4-ammo 5-door 6-lightSource 7-medication 8-key 10-chest
 
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
@@ -34,7 +34,7 @@ import kotlin.random.Random
 var playerHealth: Int = 100
 var level: Int = 1
 var points: Int = 0
-var keys: Int = 100
+var keys: Int = 1
 
 var map = true
 var currentangle = 45
@@ -69,7 +69,7 @@ class Medication(
     var heal: Int = 100
 ) {
     val size = 0.5 * tileSize // Medication size (radius)
-    val pickupDistance = 0.7 * size // radius for pickup
+    val pickupDistance = 0.7 * 2 * size // radius for pickup
 }
 
 class Key(
@@ -79,7 +79,7 @@ class Key(
     var active: Boolean = true
 ) {
     val size = 0.5 * tileSize // Key size (radius)
-    val pickupDistance = 0.7 * size // radius for pickup
+    val pickupDistance = 0.7 * 2 * size // radius for pickup
 }
 
 class Ammo(
@@ -89,7 +89,7 @@ class Ammo(
     var active: Boolean = true
 ) {
     val size = 0.5 * tileSize
-    val pickupDistance = 0.7 * size
+    val pickupDistance = 0.7 * 2 * size
 }
 
 class LightSource(
@@ -185,7 +185,7 @@ class Enemy(
         val dy: Double,
         val speed: Double = 5.0,
         val size: Double = 0.1 * tileSize,
-        val damage: Int = (2.5 * level).toInt(),
+        val damage: Int = ((2.5 * level)*1.5).toInt(),
         var active: Boolean = true,
         val lightSource: LightSource? = null
     ) {
@@ -333,11 +333,13 @@ class Enemy(
 
         if (startY !in map.grid.indices || startX !in map.grid[0].indices ||
             goalY !in map.grid.indices || goalX !in map.grid[0].indices ||
-            ((map.grid[goalY][goalX] != 0) && (map.grid[goalY][goalX] != 5) &&
-                    (map.grid[goalY][goalX] != 3) &&
-                    (map.grid[goalY][goalX] != 6) &&
-                    (map.grid[goalY][goalX] != 7) &&
-                    (map.grid[goalY][goalX] != 8))
+            (((map.grid[goalY][goalX] != 0) and
+                    (map.grid[goalY][goalX] != 3) and
+                    (map.grid[goalY][goalX] != 4) and
+                    (map.grid[goalY][goalX] != 6) and
+                    (map.grid[goalY][goalX] != 7) and
+                    (map.grid[goalY][goalX] != 8) and
+                    (map.grid[goalY][goalX] != 10)))
         ) {
             return emptyList()
         }
@@ -1673,13 +1675,20 @@ class Map(var renderCast: RenderCast? = null) {
                             )
                         }
                         if (selectedTemplate.grid[y][x] == 7) {
+                            val random = Random.nextFloat()
+                            val healRNG = when {
+                                random < 0.33f -> 15
+                                random < 0.66f -> 25
+                                else -> 35
+                            }
+
                             renderCast?.let {
                                 medicationsList.add(
                                     Medication(
                                         x = ((tileSize * (mapX + 1)) - (tileSize / 2)),
                                         y = ((tileSize * (mapY + 1)) - (tileSize / 2)),
                                         renderCast?.medicationTextureID!!,
-                                        heal = 40
+                                        heal = healRNG
                                     )
                                 )
                                 it.repaint()
