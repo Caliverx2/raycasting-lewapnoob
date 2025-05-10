@@ -16,7 +16,6 @@ import java.awt.Font
 import java.awt.Graphics
 import java.awt.Graphics2D
 import java.awt.GraphicsEnvironment
-import java.awt.Point
 import java.awt.RenderingHints
 import java.awt.Toolkit
 import java.awt.event.MouseAdapter
@@ -125,7 +124,8 @@ class Enemy(
     var texture: BufferedImage,
     private val renderCast: RenderCast,
     private val map: Map,
-    var speed: Double = 0.9
+    var speed: Double = 0.9,
+    val maxHeal: Int = (100 + (level * 7.5) * 2).toInt()
 ) {
     var path: List<Node> = emptyList()
     val size = 1.0
@@ -865,7 +865,7 @@ class Map(var renderCast: RenderCast? = null) {
         val entrances: List<Pair<GridPoint, Direction>>
     )
     private val generatedTriggers = mutableSetOf<GridPoint>()
-    //0-air 1-wall 2-black_wall 3-enemy 6-lightSource 7-medication 8-key 10-chest
+    //0-air 1-wall 2-black_wall 3-enemy 4-ammo 5-door 6-lightSource 7-medication 8-key 10-chest
     // Room templates
     private val templates = listOf(
         // Template 1: Small 5x5 room

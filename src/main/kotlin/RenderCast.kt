@@ -19,7 +19,6 @@ import kotlin.math.sqrt
 import kotlin.random.Random
 import javax.sound.sampled.AudioSystem
 import javax.sound.sampled.FloatControl
-import kotlin.coroutines.Continuation
 import kotlin.jvm.java
 import kotlin.math.min
 import kotlin.math.pow
@@ -963,7 +962,7 @@ class RenderCast(private val map: Map) : JPanel() {
                 }
             }
 
-            if (enemy.health > 0) {
+            if ((enemy.health > 0) and (enemy.maxHeal > enemy.health)) {
                 val healthText = "${enemy.health}"
                 val textSize = (spriteSize / 3.0).coerceIn(16.0, 26.0).toInt()
                 val textFont = font?.deriveFont(Font.BOLD, textSize.toFloat()) ?: Font("Arial", Font.BOLD, textSize)
