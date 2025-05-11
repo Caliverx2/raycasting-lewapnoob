@@ -708,18 +708,36 @@ class RenderCast(private val map: Map) : JPanel() {
         val totalSlots = 9
 
         val startX = (1366 - (slotSize + spacing) * 9 - 20)
-        val startY = 600+slotSize
-        val chestY = 500+slotSize
+        val startY = 600 + slotSize
+        val chestY = 500 + slotSize
 
         openChest?.let { chest ->
             for (i in chest.loot.indices) {
                 val slotX = startX + i * (slotSize + spacing)
                 if (mouseX in slotX until (slotX + slotSize) && mouseY in chestY until (chestY + slotSize)) {
-                    val item = chest.loot[i]
-                    val targetIndex = playerInventory.indexOfFirst { it == null }
+                    val chestItem = chest.loot[i]
+                    // Szukaj slotu z tym samym typem przedmiotu w ekwipunku
+                    val targetIndex = playerInventory.indexOfFirst { it?.type == chestItem.type && it.quantity < Item.getMaxQuantity(it.type) }
                     if (targetIndex != -1) {
-                        playerInventory[targetIndex] = item
-                        chest.loot.removeAt(i)
+                        // Dodaj do istniejącego slotu
+                        val inventoryItem = playerInventory[targetIndex]!!
+                        val spaceLeft = Item.getMaxQuantity(inventoryItem.type) - inventoryItem.quantity
+                        val transferQuantity = minOf(spaceLeft, chestItem.quantity)
+                        inventoryItem.quantity += transferQuantity
+                        chestItem.quantity -= transferQuantity
+                        if (chestItem.quantity <= 0) {
+                            chest.loot.removeAt(i)
+                        }
+                    } else {
+                        // Dodaj do pustego slotu
+                        val emptyIndex = playerInventory.indexOfFirst { it == null }
+                        if (emptyIndex != -1) {
+                            playerInventory[emptyIndex] = Item(chestItem.type, minOf(chestItem.quantity, Item.getMaxQuantity(chestItem.type)))
+                            chestItem.quantity -= playerInventory[emptyIndex]!!.quantity
+                            if (chestItem.quantity <= 0) {
+                                chest.loot.removeAt(i)
+                            }
+                        }
                     }
                     return
                 }
@@ -729,12 +747,28 @@ class RenderCast(private val map: Map) : JPanel() {
         for (i in 0 until totalSlots) {
             val slotX = startX + i * (slotSize + spacing)
             if (mouseX in slotX until (slotX + slotSize) && mouseY in startY until (startY + slotSize)) {
-                println("Kliknięto ekwipunek: slot $i")
-                val item = playerInventory[i]
-                if (item != null && openChest != null && openChest!!.loot.size < 9) {
-                    println("→ do skrzynki")
-                    openChest!!.loot.add(item)
-                    playerInventory[i] = null
+                val inventoryItem = playerInventory[i]
+                if (inventoryItem != null && openChest != null && openChest!!.loot.size < 9) {
+                    // Szukaj slotu z tym samym typem przedmiotu w skrzynce
+                    val chestTarget = openChest!!.loot.indexOfFirst { it.type == inventoryItem.type && it.quantity < Item.getMaxQuantity(it.type) }
+                    if (chestTarget != -1) {
+                        // Dodaj do istniejącego slotu w skrzynce
+                        val chestItem = openChest!!.loot[chestTarget]
+                        val spaceLeft = Item.getMaxQuantity(chestItem.type) - chestItem.quantity
+                        val transferQuantity = minOf(spaceLeft, inventoryItem.quantity)
+                        chestItem.quantity += transferQuantity
+                        inventoryItem.quantity -= transferQuantity
+                        if (inventoryItem.quantity <= 0) {
+                            playerInventory[i] = null
+                        }
+                    } else {
+                        // Dodaj nowy przedmiot do skrzynki
+                        openChest!!.loot.add(Item(inventoryItem.type, minOf(inventoryItem.quantity, Item.getMaxQuantity(inventoryItem.type))))
+                        inventoryItem.quantity -= openChest!!.loot.last().quantity
+                        if (inventoryItem.quantity <= 0) {
+                            playerInventory[i] = null
+                        }
+                    }
                 }
                 return
             }
@@ -748,22 +782,25 @@ class RenderCast(private val map: Map) : JPanel() {
         val startX = 1366 - (slotSize + spacing) * 9 - 20
         val startY = 600
 
-        //GUI ekwipunek
+        // GUI ekwipunek
         g2.color = Color(50, 50, 50, 180)
         g2.fillRect(startX - 10, startY - 10, (slotSize + spacing) * 9 + 20, slotSize + 20)
-
 
         for (i in 0 until 9) {
             val x = startX + i * (slotSize + spacing)
             val y = startY
-            g2.color = Color(100,100,100)
+            g2.color = Color(100, 100, 100)
             g2.fillRect(x, y, slotSize, slotSize)
-            playerInventory[i]?.let {
-                g2.drawImage(getItemTexture(it.type), x, y, slotSize, slotSize, null)
+            playerInventory[i]?.let { item ->
+                g2.drawImage(getItemTexture(item.type), x, y, slotSize, slotSize, null)
+                // Wyświetl ilość
+                g2.color = Color.WHITE
+                g2.font = Font("Arial", Font.BOLD, 12)
+                g2.drawString("${item.quantity}", x + slotSize - 20, y + slotSize - 5)
             }
         }
 
-        //GUI skrzynki
+        // GUI skrzynki
         openChest?.let { chest ->
             val chestY = 500
             g2.color = Color(50, 50, 50, 220)
@@ -772,9 +809,13 @@ class RenderCast(private val map: Map) : JPanel() {
             for (i in chest.loot.indices) {
                 val x = startX + i * (slotSize + spacing)
                 val y = chestY
-                g2.color = Color(100,100,100)
+                g2.color = Color(100, 100, 100)
                 g2.fillRect(x, y, slotSize, slotSize)
                 g2.drawImage(getItemTexture(chest.loot[i].type), x, y, slotSize, slotSize, null)
+                // Wyświetl ilość
+                g2.color = Color.WHITE
+                g2.font = Font("Arial", Font.BOLD, 12)
+                g2.drawString("${chest.loot[i].quantity}", x + slotSize - 20, y + slotSize - 5)
             }
         }
     }
@@ -1301,8 +1342,12 @@ class RenderCast(private val map: Map) : JPanel() {
 
     fun shotgun() {
         val currentTime = System.nanoTime()
-        if ((currentTime - lastShotTime >= SHOT_COOLDOWN && !isShooting)and (currentAmmo > 0)) {
-            currentAmmo -= 1
+        val ammoSlot = playerInventory.indexOfFirst { it?.type == ItemType.AMMO && it.quantity > 0 }
+        if (currentTime - lastShotTime >= SHOT_COOLDOWN && !isShooting && ammoSlot != -1) {
+            playerInventory[ammoSlot]!!.quantity -= 1
+            if (playerInventory[ammoSlot]!!.quantity <= 0) {
+                playerInventory[ammoSlot] = null
+            }
             lastShotTime = currentTime
             isShooting = true
 
@@ -1394,7 +1439,7 @@ class RenderCast(private val map: Map) : JPanel() {
                         var angleDiff = abs(angleToEnemy - shotAngleRad)
                         angleDiff = min(angleDiff, 2 * Math.PI - angleDiff)
 
-                        if (angleDiff < Math.toRadians(35.0/3)) { //35.0
+                        if (angleDiff < Math.toRadians(35.0/3)) {
                             enemy.health -= 25
                             println("enemy: ${enemy} heal: ${enemy.health}")
                             if (enemy.health <= 0) {
@@ -1428,6 +1473,13 @@ class RenderCast(private val map: Map) : JPanel() {
                                                     val dy = itemY - existingKey.y
                                                     sqrt(dx * dx + dy * dy) < 0.3 * tileSize
                                                 }
+                                            } || ammoList.any { existingAmmo ->
+                                                if (!existingAmmo.active) false
+                                                else {
+                                                    val dx = itemX - existingAmmo.x
+                                                    val dy = itemY - existingAmmo.y
+                                                    sqrt(dx * dx + dy * dy) < 0.3 * tileSize
+                                                }
                                             }
                                             if (!tooClose) {
                                                 validPosition = true
@@ -1440,15 +1492,10 @@ class RenderCast(private val map: Map) : JPanel() {
                                         itemY = enemy.y
                                     }
 
-                                    //keysList.add(Key(itemX, itemY, keyTextureId!!))
-
-                                    val random = Random.nextFloat()
                                     val randomItem = when {
                                         random < 0.80f -> keysList.add(Key(itemX, itemY, keyTextureId!!))
                                         else -> ammoList.add(Ammo(itemX, itemY, ammoTextureID!!))
                                     }
-
-                                    randomItem
                                 }
                                 points = points + (100 / level)
                                 if (points >= 100) {
@@ -1499,8 +1546,17 @@ class RenderCast(private val map: Map) : JPanel() {
                 val distance = sqrt(dx * dx + dy * dy)
                 if (distance < key.pickupDistance) {
                     key.active = false
-                    keys += 1
-                    playSound("pickup.wav", 0.65f)
+                    // Szukaj slotu z kluczami
+                    val keySlot = playerInventory.indexOfFirst { it?.type == ItemType.KEY && it.quantity < Item.MAX_KEYS_PER_SLOT }
+                    if (keySlot != -1) {
+                        playerInventory[keySlot]!!.quantity += key.amount
+                    } else {
+                        val emptySlot = playerInventory.indexOfFirst { it == null }
+                        if (emptySlot != -1) {
+                            playerInventory[emptySlot] = Item(ItemType.KEY, key.amount)
+                        }
+                    }
+                    playSound("8exp.wav", 0.65f)
                 }
             }
         }
@@ -1511,12 +1567,34 @@ class RenderCast(private val map: Map) : JPanel() {
                 val distance = sqrt(dx * dx + dy * dy)
                 if (distance < medication.pickupDistance) {
                     medication.active = false
-                    playerHealth = minOf(playerHealth + medication.heal, 100)
-                    playSound("pickup.wav", 0.65f)
+                    playerHealth = playerHealth + medication.heal
+                    playSound("8exp.wav", 0.65f)
+                }
+            }
+        }
+        ammoList.forEach { ammo ->
+            if (ammo.active) {
+                val dx = positionX - ammo.x
+                val dy = positionY - ammo.y
+                val distance = sqrt(dx * dx + dy * dy)
+                if (distance < ammo.pickupDistance) {
+                    ammo.active = false
+                    // Szukaj slotu z amunicją
+                    val ammoSlot = playerInventory.indexOfFirst { it?.type == ItemType.AMMO && it.quantity < Item.MAX_AMMO_PER_SLOT }
+                    if (ammoSlot != -1) {
+                        playerInventory[ammoSlot]!!.quantity += ammo.amount
+                    } else {
+                        val emptySlot = playerInventory.indexOfFirst { it == null }
+                        if (emptySlot != -1) {
+                            playerInventory[emptySlot] = Item(ItemType.AMMO, ammo.amount)
+                        }
+                    }
+                    playSound("8exp.wav", 0.65f)
                 }
             }
         }
         keysList.removeIf { !it.active }
         medicationsList.removeIf { !it.active }
+        ammoList.removeIf { !it.active }
     }
 }

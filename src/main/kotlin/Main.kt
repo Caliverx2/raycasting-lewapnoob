@@ -33,7 +33,7 @@ import kotlin.random.Random
 var playerHealth: Int = 100
 var level: Int = 1
 var points: Int = 0
-var keys: Int = 1
+var keys: Int = 0
 
 var map = true
 var currentangle = 45
@@ -69,6 +69,7 @@ class Medication(
 ) {
     val size = 0.5 * tileSize // Medication size (radius)
     val pickupDistance = 0.7 * 2 * size // radius for pickup
+    val amount: Int = 1
 }
 
 class Key(
@@ -79,6 +80,7 @@ class Key(
 ) {
     val size = 0.5 * tileSize // Key size (radius)
     val pickupDistance = 0.7 * 2 * size // radius for pickup
+    val amount: Int = 1
 }
 
 class Ammo(
@@ -89,6 +91,7 @@ class Ammo(
 ) {
     val size = 0.5 * tileSize
     val pickupDistance = 0.7 * 2 * size
+    val amount: Int = 10
 }
 
 class LightSource(
@@ -110,12 +113,24 @@ class Chest(
     val pickupDistance = 1.3*2
 }
 
-data class Item(val type: ItemType)
+data class Item(val type: ItemType, var quantity: Int = 1) {
+    // Maksymalna ilość przedmiotów na slot
+    companion object {
+        const val MAX_KEYS_PER_SLOT = 64
+        const val MAX_AMMO_PER_SLOT = 45
+        const val MAX_MEDKIT_PER_SLOT = 2
+
+        fun getMaxQuantity(type: ItemType): Int = when (type) {
+            ItemType.KEY -> MAX_KEYS_PER_SLOT
+            ItemType.AMMO -> MAX_AMMO_PER_SLOT
+            ItemType.MEDKIT -> MAX_MEDKIT_PER_SLOT
+        }
+    }
+}
 
 enum class ItemType {
     MEDKIT, AMMO, KEY
 }
-
 
 class Enemy(
     var x: Double,
@@ -333,6 +348,7 @@ class Enemy(
 
         if (startY !in map.grid.indices || startX !in map.grid[0].indices ||
             goalY !in map.grid.indices || goalX !in map.grid[0].indices ||
+            //0-air 1-wall 2-black_wall 3-enemy 4-ammo 5-door 6-lightSource 7-medication 8-key 10-chest
             (((map.grid[goalY][goalX] != 0) and
                     (map.grid[goalY][goalX] != 3) and
                     (map.grid[goalY][goalX] != 4) and
@@ -407,8 +423,7 @@ class Enemy(
 
         for (dir in directions) {
             if (dir.y in map.grid.indices && dir.x in map.grid[0].indices &&
-                map.grid[dir.y][dir.x] != 1 &&
-                map.getWallDistances()[dir.y][dir.x] >= MIN_WALL_DISTANCE
+                map.grid[dir.y][dir.x] != 1
             ) {
                 neighbors.add(dir)
             }
@@ -702,12 +717,6 @@ fun main() = runBlocking {
     frame.setSize(1366, 768)
     frame.setLocation(((Toolkit.getDefaultToolkit().screenSize.width - frame.width) / 2), ((Toolkit.getDefaultToolkit().screenSize.height - frame.height) / 2))
 
-    /*frame.cursor = frame.toolkit.createCustomCursor(
-        BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB),
-        Point(0, 0),
-        "invisible"
-    )*/
-
     frame.isVisible = true
     val map = Map()
 
@@ -736,6 +745,24 @@ fun main() = runBlocking {
 
     val keysPressed: MutableMap<Int, Boolean> = mutableMapOf()
     var centerX = frame.width / 2
+
+    var remainingAmmo = 45
+    var slotIndexAmmo = 0
+    while (remainingAmmo > 0 && slotIndexAmmo < playerInventory.size) {
+        val quantity = minOf(remainingAmmo, Item.MAX_AMMO_PER_SLOT)
+        playerInventory[slotIndexAmmo] = Item(ItemType.AMMO, quantity)
+        remainingAmmo -= quantity
+        slotIndexAmmo++
+    }
+
+    var remainingKeys = 200
+    var slotIndexKey = 1
+    while (remainingKeys > 0 && slotIndexKey < playerInventory.size) {
+        val quantity = minOf(remainingKeys, Item.MAX_KEYS_PER_SLOT)
+        playerInventory[slotIndexKey] = Item(ItemType.KEY, quantity)
+        remainingKeys -= quantity
+        slotIndexKey++
+    }
 
     frame.addMouseListener(object : MouseAdapter() {
         override fun mousePressed(event: MouseEvent) {
@@ -897,7 +924,7 @@ class Map(var renderCast: RenderCast? = null) {
                 intArrayOf(2, 0, 0, 0, 2),
                 intArrayOf(2, 2, 2, 2, 2)
             ),
-            entrances = listOf(Pair(GridPoint(6, 2), Direction.RIGHT))
+            entrances = listOf(Pair(GridPoint(-2, 2), Direction.RIGHT))
         ),
         RoomTemplate(
             grid = arrayOf(
@@ -907,7 +934,7 @@ class Map(var renderCast: RenderCast? = null) {
                 intArrayOf(1, 0, 0, 0, 1),
                 intArrayOf(1, 1, 1, 1, 1)
             ),
-            entrances = listOf(Pair(GridPoint(-2, 2), Direction.LEFT))
+            entrances = listOf(Pair(GridPoint(6, 2), Direction.LEFT))
         ),
 
         // Template 2: Medium 7x7 room
@@ -1655,13 +1682,32 @@ class Map(var renderCast: RenderCast? = null) {
                         }
 
                         if (selectedTemplate.grid[y][x] == 10) {
-                            chestsList.add(
-                                Chest(
-                                    x = (tileSize * (mapX+1)) - (tileSize / 2),
-                                    y = (tileSize * (mapY+1)) - (tileSize / 2),
-                                    loot = generateRandomLoot()
-                                )
-                            )
+                            val items = mutableListOf<Item>()
+                            val random = Random.nextFloat()
+                            val itemCount = when {
+                                random < 0.5f -> 1
+                                random < 0.8f -> 2
+                                else -> 3
+                            }
+
+                            for (i in 0 until itemCount) {
+                                val itemType = when (Random.nextFloat()) {
+                                    in 0.0f..0.4f -> ItemType.KEY
+                                    in 0.4f..0.7f -> ItemType.AMMO
+                                    else -> ItemType.MEDKIT
+                                }
+                                val quantity = when (itemType) {
+                                    ItemType.KEY -> Random.nextInt(1, Item.MAX_KEYS_PER_SLOT / 4)
+                                    ItemType.AMMO -> Random.nextInt(1, Item.MAX_AMMO_PER_SLOT / 4)
+                                    ItemType.MEDKIT -> 1
+                                }
+                                items.add(Item(itemType, quantity))
+                            }
+                            val spawnRNG = when {
+                                random < 0.5f -> chestsList.add(Chest((tileSize * (mapX+1)) - (tileSize / 2), (tileSize * (mapY+1)) - (tileSize / 2), items))
+                                else -> println("loss chest")
+                            }
+                            spawnRNG
                         }
 
                         if (selectedTemplate.grid[y][x] == 8) {
@@ -1719,13 +1765,21 @@ class Map(var renderCast: RenderCast? = null) {
                     roomConnections.add(Pair(adjustedTriggerPoint, newEntrancePoint))
                     updateWallDistances()
                     currentRooms += 1
-                    keys -= 1
+                    val keysSlot = playerInventory.indexOfFirst { it?.type == ItemType.KEY && it.quantity > 0 }
+                    playerInventory[keysSlot]!!.quantity -= 1
+                    if (playerInventory[keysSlot]!!.quantity <= 0) {
+                        playerInventory[keysSlot] = null
+                    }
                     return newEntrancePoint
                 }
             }
 
             currentRooms += 1
-            keys -= 1
+            val keysSlot = playerInventory.indexOfFirst { it?.type == ItemType.KEY && it.quantity > 0 }
+            playerInventory[keysSlot]!!.quantity -= 1
+            if (playerInventory[keysSlot]!!.quantity <= 0) {
+                playerInventory[keysSlot] = null
+            }
             updateWallDistances()
             return null
         } else if (currentRooms >= limitRooms && keys > 0) {
@@ -1738,6 +1792,8 @@ class Map(var renderCast: RenderCast? = null) {
             lightSources = mutableListOf<LightSource>()
             keysList = mutableListOf<Key>()
             medicationsList = mutableListOf<Medication>()
+            ammoList = mutableListOf<Ammo>()
+            chestsList = mutableListOf<Chest>()
             lightSources.add(
                 LightSource(
                     0.0, 0.0, color = Color(200, 200, 100), intensity = 0.75, range = 0.15, owner = "player"
@@ -1810,6 +1866,14 @@ class Mappingmap(private val map: Map, private val renderCast: RenderCast) : JPa
         // pos player -> titesize
         val playerGridX = positionX / tileSize
         val playerGridY = positionY / tileSize
+
+        val totalAmmo = playerInventory.filterNotNull()
+            .filter { it.type == ItemType.AMMO }
+            .sumOf { it.quantity }
+
+        val totalKeys = playerInventory.filterNotNull()
+            .filter { it.type == ItemType.KEY }
+            .sumOf { it.quantity }
 
         // Cache map
         if (bufferedImage == null || !map.grid.contentDeepEquals(lastGrid)) {
@@ -1907,7 +1971,7 @@ class Mappingmap(private val map: Map, private val renderCast: RenderCast) : JPa
                 }
             }
         }
-        // draw keys
+        // draw key
         keysList.forEach { key ->
             if (key.active) {
                 val relativeX = (key.x / tileSize) - playerGridX
@@ -1921,6 +1985,7 @@ class Mappingmap(private val map: Map, private val renderCast: RenderCast) : JPa
             }
         }
 
+        //draw chest
         chestsList.forEach { chest ->
             if (chest.active) {
                 val relativeX = (chest.x / tileSize) - playerGridX
@@ -1948,6 +2013,20 @@ class Mappingmap(private val map: Map, private val renderCast: RenderCast) : JPa
             }
         }
 
+        //draw ammo
+        ammoList.forEach { ammo ->
+            if (ammo.active) {
+                val relativeX = (ammo.x / tileSize) - playerGridX
+                val relativeY = (ammo.y / tileSize) - playerGridY
+                val ammoX = (playerMapX + relativeX * tileScale).toInt()
+                val ammoY = (playerMapY + relativeY * tileScale).toInt()
+                if (ammoX >= offsetX && ammoX < miniMapSize + offsetX && ammoY >= offsetY && ammoY < miniMapSize + offsetY) {
+                    g2.color = Color.DARK_GRAY
+                    g2.fillOval(ammoX - 3, ammoY - 3, 6, 6)
+                }
+            }
+        }
+
         // draw player
         val angleRad = Math.toRadians(currentangle.toDouble())
         val lineLength = 10.0
@@ -1971,12 +2050,13 @@ class Mappingmap(private val map: Map, private val renderCast: RenderCast) : JPa
         g2.drawString("HEAL: ${playerHealth}", 10, 340)
         g2.drawString("LEVEL: ${level}", 10, 360)
         g2.drawString("POINTS: ${points}", 10, 380)
-        g2.drawString("AMMO: ${currentAmmo}", 10, 400)
+        g2.drawString("AMMO: ${totalAmmo}", 10, 400)
         if (lookchest and !inventoryVisible) {
             g2.drawString("Click E", (1366+g2.font.size)/2, (768+g2.font.size)/2)
         }
         g2.font = font?.deriveFont(Font.BOLD, 50f) ?: Font("Arial", Font.BOLD, 50)
-        g2.drawString("${keys}", 85, 290)
+        g2.drawString("${totalKeys}", 85, 290)
+        keys = totalKeys
     }
 
     override fun getPreferredSize(): Dimension {

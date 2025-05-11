@@ -1,5 +1,6 @@
 package org.example.MainKt
 
+import kotlinx.coroutines.currentCoroutineContext
 import java.awt.Color
 import java.awt.MouseInfo
 import java.awt.event.KeyEvent
@@ -128,42 +129,6 @@ class Player(private val renderCast: RenderCast, private val map: Map) {
         val ammoToDeactivate = mutableListOf<Ammo>()
         val medicationsToDeactivate = mutableListOf<Medication>()
 
-        // Collect keys to deactivate
-        keysList.forEach { key ->
-            if (key.active) {
-                val dx = positionX - key.x
-                val dy = positionY - key.y
-                val distance = sqrt(dx * dx + dy * dy)
-                if (distance < key.pickupDistance) {
-                    keysToDeactivate.add(key)
-                }
-            }
-        }
-
-        // Collect ammo to deactivate
-        ammoList.forEach { ammo ->
-            if (ammo.active) {
-                val dx = positionX - ammo.x
-                val dy = positionY - ammo.y
-                val distance = sqrt(dx * dx + dy * dy)
-                if (distance < ammo.pickupDistance) {
-                    ammoToDeactivate.add(ammo)
-                }
-            }
-        }
-
-        // Collect medications to deactivate
-        medicationsList.forEach { medication ->
-            if (medication.active) {
-                val dx = positionX - medication.x
-                val dy = positionY - medication.y
-                val distance = sqrt(dx * dx + dy * dy)
-                if (distance < medication.pickupDistance) {
-                    medicationsToDeactivate.add(medication)
-                }
-            }
-        }
-
         // Apply changes after iteration
         keysToDeactivate.forEach { key ->
             key.active = false
@@ -264,18 +229,22 @@ class Player(private val renderCast: RenderCast, private val map: Map) {
         if (playerHealth <= 0) {
             positionX = (tileSize*11)-(tileSize/2)  //tile*positon - (half tile)
             positionY = (tileSize*11)-(tileSize/2)
-            keys = 1
-            playerHealth = 100
-            map.currentRooms = 0
 
-            level = (level/3)*2.toInt()
+            level -= 2
             if (level <= 0) {
                 level = 1
             }
+            keys += level
+            playerHealth = 100
+            map.currentRooms = 0
+            currentAmmo += 45
+
             enemies = mutableListOf<Enemy>()
             lightSources = mutableListOf<LightSource>()
             keysList = mutableListOf<Key>()
             medicationsList = mutableListOf<Medication>()
+            chestsList = mutableListOf<Chest>()
+            ammoList = mutableListOf<Ammo>()
 
             lightSources.add(LightSource(0.0, 0.0, color = Color(200, 200, 100), intensity = 0.75, range = 0.15, owner = "player"))
             enemies.add(Enemy((tileSize * 2) - (tileSize / 2), (tileSize * 2) - (tileSize / 2), health = 100, renderCast.enemyTextureId!!, renderCast, map, speed = (2.0 * ((18..19).random() / 10.0))))
