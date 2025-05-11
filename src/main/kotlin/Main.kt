@@ -76,7 +76,7 @@ class Key(
     var x: Double,
     var y: Double,
     var texture: BufferedImage,
-    var active: Boolean = true
+    var active: Boolean = true,
 ) {
     val size = 0.5 * tileSize // Key size (radius)
     val pickupDistance = 0.7 * 2 * size // radius for pickup
@@ -87,11 +87,11 @@ class Ammo(
     var x: Double,
     var y: Double,
     var texture: BufferedImage,
-    var active: Boolean = true
+    var active: Boolean = true,
+    val amount: Int = 10
 ) {
     val size = 0.5 * tileSize
     val pickupDistance = 0.7 * 2 * size
-    val amount: Int = 10
 }
 
 class LightSource(
@@ -1703,8 +1703,10 @@ class Map(var renderCast: RenderCast? = null) {
                                 }
                                 items.add(Item(itemType, quantity))
                             }
+                            println("skrzynka")
                             val spawnRNG = when {
                                 random < 0.5f -> chestsList.add(Chest((tileSize * (mapX+1)) - (tileSize / 2), (tileSize * (mapY+1)) - (tileSize / 2), items))
+                                random < 0.75f -> ammoList.add(Ammo((tileSize * (mapX+1)) - (tileSize / 2), (tileSize * (mapY+1)) - (tileSize / 2), texture = renderCast?.ammoTextureID!!, active = true, 6))
                                 else -> println("loss chest")
                             }
                             spawnRNG

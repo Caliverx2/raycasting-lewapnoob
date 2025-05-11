@@ -792,11 +792,17 @@ class RenderCast(private val map: Map) : JPanel() {
             g2.color = Color(100, 100, 100)
             g2.fillRect(x, y, slotSize, slotSize)
             playerInventory[i]?.let { item ->
-                g2.drawImage(getItemTexture(item.type), x, y, slotSize, slotSize, null)
+                if (item.type != ItemType.AMMO){
+                g2.drawImage(getItemTexture(item.type), x, y, (slotSize), (slotSize), null)} else {
+                    g2.drawImage(getItemTexture(item.type), x + (slotSize/5), y + (slotSize/5), (slotSize/4)*3, (slotSize/4)*3, null)
+                }
                 // Wyświetl ilość
                 g2.color = Color.WHITE
-                g2.font = Font("Arial", Font.BOLD, 12)
-                g2.drawString("${item.quantity}", x + slotSize - 20, y + slotSize - 5)
+                g2.font = font?.deriveFont(Font.TYPE1_FONT, 16.toFloat()) ?: Font("Arial", Font.BOLD, 1)//Font("Arial", Font.BOLD, 12)
+                if (item.quantity > 9) {
+                g2.drawString("${item.quantity}", x + slotSize - 20, y + slotSize - 5)} else {
+                    g2.drawString("  ${item.quantity}", x + slotSize - 20, y + slotSize - 5)
+                }
             }
         }
 
@@ -814,8 +820,11 @@ class RenderCast(private val map: Map) : JPanel() {
                 g2.drawImage(getItemTexture(chest.loot[i].type), x, y, slotSize, slotSize, null)
                 // Wyświetl ilość
                 g2.color = Color.WHITE
-                g2.font = Font("Arial", Font.BOLD, 12)
-                g2.drawString("${chest.loot[i].quantity}", x + slotSize - 20, y + slotSize - 5)
+                g2.font = font?.deriveFont(Font.BOLD, 8.toFloat()) ?: Font("Arial", Font.BOLD, 8)
+                if (chest.loot[i].quantity > 9) {
+                g2.drawString("${chest.loot[i].quantity}", x + slotSize - 20, y + slotSize - 5)} else {
+                    g2.drawString("  ${chest.loot[i].quantity}", x + slotSize - 20, y + slotSize - 5)
+                }
             }
         }
     }
