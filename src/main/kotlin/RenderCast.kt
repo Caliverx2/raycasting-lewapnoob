@@ -246,7 +246,6 @@ class RenderCast(private val map: Map) : JPanel() {
 
     fun renderWallsToBuffer() {
         var currentTime = System.nanoTime()
-        var elapsedTime = currentTime - lastRenderFrameTime
 
         lightSources.forEach { light ->
             if (light.owner != "player" && !light.owner.startsWith("projectile_")) {
@@ -900,12 +899,81 @@ class RenderCast(private val map: Map) : JPanel() {
             val shadowDrawStartX = shadowLeftX.coerceAtLeast(0.0).toInt()
             val shadowDrawEndX = shadowRightX.coerceAtMost(screenWidth - 1.0).toInt()
 
-            val dx = chest.x - positionX
-            val dy = chest.y - positionY
-            if (sqrt(dx * dx + dy * dy) < tileSize * chest.pickupDistance) {
-                lookchest = true
-            }
+            //chest interact
+            val playerPosX = positionX / tileSize
+            val playerPosY = positionY / tileSize
+            val chestPosX = chest.x / tileSize
+            val chestPosY = chest.y / tileSize
+            val dx = chestPosX - playerPosX
+            val dy = chestPosY - playerPosY
+            val rayLength = sqrt(dx * dx + dy * dy)
 
+            if (rayLength <= chest.pickupDistance) {
+                val rayDirX = dx / rayLength
+                val rayDirY = dy / rayLength
+                val shotAngleRad = Math.toRadians(currentangle.toDouble())
+                val angleToChest = atan2(dy, dx)
+                var angleDiff = abs(angleToChest - shotAngleRad)
+                angleDiff = min(angleDiff, 2 * Math.PI - angleDiff)
+
+                if (angleDiff < Math.toRadians(15.0)) {
+                    var mapX = playerPosX.toInt()
+                    var mapY = playerPosY.toInt()
+                    val deltaDistX = if (rayDirX == 0.0) 1e30 else abs(1 / rayDirX)
+                    val deltaDistY = if (rayDirY == 0.0) 1e30 else abs(1 / rayDirY)
+                    var stepX: Int
+                    var stepY: Int
+                    var sideDistX: Double
+                    var sideDistY: Double
+                    var side: Int
+
+                    if (rayDirX < 0) {
+                        stepX = -1
+                        sideDistX = (playerPosX - mapX) * deltaDistX
+                    } else {
+                        stepX = 1
+                        sideDistX = (mapX + 1.0 - playerPosX) * deltaDistX
+                    }
+                    if (rayDirY < 0) {
+                        stepY = -1
+                        sideDistY = (playerPosY - mapY) * deltaDistY
+                    } else {
+                        stepY = 1
+                        sideDistY = (mapY + 1.0 - playerPosY) * deltaDistY
+                    }
+
+                    var hitWall = false
+                    var wallDistance = Double.MAX_VALUE
+
+                    while (!hitWall) {
+                        if (sideDistX < sideDistY) {
+                            sideDistX += deltaDistX
+                            mapX += stepX
+                            side = 0
+                        } else {
+                            sideDistY += deltaDistY
+                            mapY += stepY
+                            side = 1
+                        }
+                        if (mapY !in map.grid.indices || mapX !in map.grid[0].indices) {
+                            break
+                        }
+                        if (wallIndices.contains(map.grid[mapY][mapX])) {
+                            hitWall = true
+                            wallDistance = if (side == 0) {
+                                (mapX - playerPosX + (1 - stepX) / 2.0) / rayDirX
+                            } else {
+                                (mapY - playerPosY + (1 - stepY) / 2.0) / rayDirY
+                            }
+                            if (wallDistance < 0.01) wallDistance = 0.01
+                        }
+                    }
+
+                    if (!hitWall || rayLength < wallDistance) {
+                        lookchest = true
+                    }
+                }
+            }
 
             // Render shadow
             for (x in shadowDrawStartX until shadowDrawEndX) {
@@ -1322,7 +1390,7 @@ class RenderCast(private val map: Map) : JPanel() {
                     clip.open(AudioSystem.getAudioInputStream(resource))
                     val gainControl = clip.getControl(FloatControl.Type.MASTER_GAIN) as FloatControl
                     val maxGain = gainControl.maximum
-                    var minGain = gainControl.minimum
+                    val minGain = gainControl.minimum
                     val gainRange = maxGain - minGain
                     val gain = minGain + (gainRange * volume.coerceIn(0.0f, 1.0f))
                     gainControl.value = gain
@@ -1505,13 +1573,14 @@ class RenderCast(private val map: Map) : JPanel() {
                                         random < 0.80f -> keysList.add(Key(itemX, itemY, keyTextureId!!))
                                         else -> ammoList.add(Ammo(itemX, itemY, ammoTextureID!!))
                                     }
+                                    randomItem
                                 }
                                 points = points + (100 / level)
                                 if (points >= 100) {
                                     level += 1
                                     points = 0
                                 }
-                                println("level: $level points: $points keys: $keys")
+                                println("level: $level points: $points keys: $keys ammo: $currentAmmo")
                                 playSound(when {
                                     random < 0.16f -> "scream1.wav"
                                     random < 0.32f -> "scream2.wav"

@@ -198,8 +198,8 @@ class Player(private val renderCast: RenderCast, private val map: Map) {
     }
 
     fun update(keysPressed: kotlin.collections.Map<Int, Boolean>) {
-        if (keysPressed.getOrDefault(KeyEvent.VK_W, false) || keysPressed.getOrDefault(KeyEvent.VK_UP, false)) w()
-        if (keysPressed.getOrDefault(KeyEvent.VK_S, false) || keysPressed.getOrDefault(KeyEvent.VK_DOWN, false)) s()
+        if (keysPressed.getOrDefault(KeyEvent.VK_W, false)) w()
+        if (keysPressed.getOrDefault(KeyEvent.VK_S, false)) s()
         if (keysPressed.getOrDefault(KeyEvent.VK_A, false)) a()
         if (keysPressed.getOrDefault(KeyEvent.VK_D, false)) d()
         if (keysPressed.getOrDefault(KeyEvent.VK_LEFT, false)) anglea()
@@ -220,14 +220,15 @@ class Player(private val renderCast: RenderCast, private val map: Map) {
                     gridY > lastGridY -> Map.Direction.UP
                     else -> Map.Direction.DOWN
                 }
-                map.generateRoom(Map.GridPoint(gridX, gridY), direction)
+                map.generateRoom((positionX/tileSize).toInt(), (positionY/tileSize).toInt(), direction)
+                //map.generateRoom(Map.GridPoint(gridX, gridY), direction)
             }
             lastGridX = gridX
             lastGridY = gridY
         }
 
         if (playerHealth <= 0) {
-            positionX = (tileSize*11)-(tileSize/2)  //tile*positon - (half tile)
+            positionX = (tileSize*11)-(tileSize/2)
             positionY = (tileSize*11)-(tileSize/2)
 
             level -= 2
