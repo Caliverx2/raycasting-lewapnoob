@@ -933,7 +933,7 @@ class Map(var renderCast: RenderCast? = null) {
         val newWidth = maxOf(grid[0].size + offsetX, x + margin + 1)
 
         if (offsetY > 0 || newHeight > grid.size || offsetX > 0 || newWidth > grid[0].size) {
-            val newGrid = Array(newHeight) { IntArray(newWidth) { 0 } }
+            val newGrid = Array(newHeight) { IntArray(newWidth) { 2 } }
             val newGridRooms = Array(newHeight) { IntArray(newWidth) { 0 } }
 
             for (yOld in grid.indices) {
@@ -969,7 +969,7 @@ class Map(var renderCast: RenderCast? = null) {
                     intArrayOf(2, 2, 2, 5, 2, 2, 2),
                     intArrayOf(2, 0, 0, 0, 0, 0, 2),
                     intArrayOf(2, 0, 0, 0, 0, 0, 2),
-                    intArrayOf(5, 0, 0, 4, 0, 0, 5),
+                    intArrayOf(5, 0, 0, 10, 0, 0, 5),
                     intArrayOf(2, 0, 0, 0, 0, 0, 2),
                     intArrayOf(2, 0, 0, 0, 0, 0, 2),
                     intArrayOf(2, 2, 2, 5, 2, 2, 2)
@@ -982,7 +982,7 @@ class Map(var renderCast: RenderCast? = null) {
                     intArrayOf(2, 0, 0, 0, 0, 0, 0, 0, 2),
                     intArrayOf(2, 0, 0, 0, 0, 0, 0, 0, 2),
                     intArrayOf(2, 0, 0, 0, 0, 0, 0, 0, 2),
-                    intArrayOf(5, 0, 0, 0, 4, 0, 0, 0, 5),
+                    intArrayOf(5, 0, 0, 0, 10, 0, 0, 0, 5),
                     intArrayOf(2, 0, 0, 0, 0, 0, 0, 0, 2),
                     intArrayOf(2, 0, 0, 0, 0, 0, 0, 0, 2),
                     intArrayOf(2, 0, 0, 0, 0, 0, 0, 0, 2),
@@ -1042,10 +1042,38 @@ class Map(var renderCast: RenderCast? = null) {
                     }
                 }
             }
-
+            if (!clear) {
+                println("not enough space to generate a room")
+                if (gridmod && (offsetX != 0 || offsetY != 0)) {
+                    enemies.forEach {enemy ->
+                        enemy.x += offsetX*tileSize
+                        enemy.y += offsetY*tileSize
+                    }
+                    keysList.forEach { key ->
+                        key.x += offsetX*tileSize
+                        key.y += offsetY*tileSize
+                    }
+                    medicationsList.forEach { medication ->
+                        medication.x += offsetX*tileSize
+                        medication.y += offsetY*tileSize
+                    }
+                    ammoList.forEach { ammo ->
+                        ammo.x += offsetX*tileSize
+                        ammo.y += offsetY*tileSize
+                    }
+                    lightSources.forEach { lightSource ->
+                        lightSource.x += offsetX*tileSize
+                        lightSource.y += offsetY*tileSize
+                    }
+                    chestsList.forEach { chest ->
+                        chest.x += offsetX*tileSize
+                        chest.y += offsetY*tileSize
+                    }
+                }
+            }
 
             if (clear) {
-                println("goat")
+                println("generation room")
                 grid[newY][newX] = 0
                 for (XX in 0..(roomTemplate.scale-1)) {
                     for (YY in 0..(roomTemplate.scale-1)) {
@@ -1209,22 +1237,32 @@ class Map(var renderCast: RenderCast? = null) {
                                 }
                                 val quantity = when (itemType) {
                                     ItemType.KEY -> Random.nextInt(1, Item.MAX_KEYS_PER_SLOT / 4)
-                                    ItemType.AMMO -> Random.nextInt(1, Item.MAX_AMMO_PER_SLOT / 4)
+                                    ItemType.AMMO -> Random.nextInt(7, Item.MAX_AMMO_PER_SLOT / 3)
                                     ItemType.MEDKIT -> 1
                                 }
                                 items.add(Item(itemType, quantity))
                             }
                             item1 = chestsList.size
                             item2 = ammoList.size
-                            println("skrzynka")
+                            println("chest")
                             val spawnRNG = when {
                                 random < 0.5f -> chestsList.add(Chest((tileSize * (distItemX+1)) - (tileSize / 2), (tileSize * (distItemY+1)) - (tileSize / 2), items))
                                 random < 0.75f -> ammoList.add(Ammo((tileSize * (distItemX+1)) - (tileSize / 2), (tileSize * (distItemY+1)) - (tileSize / 2), texture = renderCast?.ammoTextureID!!, active = true, 6))
                                 else -> println("loss chest")
                             }
                             spawnRNG
-                            println("$item1, ${chestsList.size}")
-                            println("$item2, ${ammoList.size}")
+                            if (item1 < chestsList.size) {
+                                if (gridmod && (offsetX != 0 || offsetY != 0)) {
+                                    chestsList.get(chestsList.size-1).x -= offsetX*tileSize
+                                    chestsList.get(chestsList.size-1).y -= offsetY*tileSize
+                                }
+                            }
+                            if (item2 < ammoList.size) {
+                                if (gridmod && (offsetX != 0 || offsetY != 0)) {
+                                    ammoList.get(ammoList.size-1).x -= offsetX*tileSize
+                                    ammoList.get(ammoList.size-1).y -= offsetY*tileSize
+                                }
+                            }
                         }
                     }
                 }
