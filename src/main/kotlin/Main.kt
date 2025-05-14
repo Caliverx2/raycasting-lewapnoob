@@ -873,7 +873,7 @@ class Map(var renderCast: RenderCast? = null) {
         intArrayOf(2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2),
         intArrayOf(2,0,2,0,2,0,1,0,1,0,1,0,1,0,1,0,2,0,2,0,2),
         intArrayOf(2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2),
-        intArrayOf(2,0,2,0,2,0,5,0,1,1,0,1,1,0,1,0,2,0,2,0,2),
+        intArrayOf(2,0,2,0,2,0,1,0,1,1,0,1,1,0,1,0,2,0,2,0,2),
         intArrayOf(2,0,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0,0,0,2),
         intArrayOf(5,0,2,0,2,0,1,0,0,0,0,0,0,0,1,0,2,0,2,0,5),
         intArrayOf(2,0,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0,0,0,2),
@@ -915,6 +915,7 @@ class Map(var renderCast: RenderCast? = null) {
     var gridmod = false
     var currentRooms = 0
     enum class Direction { UP, DOWN, LEFT, RIGHT }
+    var clear = true
 
     data class RoomTemplate(
         val grid: Array<IntArray>,
@@ -997,276 +998,19 @@ class Map(var renderCast: RenderCast? = null) {
         var (offsetX, offsetY) = offsets
 
         if (gridmod && (offsetX != 0 || offsetY != 0)) {
-            val DirectionPositionX = when {
-                enterdirection == Direction.UP -> positionX += offsetX*tileSize
-                enterdirection == Direction.DOWN -> positionX += offsetX*tileSize
-                enterdirection == Direction.RIGHT -> positionX += offsetX*tileSize
-                else -> positionX += offsetX*tileSize
-            }
-            val DirectionPositionY = when {
-                enterdirection == Direction.UP -> positionY += offsetY*tileSize
-                enterdirection == Direction.DOWN -> positionY += offsetY*tileSize
-                enterdirection == Direction.RIGHT -> positionY += offsetY*tileSize
-                else -> positionY += offsetY*tileSize
-            }
-            DirectionPositionX
-            DirectionPositionY
+            positionX += offsetX*tileSize
+            positionY += offsetY*tileSize
         }
 
         if (keys > 0) {
             println("$currentRooms $enterdirection")
-            var clear = true
-            for (XX in 0..(roomTemplate.scale-1)) {
-                for (YY in 0..(roomTemplate.scale-1)) {
-                    if(clear) {
-                        if (enterdirection == Direction.UP) {
-                            if (gridRooms[(newY+YY)-(roomTemplate.scale-(roomTemplate.scale+1))][(newX+XX)-(roomTemplate.scale/2)] != 0) {
-                                clear = false
-                            }
-                        }
-                        if (enterdirection == Direction.DOWN) {
-                            if (gridRooms[(newY+YY)-(roomTemplate.scale)][(newX+XX)-(roomTemplate.scale/2)] != 0) {
-                                clear = false
-                            }
-                        }
-                        if (enterdirection == Direction.RIGHT) {
-                            if (gridRooms[(newY+YY)-(roomTemplate.scale/2)][(newX+XX)-(roomTemplate.scale)] != 0) {
-                                clear = false
-                            }
-                        }
-                        if (enterdirection == Direction.LEFT) {
-                            if (gridRooms[(newY+YY)-(roomTemplate.scale/2)][(newX+XX)-(roomTemplate.scale-(roomTemplate.scale+1))] != 0) {
-                                clear = false
-                            }
-                        }
-                    }
-                }
-            }
-            if (!clear) {
-                println("not enough space to generate a room")
-                if (gridmod && (offsetX != 0 || offsetY != 0)) {
-                    enemies.forEach {enemy ->
-                        enemy.x += offsetX*tileSize
-                        enemy.y += offsetY*tileSize
-                    }
-                    keysList.forEach { key ->
-                        key.x += offsetX*tileSize
-                        key.y += offsetY*tileSize
-                    }
-                    medicationsList.forEach { medication ->
-                        medication.x += offsetX*tileSize
-                        medication.y += offsetY*tileSize
-                    }
-                    ammoList.forEach { ammo ->
-                        ammo.x += offsetX*tileSize
-                        ammo.y += offsetY*tileSize
-                    }
-                    lightSources.forEach { lightSource ->
-                        lightSource.x += offsetX*tileSize
-                        lightSource.y += offsetY*tileSize
-                    }
-                    chestsList.forEach { chest ->
-                        chest.x += offsetX*tileSize
-                        chest.y += offsetY*tileSize
-                    }
-                }
-            }
+            clear = true
+            generationCheck(x, y, enterdirection, roomTemplate, newX, newY)
 
             if (clear) {
                 println("generation room")
                 grid[newY][newX] = 0
-                for (XX in 0..(roomTemplate.scale-1)) {
-                    for (YY in 0..(roomTemplate.scale-1)) {
-                        val distGrid = when {
-                            enterdirection == Direction.UP -> grid[(newY+YY)-(roomTemplate.scale-(roomTemplate.scale+1))][(newX+XX)-(roomTemplate.scale/2)] = roomTemplate.grid[YY][XX]
-                            enterdirection == Direction.DOWN -> grid[(newY+YY)-(roomTemplate.scale)][(newX+XX)-(roomTemplate.scale/2)] = roomTemplate.grid[YY][XX]
-                            enterdirection == Direction.RIGHT -> grid[(newY+YY)-(roomTemplate.scale/2)][(newX+XX)-roomTemplate.scale] = roomTemplate.grid[YY][XX]
-                            else -> grid[(newY+YY)-(roomTemplate.scale/2)][(newX+XX)-(roomTemplate.scale-(roomTemplate.scale+1))] = roomTemplate.grid[YY][XX]
-                        }
-                        val distRooms = when {
-                            enterdirection == Direction.UP -> gridRooms[(newY+YY)-(roomTemplate.scale-(roomTemplate.scale+1))][(newX+XX)-(roomTemplate.scale/2)] = roomTemplate.grid[YY][XX]
-                            enterdirection == Direction.DOWN -> gridRooms[(newY+YY)-(roomTemplate.scale)][(newX+XX)-(roomTemplate.scale/2)] = roomTemplate.grid[YY][XX]
-                            enterdirection == Direction.RIGHT -> gridRooms[(newY+YY)-(roomTemplate.scale/2)][(newX+XX)-roomTemplate.scale] = roomTemplate.grid[YY][XX]
-                            else -> gridRooms[(newY+YY)-(roomTemplate.scale/2)][(newX+XX)-(roomTemplate.scale-(roomTemplate.scale+1))] = roomTemplate.grid[YY][XX]
-                        }
-                        distGrid
-                        distRooms
-
-                        val distItemX = when {
-                            enterdirection == Direction.UP -> ((newX+XX)-(roomTemplate.scale/2))
-                            enterdirection == Direction.DOWN -> ((newX+XX)-(roomTemplate.scale/2))
-                            enterdirection == Direction.RIGHT -> ((newX+XX)-roomTemplate.scale)
-                            else -> ((newX+XX)-(roomTemplate.scale-(roomTemplate.scale+1)))
-                        }
-                        val distItemY = when {
-                            enterdirection == Direction.UP -> ((newY+YY)-(roomTemplate.scale-(roomTemplate.scale+1)))
-                            enterdirection == Direction.DOWN -> ((newY+YY)-(roomTemplate.scale))
-                            enterdirection == Direction.RIGHT -> ((newY+YY)-(roomTemplate.scale/2))
-                            else -> ((newY+YY)-(roomTemplate.scale/2))
-                        }
-
-                        if (enterdirection == Direction.UP) {
-                            grid[newY+1][newX] = 0
-                        }
-                        if (enterdirection == Direction.DOWN) {
-                            grid[newY-1][newX] = 0
-                        }
-                        if (enterdirection == Direction.RIGHT) {
-                            grid[newY][newX-1] = 0
-                        }
-                        if (enterdirection == Direction.LEFT) {
-                            grid[newY][newX+1] = 0
-                        }
-
-                        if (roomTemplate.grid[XX][YY] == 3) {
-                            renderCast?.let {
-                                enemies.add(
-                                    Enemy(
-                                        (tileSize * (distItemX)) - (tileSize / 2),
-                                        (tileSize * (distItemY)) - (tileSize / 2),
-                                        (100 + (level * 7.5) * 2).toInt(),
-                                        renderCast!!.enemyTextureId!!,
-                                        renderCast = it,
-                                        this,
-                                        speed = (2.0 * ((10..15).random() / 10.0))
-                                    )
-                                )
-                                if (gridmod && (offsetX != 0 || offsetY != 0)) {
-                                    enemies.get(enemies.size-1).x -= offsetX*tileSize
-                                    enemies.get(enemies.size-1).y -= offsetY*tileSize
-                                }
-                                lightSources.add(
-                                    LightSource(
-                                        (distItemX + 0.5),
-                                        (distItemY + 0.5),
-                                        color = Color(20, 20, 200),
-                                        intensity = 0.25,
-                                        range = 1.0,
-                                        owner = "${enemies[enemies.size - 1]}"
-                                    )
-                                )
-                            } ?: throw IllegalStateException("renderCast is null")
-                        }
-                        if (roomTemplate.grid[XX][YY] == 4) {
-                            ammoList.add(
-                                Ammo(
-                                    x = (tileSize * (distItemX+1)) - (tileSize / 2),
-                                    y = (tileSize * (distItemY+1)) - (tileSize / 2),
-                                    texture = renderCast?.ammoTextureID!!,
-                                    active = true
-                                )
-                            )
-                            if (gridmod && (offsetX != 0 || offsetY != 0)) {
-                                ammoList.get(ammoList.size-1).x -= offsetX*tileSize
-                                ammoList.get(ammoList.size-1).y -= offsetY*tileSize
-                            }
-                        }
-                        if (roomTemplate.grid[XX][YY] == 6) {
-                            renderCast?.let {
-                                lightSources.add(
-                                    LightSource(
-                                        (distItemX + 0.5),
-                                        (distItemY + 0.5),
-                                        color = Color(200, 20, 20),
-                                        intensity = 0.25,
-                                        range = 3.0,
-                                        owner = "skun"
-                                    )
-                                )
-                                it.repaint()
-                            }
-                            if (gridmod && (offsetX != 0 || offsetY != 0)) {
-                                lightSources.get(lightSources.size-1).x -= offsetX*tileSize
-                                lightSources.get(lightSources.size-1).y -= offsetY*tileSize
-                            }
-                        }
-                        if (roomTemplate.grid[XX][YY] == 7) {
-                            val random = Random.nextFloat()
-                            val healRNG = when {
-                                random < 0.33f -> 15
-                                random < 0.66f -> 25
-                                else -> 35
-                            }
-
-                            renderCast?.let {
-                                medicationsList.add(
-                                    Medication(
-                                        x = ((tileSize * (distItemX + 1)) - (tileSize / 2)),
-                                        y = ((tileSize * (distItemY + 1)) - (tileSize / 2)),
-                                        renderCast?.medicationTextureID!!,
-                                        heal = healRNG
-                                    )
-                                )
-                                it.repaint()
-                            }
-                            if (gridmod && (offsetX != 0 || offsetY != 0)) {
-                                medicationsList.get(medicationsList.size-1).x -= offsetX*tileSize
-                                medicationsList.get(medicationsList.size-1).y -= offsetY*tileSize
-                            }
-                        }
-                        if (roomTemplate.grid[XX][YY] == 8) {
-                            keysList.add(
-                                Key(
-                                    x = (tileSize * (distItemX+1)) - (tileSize / 2),
-                                    y = (tileSize * (distItemY+1)) - (tileSize / 2),
-                                    texture = renderCast?.keyTextureId!!,
-                                    active = true
-                                )
-                            )
-                            if (gridmod && (offsetX != 0 || offsetY != 0)) {
-                                keysList.get(keysList.size-1).x -= offsetX*tileSize
-                                keysList.get(keysList.size-1).y -= offsetY*tileSize
-                            }
-                        }
-                        if (roomTemplate.grid[XX][YY] == 10) {
-                            var item1 = 0
-                            var item2 = 0
-                            val items = mutableListOf<Item>()
-                            val random = Random.nextFloat()
-                            val itemCount = when {
-                                random < 0.5f -> 1
-                                random < 0.8f -> 2
-                                else -> 3
-                            }
-
-                            for (i in 0 until itemCount) {
-                                val itemType = when (Random.nextFloat()) {
-                                    in 0.0f..0.4f -> ItemType.KEY
-                                    in 0.4f..0.7f -> ItemType.AMMO
-                                    else -> ItemType.MEDKIT
-                                }
-                                val quantity = when (itemType) {
-                                    ItemType.KEY -> Random.nextInt(1, Item.MAX_KEYS_PER_SLOT / 4)
-                                    ItemType.AMMO -> Random.nextInt(7, Item.MAX_AMMO_PER_SLOT / 3)
-                                    ItemType.MEDKIT -> 1
-                                }
-                                items.add(Item(itemType, quantity))
-                            }
-                            item1 = chestsList.size
-                            item2 = ammoList.size
-                            println("chest")
-                            val spawnRNG = when {
-                                random < 0.5f -> chestsList.add(Chest((tileSize * (distItemX+1)) - (tileSize / 2), (tileSize * (distItemY+1)) - (tileSize / 2), items))
-                                random < 0.75f -> ammoList.add(Ammo((tileSize * (distItemX+1)) - (tileSize / 2), (tileSize * (distItemY+1)) - (tileSize / 2), texture = renderCast?.ammoTextureID!!, active = true, 6))
-                                else -> println("loss chest")
-                            }
-                            spawnRNG
-                            if (item1 < chestsList.size) {
-                                if (gridmod && (offsetX != 0 || offsetY != 0)) {
-                                    chestsList.get(chestsList.size-1).x -= offsetX*tileSize
-                                    chestsList.get(chestsList.size-1).y -= offsetY*tileSize
-                                }
-                            }
-                            if (item2 < ammoList.size) {
-                                if (gridmod && (offsetX != 0 || offsetY != 0)) {
-                                    ammoList.get(ammoList.size-1).x -= offsetX*tileSize
-                                    ammoList.get(ammoList.size-1).y -= offsetY*tileSize
-                                }
-                            }
-                        }
-                    }
-                }
-
+                generation(x, y, enterdirection, roomTemplate, newX, newY, offsetX, offsetY)
                 if (gridmod && (offsetX != 0 || offsetY != 0)) {
                     enemies.forEach {enemy ->
                         enemy.x += offsetX*tileSize
@@ -1298,6 +1042,305 @@ class Map(var renderCast: RenderCast? = null) {
                 playerInventory[keysSlot]!!.quantity -= 1
                 if (playerInventory[keysSlot]!!.quantity <= 0) {
                     playerInventory[keysSlot] = null
+                }
+            }
+
+            if (!clear) {
+                println("not enough space to generate a room")
+                if (enterdirection == Direction.UP) {
+                    roomTemplate = RoomTemplate(
+                        grid = arrayOf(
+                            intArrayOf(2, 5, 2),
+                            intArrayOf(2, 0, 2),
+                            intArrayOf(2, 5, 2),
+                        ),
+                        scale = 3
+                    )
+                }
+                if (enterdirection == Direction.DOWN) {
+                    roomTemplate = RoomTemplate(
+                        grid = arrayOf(
+                            intArrayOf(2, 5, 2),
+                            intArrayOf(2, 0, 2),
+                            intArrayOf(2, 5, 2),
+                        ),
+                        scale = 3
+                    )
+                }
+                if (enterdirection == Direction.RIGHT) {
+                    roomTemplate = RoomTemplate(
+                        grid = arrayOf(
+                            intArrayOf(2, 2, 2),
+                            intArrayOf(5, 0, 5),
+                            intArrayOf(2, 2, 2),
+                        ),
+                        scale = 3
+                    )
+                }
+                if (enterdirection == Direction.LEFT) {
+                    roomTemplate = RoomTemplate(
+                        grid = arrayOf(
+                            intArrayOf(2, 2, 2),
+                            intArrayOf(5, 0, 5),
+                            intArrayOf(2, 2, 2),
+                        ),
+                        scale = 3
+                    )
+                }
+                clear = true
+                generationCheck(x, y, enterdirection, roomTemplate, newX, newY)
+                if (clear == true) {
+                    grid[newY][newX] = 0
+                    generation(x, y, enterdirection, roomTemplate, newX, newY, offsetX, offsetY)
+                }
+                if (gridmod && (offsetX != 0 || offsetY != 0)) {
+                    enemies.forEach {enemy ->
+                        enemy.x += offsetX*tileSize
+                        enemy.y += offsetY*tileSize
+                    }
+                    keysList.forEach { key ->
+                        key.x += offsetX*tileSize
+                        key.y += offsetY*tileSize
+                    }
+                    medicationsList.forEach { medication ->
+                        medication.x += offsetX*tileSize
+                        medication.y += offsetY*tileSize
+                    }
+                    ammoList.forEach { ammo ->
+                        ammo.x += offsetX*tileSize
+                        ammo.y += offsetY*tileSize
+                    }
+                    lightSources.forEach { lightSource ->
+                        lightSource.x += offsetX*tileSize
+                        lightSource.y += offsetY*tileSize
+                    }
+                    chestsList.forEach { chest ->
+                        chest.x += offsetX*tileSize
+                        chest.y += offsetY*tileSize
+                    }
+                }
+            }
+        }
+    }
+
+    fun generationCheck(x: Int = 0, y: Int = 0, enterdirection: Direction, roomTemplate: RoomTemplate, newX: Int, newY: Int){
+        for (XX in 0..(roomTemplate.scale-1)) {
+            for (YY in 0..(roomTemplate.scale-1)) {
+                if(clear) {
+                    if (enterdirection == Direction.UP) {
+                        if (gridRooms[(newY+YY)-(roomTemplate.scale-(roomTemplate.scale+1))][(newX+XX)-(roomTemplate.scale/2)] != 0) {
+                            clear = false
+                        }
+                    }
+                    if (enterdirection == Direction.DOWN) {
+                        if (gridRooms[(newY+YY)-(roomTemplate.scale)][(newX+XX)-(roomTemplate.scale/2)] != 0) {
+                            clear = false
+                        }
+                    }
+                    if (enterdirection == Direction.RIGHT) {
+                        if (gridRooms[(newY+YY)-(roomTemplate.scale/2)][(newX+XX)-(roomTemplate.scale)] != 0) {
+                            clear = false
+                        }
+                    }
+                    if (enterdirection == Direction.LEFT) {
+                        if (gridRooms[(newY+YY)-(roomTemplate.scale/2)][(newX+XX)-(roomTemplate.scale-(roomTemplate.scale+1))] != 0) {
+                            clear = false
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    fun generation(x: Int = 0, y: Int = 0, enterdirection: Direction, roomTemplate: RoomTemplate, newX: Int, newY: Int, offsetX: Int, offsetY: Int) {
+        for (XX in 0..(roomTemplate.scale-1)) {
+            for (YY in 0..(roomTemplate.scale-1)) {
+                val distGrid = when {
+                    enterdirection == Direction.UP -> grid[(newY+YY)-(roomTemplate.scale-(roomTemplate.scale+1))][(newX+XX)-(roomTemplate.scale/2)] = roomTemplate.grid[YY][XX]
+                    enterdirection == Direction.DOWN -> grid[(newY+YY)-(roomTemplate.scale)][(newX+XX)-(roomTemplate.scale/2)] = roomTemplate.grid[YY][XX]
+                    enterdirection == Direction.RIGHT -> grid[(newY+YY)-(roomTemplate.scale/2)][(newX+XX)-roomTemplate.scale] = roomTemplate.grid[YY][XX]
+                    else -> grid[(newY+YY)-(roomTemplate.scale/2)][(newX+XX)-(roomTemplate.scale-(roomTemplate.scale+1))] = roomTemplate.grid[YY][XX]
+                }
+                val distRooms = when {
+                    enterdirection == Direction.UP -> gridRooms[(newY+YY)-(roomTemplate.scale-(roomTemplate.scale+1))][(newX+XX)-(roomTemplate.scale/2)] = roomTemplate.grid[YY][XX]
+                    enterdirection == Direction.DOWN -> gridRooms[(newY+YY)-(roomTemplate.scale)][(newX+XX)-(roomTemplate.scale/2)] = roomTemplate.grid[YY][XX]
+                    enterdirection == Direction.RIGHT -> gridRooms[(newY+YY)-(roomTemplate.scale/2)][(newX+XX)-roomTemplate.scale] = roomTemplate.grid[YY][XX]
+                    else -> gridRooms[(newY+YY)-(roomTemplate.scale/2)][(newX+XX)-(roomTemplate.scale-(roomTemplate.scale+1))] = roomTemplate.grid[YY][XX]
+                }
+                distGrid
+                distRooms
+
+                val distItemX = when {
+                    enterdirection == Direction.UP -> ((newX+XX)-(roomTemplate.scale/2))
+                    enterdirection == Direction.DOWN -> ((newX+XX)-(roomTemplate.scale/2))
+                    enterdirection == Direction.RIGHT -> ((newX+XX)-roomTemplate.scale)
+                    else -> ((newX+XX)-(roomTemplate.scale-(roomTemplate.scale+1)))
+                }
+                val distItemY = when {
+                    enterdirection == Direction.UP -> ((newY+YY)-(roomTemplate.scale-(roomTemplate.scale+1)))
+                    enterdirection == Direction.DOWN -> ((newY+YY)-(roomTemplate.scale))
+                    enterdirection == Direction.RIGHT -> ((newY+YY)-(roomTemplate.scale/2))
+                    else -> ((newY+YY)-(roomTemplate.scale/2))
+                }
+
+                if (enterdirection == Direction.UP) {
+                    grid[newY+1][newX] = 0
+                }
+                if (enterdirection == Direction.DOWN) {
+                    grid[newY-1][newX] = 0
+                }
+                if (enterdirection == Direction.RIGHT) {
+                    grid[newY][newX-1] = 0
+                }
+                if (enterdirection == Direction.LEFT) {
+                    grid[newY][newX+1] = 0
+                }
+
+                if (roomTemplate.grid[XX][YY] == 3) {
+                    renderCast?.let {
+                        enemies.add(
+                            Enemy(
+                                (tileSize * (distItemX)) - (tileSize / 2),
+                                (tileSize * (distItemY)) - (tileSize / 2),
+                                (100 + (level * 7.5) * 2).toInt(),
+                                renderCast!!.enemyTextureId!!,
+                                renderCast = it,
+                                this,
+                                speed = (2.0 * ((10..15).random() / 10.0))
+                            )
+                        )
+                        if (gridmod && (offsetX != 0 || offsetY != 0)) {
+                            enemies.get(enemies.size-1).x -= offsetX*tileSize
+                            enemies.get(enemies.size-1).y -= offsetY*tileSize
+                        }
+                        lightSources.add(
+                            LightSource(
+                                (distItemX + 0.5),
+                                (distItemY + 0.5),
+                                color = Color(20, 20, 200),
+                                intensity = 0.25,
+                                range = 1.0,
+                                owner = "${enemies[enemies.size - 1]}"
+                            )
+                        )
+                    } ?: throw IllegalStateException("renderCast is null")
+                }
+                if (roomTemplate.grid[XX][YY] == 4) {
+                    ammoList.add(
+                        Ammo(
+                            x = (tileSize * (distItemX+1)) - (tileSize / 2),
+                            y = (tileSize * (distItemY+1)) - (tileSize / 2),
+                            texture = renderCast?.ammoTextureID!!,
+                            active = true
+                        )
+                    )
+                    if (gridmod && (offsetX != 0 || offsetY != 0)) {
+                        ammoList.get(ammoList.size-1).x -= offsetX*tileSize
+                        ammoList.get(ammoList.size-1).y -= offsetY*tileSize
+                    }
+                }
+                if (roomTemplate.grid[XX][YY] == 6) {
+                    renderCast?.let {
+                        lightSources.add(
+                            LightSource(
+                                (distItemX + 0.5),
+                                (distItemY + 0.5),
+                                color = Color(200, 20, 20),
+                                intensity = 0.25,
+                                range = 3.0,
+                                owner = "skun"
+                            )
+                        )
+                        it.repaint()
+                    }
+                    if (gridmod && (offsetX != 0 || offsetY != 0)) {
+                        lightSources.get(lightSources.size-1).x -= offsetX*tileSize
+                        lightSources.get(lightSources.size-1).y -= offsetY*tileSize
+                    }
+                }
+                if (roomTemplate.grid[XX][YY] == 7) {
+                    val random = Random.nextFloat()
+                    val healRNG = when {
+                        random < 0.33f -> 15
+                        random < 0.66f -> 25
+                        else -> 35
+                    }
+
+                    renderCast?.let {
+                        medicationsList.add(
+                            Medication(
+                                x = ((tileSize * (distItemX + 1)) - (tileSize / 2)),
+                                y = ((tileSize * (distItemY + 1)) - (tileSize / 2)),
+                                renderCast?.medicationTextureID!!,
+                                heal = healRNG
+                            )
+                        )
+                        it.repaint()
+                    }
+                    if (gridmod && (offsetX != 0 || offsetY != 0)) {
+                        medicationsList.get(medicationsList.size-1).x -= offsetX*tileSize
+                        medicationsList.get(medicationsList.size-1).y -= offsetY*tileSize
+                    }
+                }
+                if (roomTemplate.grid[XX][YY] == 8) {
+                    keysList.add(
+                        Key(
+                            x = (tileSize * (distItemX+1)) - (tileSize / 2),
+                            y = (tileSize * (distItemY+1)) - (tileSize / 2),
+                            texture = renderCast?.keyTextureId!!,
+                            active = true
+                        )
+                    )
+                    if (gridmod && (offsetX != 0 || offsetY != 0)) {
+                        keysList.get(keysList.size-1).x -= offsetX*tileSize
+                        keysList.get(keysList.size-1).y -= offsetY*tileSize
+                    }
+                }
+                if (roomTemplate.grid[XX][YY] == 10) {
+                    var item1 = 0
+                    var item2 = 0
+                    val items = mutableListOf<Item>()
+                    val random = Random.nextFloat()
+                    val itemCount = when {
+                        random < 0.5f -> 1
+                        random < 0.8f -> 2
+                        else -> 3
+                    }
+
+                    for (i in 0 until itemCount) {
+                        val itemType = when (Random.nextFloat()) {
+                            in 0.0f..0.4f -> ItemType.KEY
+                            in 0.4f..0.7f -> ItemType.AMMO
+                            else -> ItemType.MEDKIT
+                        }
+                        val quantity = when (itemType) {
+                            ItemType.KEY -> Random.nextInt(1, Item.MAX_KEYS_PER_SLOT / 4)
+                            ItemType.AMMO -> Random.nextInt(7, Item.MAX_AMMO_PER_SLOT / 3)
+                            ItemType.MEDKIT -> 1
+                        }
+                        items.add(Item(itemType, quantity))
+                    }
+                    item1 = chestsList.size
+                    item2 = ammoList.size
+                    println("chest")
+                    val spawnRNG = when {
+                        random < 0.5f -> chestsList.add(Chest((tileSize * (distItemX+1)) - (tileSize / 2), (tileSize * (distItemY+1)) - (tileSize / 2), items))
+                        random < 0.75f -> ammoList.add(Ammo((tileSize * (distItemX+1)) - (tileSize / 2), (tileSize * (distItemY+1)) - (tileSize / 2), texture = renderCast?.ammoTextureID!!, active = true, 6))
+                        else -> println("loss chest")
+                    }
+                    spawnRNG
+                    if (item1 < chestsList.size) {
+                        if (gridmod && (offsetX != 0 || offsetY != 0)) {
+                            chestsList.get(chestsList.size-1).x -= offsetX*tileSize
+                            chestsList.get(chestsList.size-1).y -= offsetY*tileSize
+                        }
+                    }
+                    if (item2 < ammoList.size) {
+                        if (gridmod && (offsetX != 0 || offsetY != 0)) {
+                            ammoList.get(ammoList.size-1).x -= offsetX*tileSize
+                            ammoList.get(ammoList.size-1).y -= offsetY*tileSize
+                        }
+                    }
                 }
             }
         }
