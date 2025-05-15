@@ -35,6 +35,8 @@ var playerHealth: Int = 100
 var level: Int = 1
 var points: Int = 0
 var keys: Int = 0
+var selectSlot: Int = 1
+var activateSlot: Boolean = false
 
 var map = true
 var currentangle = 45
@@ -805,7 +807,6 @@ fun main() = runBlocking {
         override fun keyPressed(event: KeyEvent) {
             keysPressed[event.keyCode] = true
             when (event.keyCode) {
-
                 KeyEvent.VK_SPACE -> {
                     if (!isShooting) {
                         renderCast.shotgun()
@@ -819,6 +820,11 @@ fun main() = runBlocking {
             when (event.keyCode) {
                 KeyEvent.VK_SPACE -> isShooting = false
                 KeyEvent.VK_E -> inventoryVisible = !inventoryVisible
+                in KeyEvent.VK_1..KeyEvent.VK_9 -> {
+                    selectSlot = event.keyCode - KeyEvent.VK_0
+                    activateSlot = true
+                    println(selectSlot)
+                }
             }
         }
 
@@ -953,46 +959,70 @@ class Map(var renderCast: RenderCast? = null) {
     }
 
     fun generateRoom(x: Int = 0, y: Int = 0, enterdirection: Direction) {
-        val random = Random.nextFloat()
-        var RoomRNG = when {
-            random < 0.33f -> RoomTemplate(
+        //0-air 1-wall 2-black_wall 3-enemy 4-ammo 5-door 6-lightSource 7-medication 8-key 10-chest
+        val roomTemplates = listOf(
+            RoomTemplate(
                 grid = arrayOf(
                     intArrayOf(2, 2, 5, 2, 2),
                     intArrayOf(2, 0, 0, 0, 2),
-                    intArrayOf(5, 0, 3, 0, 5),
+                    intArrayOf(5, 0, 6, 0, 5),
                     intArrayOf(2, 0, 0, 0, 2),
                     intArrayOf(2, 2, 5, 2, 2)
                 ),
                 scale = 5
-            )
-            random < 0.66f -> RoomTemplate(
+            ),
+            RoomTemplate(
+                grid = arrayOf(
+                    intArrayOf(2, 2, 2, 5, 2, 2, 2),
+                    intArrayOf(2, 0, 0, 0, 0, 0, 2),
+                    intArrayOf(2, 0, 7, 0, 4, 0, 2),
+                    intArrayOf(5, 0, 0, 6, 0, 0, 5),
+                    intArrayOf(2, 0, 4, 0, 7, 0, 2),
+                    intArrayOf(2, 0, 0, 0, 0, 0, 2),
+                    intArrayOf(2, 2, 2, 5, 2, 2, 2)
+                ),
+                scale = 7
+            ),
+            RoomTemplate(
+                grid = arrayOf(
+                    intArrayOf(2, 2, 2, 5, 2, 2, 2),
+                    intArrayOf(2, 0, 0, 0, 0, 0, 2),
+                    intArrayOf(2, 0, 0, 0, 3, 0, 2),
+                    intArrayOf(5, 0, 0, 6, 0, 0, 5),
+                    intArrayOf(2, 0, 3, 0, 0, 0, 2),
+                    intArrayOf(2, 0, 0, 0, 0, 0, 2),
+                    intArrayOf(2, 2, 2, 5, 2, 2, 2)
+                ),
+                scale = 7
+            ),
+            RoomTemplate(
                 grid = arrayOf(
                     intArrayOf(2, 2, 2, 5, 2, 2, 2),
                     intArrayOf(2, 0, 0, 0, 0, 0, 2),
                     intArrayOf(2, 0, 0, 0, 0, 0, 2),
-                    intArrayOf(5, 0, 0, 10, 0, 0, 5),
+                    intArrayOf(5, 0, 0, 6, 0, 0, 5),
                     intArrayOf(2, 0, 0, 0, 0, 0, 2),
                     intArrayOf(2, 0, 0, 0, 0, 0, 2),
                     intArrayOf(2, 2, 2, 5, 2, 2, 2)
                 ),
                 scale = 7
-            )
-            else -> RoomTemplate(
+            ),
+            RoomTemplate(
                 grid = arrayOf(
                     intArrayOf(2, 2, 2, 2, 5, 2, 2, 2, 2),
                     intArrayOf(2, 0, 0, 0, 0, 0, 0, 0, 2),
-                    intArrayOf(2, 0, 0, 0, 0, 0, 0, 0, 2),
+                    intArrayOf(2, 0, 6, 0, 0, 0, 6, 0, 2),
                     intArrayOf(2, 0, 0, 0, 0, 0, 0, 0, 2),
                     intArrayOf(5, 0, 0, 0, 10, 0, 0, 0, 5),
                     intArrayOf(2, 0, 0, 0, 0, 0, 0, 0, 2),
-                    intArrayOf(2, 0, 0, 0, 0, 0, 0, 0, 2),
+                    intArrayOf(2, 0, 6, 0, 0, 0, 6, 0, 2),
                     intArrayOf(2, 0, 0, 0, 0, 0, 0, 0, 2),
                     intArrayOf(2, 2, 2, 2, 5, 2, 2, 2, 2)
                 ),
                 scale = 9
             )
-        }
-        var roomTemplate = RoomRNG
+        )
+        var roomTemplate = roomTemplates.random()
         gridmod = false
         val (newX, newY, offsets) = ensureGridCapacity(x, y, roomTemplate, enterdirection)
         var (offsetX, offsetY) = offsets
@@ -1300,11 +1330,12 @@ class Map(var renderCast: RenderCast? = null) {
                     var item1 = 0
                     var item2 = 0
                     val items = mutableListOf<Item>()
-                    val random = Random.nextFloat()
-                    val itemCount = when {
-                        random < 0.5f -> 1
-                        random < 0.8f -> 2
-                        else -> 3
+                    var random = Random.nextFloat()
+                    var itemCount = when {
+                        Random.nextFloat() < 0.5f -> 1
+                        Random.nextFloat() < 0.8f -> 2
+                        Random.nextFloat() < 0.95f -> 3
+                        else -> 5
                     }
 
                     for (i in 0 until itemCount) {
