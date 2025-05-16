@@ -821,9 +821,31 @@ fun main() = runBlocking {
                 KeyEvent.VK_SPACE -> isShooting = false
                 KeyEvent.VK_E -> inventoryVisible = !inventoryVisible
                 in KeyEvent.VK_1..KeyEvent.VK_9 -> {
-                    selectSlot = event.keyCode - KeyEvent.VK_0
+                    selectSlot = event.keyCode - KeyEvent.VK_0-1
                     activateSlot = true
                     println(selectSlot)
+                    println(playerInventory[selectSlot])
+                    if (playerInventory[selectSlot] != null) {
+                        val ammoSlot = playerInventory.indexOfFirst { it?.type == ItemType.MEDKIT && it.quantity > 0 }
+                        println(ammoSlot)
+                        println(playerInventory[ammoSlot])
+                        if (playerInventory[selectSlot] == playerInventory[ammoSlot]) {
+                            if (playerInventory[selectSlot]!!.quantity <= 0) {
+                                playerInventory[selectSlot] = null
+                            }
+                            val random = Random.nextFloat()
+                            val healRNG = when {
+                                random < 0.33f -> 15
+                                random < 0.66f -> 25
+                                else -> 35
+                            }
+                            playerInventory[selectSlot]!!.quantity -= 1
+                            if (playerInventory[selectSlot]!!.quantity <= 0) {
+                                playerInventory[selectSlot] = null
+                            }
+                            playerHealth += healRNG
+                        }
+                    }
                 }
             }
         }
@@ -1270,7 +1292,7 @@ class Map(var renderCast: RenderCast? = null) {
                     }
                 }
                 if (roomTemplate.grid[XX][YY] == 6) {
-                    renderCast?.let {
+                    //renderCast?.let {
                         lightSources.add(
                             LightSource(
                                 (distItemX + 0.5),
@@ -1281,8 +1303,8 @@ class Map(var renderCast: RenderCast? = null) {
                                 owner = "skun"
                             )
                         )
-                        it.repaint()
-                    }
+                    //    it.repaint()
+                    //}
                     if (gridmod && (offsetX != 0 || offsetY != 0)) {
                         lightSources.get(lightSources.size-1).x -= offsetX*tileSize
                         lightSources.get(lightSources.size-1).y -= offsetY*tileSize
@@ -1340,8 +1362,8 @@ class Map(var renderCast: RenderCast? = null) {
 
                     for (i in 0 until itemCount) {
                         val itemType = when (Random.nextFloat()) {
-                            in 0.0f..0.4f -> ItemType.KEY
-                            in 0.4f..0.7f -> ItemType.AMMO
+                            in 0.0f..0.34f -> ItemType.KEY
+                            in 0.35f..0.6f -> ItemType.AMMO
                             else -> ItemType.MEDKIT
                         }
                         val quantity = when (itemType) {

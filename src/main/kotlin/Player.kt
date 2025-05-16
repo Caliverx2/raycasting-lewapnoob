@@ -221,7 +221,6 @@ class Player(private val renderCast: RenderCast, private val map: Map) {
                     else -> Map.Direction.DOWN
                 }
                 map.generateRoom((positionX/tileSize).toInt(), (positionY/tileSize).toInt(), direction)
-                //map.generateRoom(Map.GridPoint(gridX, gridY), direction)
             }
             lastGridX = gridX
             lastGridY = gridY
