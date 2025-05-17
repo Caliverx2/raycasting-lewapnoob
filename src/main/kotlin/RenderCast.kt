@@ -7,6 +7,7 @@ import java.awt.Graphics2D
 import java.awt.GraphicsEnvironment
 import java.awt.RenderingHints
 import java.awt.image.BufferedImage
+import javax.swing.Timer
 import javax.imageio.ImageIO
 import javax.swing.JPanel
 import kotlin.math.PI
@@ -168,8 +169,8 @@ class RenderCast(private val map: Map) : JPanel() {
         g2d.scale(1.0 / scaleX, 1.0 / scaleY)
         renderInventoryUI(g2d)
         if (levelUp) {
+            println("sex")
             Mappingmap(map, this).levelUp(g2d)
-            levelUp = true
         }
     }
 
@@ -708,7 +709,8 @@ class RenderCast(private val map: Map) : JPanel() {
     fun handleInventoryClick(mouseX: Int, mouseY: Int) {
         if (!inventoryVisible) return
 
-        val spacing = 5
+        val scaleUI = 7
+        val spacing = scaleUI*2
         val totalSlots = 9
 
         val startX = (1366 - (slotSize + spacing) * 9 - 20)
@@ -1584,9 +1586,18 @@ class RenderCast(private val map: Map) : JPanel() {
                                 }
                                 points = points + (100 / level)
                                 if (points >= 100) {
+                                    var levelUpTimer: Timer? = null
                                     levelUp = true
                                     level += 1
                                     points = 0
+                                    levelUpTimer?.stop()
+                                    levelUpTimer = Timer(2500, {
+                                        levelUp = false
+                                        levelUpTimer?.stop()
+                                    }).apply {
+                                        isRepeats = false
+                                        start()
+                                    }
                                 }
                                 println("level: $level points: $points keys: $keys ammo: $currentAmmo")
                                 playSound(when {
