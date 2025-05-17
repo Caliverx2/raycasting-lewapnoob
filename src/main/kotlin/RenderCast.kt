@@ -51,6 +51,7 @@ class RenderCast(private val map: Map) : JPanel() {
     private var lastRenderFpsUpdate = System.nanoTime()
     private var lastRenderFrameTime = System.nanoTime()
 
+    private var levelUp = false
     private val minBrightness = 0.25
     private val maxBrightness = 1.0
     private val shadeDistanceScale = 10.0
@@ -166,6 +167,10 @@ class RenderCast(private val map: Map) : JPanel() {
         g2d.drawImage(buffer, 0, 0, null)
         g2d.scale(1.0 / scaleX, 1.0 / scaleY)
         renderInventoryUI(g2d)
+        if (levelUp) {
+            Mappingmap(map, this).levelUp(g2d)
+            levelUp = true
+        }
     }
 
     private fun calculateLightContribution(worldX: Double, worldY: Double, baseColor: Color): Color {
@@ -776,14 +781,16 @@ class RenderCast(private val map: Map) : JPanel() {
 
     fun renderInventoryUI(g2: Graphics2D) {
         if (!inventoryVisible) return
-
-        val spacing = 5
+        val scaleUI = 7
+        val spacing = scaleUI*2
         val startX = 1366 - (slotSize + spacing) * 9 - 20
         val startY = 600
 
-        // GUI ekwipunek
         g2.color = Color(50, 50, 50, 180)
-        g2.fillRect(startX - 10, startY - 10, (slotSize + spacing) * 9 + 20, slotSize + 20)
+        g2.fillRect(startX-scaleUI, startY - scaleUI, (slotSize + spacing) * 9, slotSize + (scaleUI*2))
+
+        g2.color = Color(150, 150, 150, 180)
+        g2.fillRect((startX-scaleUI)+((slotSize + spacing) * selectSlot), startY - scaleUI, (slotSize + spacing), slotSize + (scaleUI*2))
 
         for (i in 0 until 9) {
             val x = startX + i * (slotSize + spacing)
@@ -1577,6 +1584,7 @@ class RenderCast(private val map: Map) : JPanel() {
                                 }
                                 points = points + (100 / level)
                                 if (points >= 100) {
+                                    levelUp = true
                                     level += 1
                                     points = 0
                                 }

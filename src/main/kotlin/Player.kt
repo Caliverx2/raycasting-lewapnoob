@@ -1,6 +1,5 @@
 package org.example.MainKt
 
-import kotlinx.coroutines.currentCoroutineContext
 import java.awt.Color
 import java.awt.MouseInfo
 import java.awt.event.KeyEvent
@@ -33,14 +32,8 @@ class Player(private val renderCast: RenderCast, private val map: Map) {
         for (gridY in gridTop..gridBottom) {
             for (gridX in gridLeft..gridRight) {
                 if (gridY !in map.grid.indices || gridX !in map.grid[0].indices ||
-                    ((map.grid[gridY][gridX] != 0) and
-                            (map.grid[gridY][gridX] != 3) and
-                            (map.grid[gridY][gridX] != 4) and
-                            (map.grid[gridY][gridX] != 5) and
-                            (map.grid[gridY][gridX] != 6) and
-                            (map.grid[gridY][gridX] != 7) and
-                            (map.grid[gridY][gridX] != 8) and
-                            (map.grid[gridY][gridX] != 10))) {
+                    ((map.grid[gridY][gridX] == 1) ||
+                            (map.grid[gridY][gridX] == 2))) {
                     return Pair(false, null)
                 }
             }
