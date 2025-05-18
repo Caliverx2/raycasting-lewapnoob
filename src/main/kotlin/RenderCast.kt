@@ -464,7 +464,7 @@ class RenderCast(private val map: Map) : JPanel() {
                 }
             }
 
-            chestsList.forEach { chest ->
+            chests.forEach { chest ->
                 if (!chest.active) return@forEach
                 val halfSize = chest.size / tileSize / 2
                 val chestLeft = chest.x / tileSize - halfSize
@@ -496,7 +496,7 @@ class RenderCast(private val map: Map) : JPanel() {
                 }
             }
 
-            ammoList.forEach { ammo ->
+            ammo.forEach { ammo ->
                 if (!ammo.active) return@forEach
                 val halfSize = (ammo.size) / tileSize / 2
                 val ammoLeft = ammo.x/ tileSize - halfSize
@@ -528,7 +528,7 @@ class RenderCast(private val map: Map) : JPanel() {
                 }
             }
 
-            medicationsList.forEach { medication ->
+            medications.forEach { medication ->
                 if (!medication.active) return@forEach
                 val halfSize = medication.size / tileSize / 2
                 val medLeft = medication.x / tileSize - halfSize
@@ -860,7 +860,7 @@ class RenderCast(private val map: Map) : JPanel() {
         val rayDirY = sin(Math.toRadians(currentangle.toDouble()))
         val shotAngleRad = atan2(rayDirY, rayDirX)
 
-        val closestChest = chestsList.minByOrNull { chest ->
+        val closestChest = chests.minByOrNull { chest ->
             val dx = chest.x / tileSize - playerPosX
             val dy = chest.y / tileSize - playerPosY
             val rayLength = dx * rayDirX + dy * rayDirY
@@ -1559,7 +1559,7 @@ class RenderCast(private val map: Map) : JPanel() {
                                                     val dy = itemY - existingKey.y
                                                     sqrt(dx * dx + dy * dy) < 0.3 * tileSize
                                                 }
-                                            } || ammoList.any { existingAmmo ->
+                                            } || ammo.any { existingAmmo ->
                                                 if (!existingAmmo.active) false
                                                 else {
                                                     val dx = itemX - existingAmmo.x
@@ -1580,12 +1580,13 @@ class RenderCast(private val map: Map) : JPanel() {
 
                                     val randomItem = when {
                                         random < 0.80f -> keysList.add(Key(itemX, itemY, keyTextureId!!))
-                                        else -> ammoList.add(Ammo(itemX, itemY, ammoTextureID!!))
+                                        else -> ammo.add(Ammo(itemX, itemY, ammoTextureID!!))
                                     }
                                     randomItem
                                 }
                                 points = points + (100 / level)
                                 if (points >= 100) {
+                                    playSound("levelup.wav", volume = 0.65f)
                                     var levelUpTimer: Timer? = null
                                     levelUp = true
                                     level += 1
@@ -1657,7 +1658,7 @@ class RenderCast(private val map: Map) : JPanel() {
                 }
             }
         }
-        medicationsList.forEach { medication ->
+        medications.forEach { medication ->
             if (medication.active) {
                 val dx = positionX - medication.x
                 val dy = positionY - medication.y
@@ -1669,7 +1670,7 @@ class RenderCast(private val map: Map) : JPanel() {
                 }
             }
         }
-        ammoList.forEach { ammo ->
+        ammo.forEach { ammo ->
             if (ammo.active) {
                 val dx = positionX - ammo.x
                 val dy = positionY - ammo.y
@@ -1691,7 +1692,7 @@ class RenderCast(private val map: Map) : JPanel() {
             }
         }
         keysList.removeIf { !it.active }
-        medicationsList.removeIf { !it.active }
-        ammoList.removeIf { !it.active }
+        medications.removeIf { !it.active }
+        ammo.removeIf { !it.active }
     }
 }

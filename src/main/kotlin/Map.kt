@@ -199,11 +199,11 @@ class Map(var renderCast: RenderCast? = null) {
                         key.x += offsetX*tileSize
                         key.y += offsetY*tileSize
                     }
-                    medicationsList.forEach { medication ->
+                    medications.forEach { medication ->
                         medication.x += offsetX*tileSize
                         medication.y += offsetY*tileSize
                     }
-                    ammoList.forEach { ammo ->
+                    ammo.forEach { ammo ->
                         ammo.x += offsetX*tileSize
                         ammo.y += offsetY*tileSize
                     }
@@ -211,7 +211,7 @@ class Map(var renderCast: RenderCast? = null) {
                         lightSource.x += offsetX
                         lightSource.y += offsetY
                     }
-                    chestsList.forEach { chest ->
+                    chests.forEach { chest ->
                         chest.x += offsetX*tileSize
                         chest.y += offsetY*tileSize
                     }
@@ -281,11 +281,11 @@ class Map(var renderCast: RenderCast? = null) {
                         key.x += offsetX*tileSize
                         key.y += offsetY*tileSize
                     }
-                    medicationsList.forEach { medication ->
+                    medications.forEach { medication ->
                         medication.x += offsetX*tileSize
                         medication.y += offsetY*tileSize
                     }
-                    ammoList.forEach { ammo ->
+                    ammo.forEach { ammo ->
                         ammo.x += offsetX*tileSize
                         ammo.y += offsetY*tileSize
                     }
@@ -293,7 +293,7 @@ class Map(var renderCast: RenderCast? = null) {
                         lightSource.x += offsetX
                         lightSource.y += offsetY
                     }
-                    chestsList.forEach { chest ->
+                    chests.forEach { chest ->
                         chest.x += offsetX*tileSize
                         chest.y += offsetY*tileSize
                     }
@@ -405,7 +405,7 @@ class Map(var renderCast: RenderCast? = null) {
                     } ?: throw IllegalStateException("renderCast is null")
                 }
                 if (roomTemplate.grid[XX][YY] == 4) {
-                    ammoList.add(
+                    ammo.add(
                         Ammo(
                             x = (tileSize * (distItemX+1)) - (tileSize / 2),
                             y = (tileSize * (distItemY+1)) - (tileSize / 2),
@@ -414,8 +414,8 @@ class Map(var renderCast: RenderCast? = null) {
                         )
                     )
                     if (gridmod && (offsetX != 0 || offsetY != 0)) {
-                        ammoList.get(ammoList.size-1).x -= offsetX*tileSize
-                        ammoList.get(ammoList.size-1).y -= offsetY*tileSize
+                        ammo.get(ammo.size-1).x -= offsetX*tileSize
+                        ammo.get(ammo.size-1).y -= offsetY*tileSize
                     }
                 }
                 if (roomTemplate.grid[XX][YY] == 6) {
@@ -443,7 +443,7 @@ class Map(var renderCast: RenderCast? = null) {
                     }
 
                     renderCast?.let {
-                        medicationsList.add(
+                        medications.add(
                             Medication(
                                 x = ((tileSize * (distItemX + 1)) - (tileSize / 2)),
                                 y = ((tileSize * (distItemY + 1)) - (tileSize / 2)),
@@ -454,8 +454,8 @@ class Map(var renderCast: RenderCast? = null) {
                         it.repaint()
                     }
                     if (gridmod && (offsetX != 0 || offsetY != 0)) {
-                        medicationsList.get(medicationsList.size-1).x -= offsetX*tileSize
-                        medicationsList.get(medicationsList.size-1).y -= offsetY*tileSize
+                        medications.get(medications.size-1).x -= offsetX*tileSize
+                        medications.get(medications.size-1).y -= offsetY*tileSize
                     }
                 }
                 if (roomTemplate.grid[XX][YY] == 8) {
@@ -497,24 +497,24 @@ class Map(var renderCast: RenderCast? = null) {
                         }
                         items.add(Item(itemType, quantity))
                     }
-                    item1 = chestsList.size
-                    item2 = ammoList.size
+                    item1 = chests.size
+                    item2 = ammo.size
                     val spawnRNG = when {
-                        random < 0.5f -> chestsList.add(Chest((tileSize * (distItemX+1)) - (tileSize / 2), (tileSize * (distItemY+1)) - (tileSize / 2), items))
-                        random < 0.75f -> ammoList.add(Ammo((tileSize * (distItemX+1)) - (tileSize / 2), (tileSize * (distItemY+1)) - (tileSize / 2), texture = renderCast?.ammoTextureID!!, active = true, 6))
+                        random < 0.5f -> chests.add(Chest((tileSize * (distItemX+1)) - (tileSize / 2), (tileSize * (distItemY+1)) - (tileSize / 2), items))
+                        random < 0.75f -> ammo.add(Ammo((tileSize * (distItemX+1)) - (tileSize / 2), (tileSize * (distItemY+1)) - (tileSize / 2), texture = renderCast?.ammoTextureID!!, active = true, 6))
                         else -> keysList.add(Key((tileSize * (distItemX+1)) - (tileSize / 2), (tileSize * (distItemY+1)) - (tileSize / 2), texture = renderCast?.keyTextureId!!))
                     }
                     spawnRNG
-                    if (item1 < chestsList.size) {
+                    if (item1 < chests.size) {
                         if (gridmod && (offsetX != 0 || offsetY != 0)) {
-                            chestsList.get(chestsList.size-1).x -= offsetX*tileSize
-                            chestsList.get(chestsList.size-1).y -= offsetY*tileSize
+                            chests.get(chests.size-1).x -= offsetX*tileSize
+                            chests.get(chests.size-1).y -= offsetY*tileSize
                         }
                     }
-                    if (item2 < ammoList.size) {
+                    if (item2 < ammo.size) {
                         if (gridmod && (offsetX != 0 || offsetY != 0)) {
-                            ammoList.get(ammoList.size-1).x -= offsetX*tileSize
-                            ammoList.get(ammoList.size-1).y -= offsetY*tileSize
+                            ammo.get(ammo.size-1).x -= offsetX*tileSize
+                            ammo.get(ammo.size-1).y -= offsetY*tileSize
                         }
                     }
                 }
@@ -680,7 +680,7 @@ class Mappingmap(private val map: Map, private val renderCast: RenderCast) : JPa
         }
 
         //draw chest
-        chestsList.forEach { chest ->
+        chests.forEach { chest ->
             if (chest.active) {
                 val relativeX = (chest.x / tileSize) - playerGridX
                 val relativeY = (chest.y / tileSize) - playerGridY
@@ -694,7 +694,7 @@ class Mappingmap(private val map: Map, private val renderCast: RenderCast) : JPa
         }
 
         //draw medication
-        medicationsList.forEach { medication ->
+        medications.forEach { medication ->
             if (medication.active) {
                 val relativeX = (medication.x / tileSize) - playerGridX
                 val relativeY = (medication.y / tileSize) - playerGridY
@@ -708,7 +708,7 @@ class Mappingmap(private val map: Map, private val renderCast: RenderCast) : JPa
         }
 
         //draw ammo
-        ammoList.forEach { ammo ->
+        ammo.forEach { ammo ->
             if (ammo.active) {
                 val relativeX = (ammo.x / tileSize) - playerGridX
                 val relativeY = (ammo.y / tileSize) - playerGridY
