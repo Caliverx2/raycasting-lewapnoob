@@ -711,8 +711,7 @@ class RenderCast(private val map: Map) : JPanel() {
 
         val scaleUI = 7
         val spacing = scaleUI*2
-        val totalSlots = 9
-
+        val totalSlots = playerInventory.size
         val startX = (1366 - (slotSize + spacing) * 9 - 20)
         val startY = 600 + slotSize
         val chestY = 500 + slotSize
@@ -787,14 +786,15 @@ class RenderCast(private val map: Map) : JPanel() {
         val spacing = scaleUI*2
         val startX = 1366 - (slotSize + spacing) * 9 - 20
         val startY = 600
+        val totalSlots = playerInventory.size
 
         g2.color = Color(50, 50, 50, 180)
-        g2.fillRect(startX-scaleUI, startY - scaleUI, (slotSize + spacing) * 9, slotSize + (scaleUI*2))
+        g2.fillRect(startX-scaleUI, startY - scaleUI, (slotSize + spacing) * totalSlots, slotSize + (scaleUI*2))
 
         g2.color = Color(150, 150, 150, 180)
         g2.fillRect((startX-scaleUI)+((slotSize + spacing) * selectSlot), startY - scaleUI, (slotSize + spacing), slotSize + (scaleUI*2))
 
-        for (i in 0 until 9) {
+        for (i in 0 until totalSlots) {
             val x = startX + i * (slotSize + spacing)
             val y = startY
             g2.color = Color(100, 100, 100)
@@ -818,7 +818,7 @@ class RenderCast(private val map: Map) : JPanel() {
         openChest?.let { chest ->
             val chestY = 500
             g2.color = Color(50, 50, 50, 220)
-            g2.fillRect(startX - 10, chestY - 10, (slotSize + spacing) * 9 + 20, slotSize + 20)
+            g2.fillRect(startX - 10, chestY - 10, (slotSize + spacing) * totalSlots + 20, slotSize + 20)
 
             for (i in chest.loot.indices) {
                 val x = startX + i * (slotSize + spacing)
@@ -1677,16 +1677,29 @@ class RenderCast(private val map: Map) : JPanel() {
                 val distance = sqrt(dx * dx + dy * dy)
                 if (distance < ammo.pickupDistance) {
                     ammo.active = false
-                    // Szukaj slotu z amunicją
-                    val ammoSlot = playerInventory.indexOfFirst { it?.type == ItemType.AMMO && it.quantity < Item.MAX_AMMO_PER_SLOT }
-                    if (ammoSlot != -1) {
-                        playerInventory[ammoSlot]!!.quantity += ammo.amount
-                    } else {
-                        val emptySlot = playerInventory.indexOfFirst { it == null }
-                        if (emptySlot != -1) {
-                            playerInventory[emptySlot] = Item(ItemType.AMMO, ammo.amount)
-                        }
+                    var remainingAmmo = ammo.amount
+
+                    val ammoSlots = playerInventory.indices.filter {
+                        playerInventory[it]?.type == ItemType.AMMO && playerInventory[it]!!.quantity < Item.MAX_AMMO_PER_SLOT
                     }
+
+                    for (slot in ammoSlots) {
+                        if (remainingAmmo <= 0) break
+                        val currentSlot = playerInventory[slot]!!
+                        val spaceInSlot = Item.MAX_AMMO_PER_SLOT - currentSlot.quantity
+                        val ammoToAdd = minOf(remainingAmmo, spaceInSlot)
+                        currentSlot.quantity += ammoToAdd
+                        remainingAmmo -= ammoToAdd
+                    }
+
+                    while (remainingAmmo > 0) {
+                        val emptySlot = playerInventory.indexOfFirst { it == null }
+                        if (emptySlot == -1) break // No more empty slots
+                        val ammoToAdd = minOf(remainingAmmo, Item.MAX_AMMO_PER_SLOT)
+                        playerInventory[emptySlot] = Item(ItemType.AMMO, ammoToAdd)
+                        remainingAmmo -= ammoToAdd
+                    }
+
                     playSound("8exp.wav", 0.65f)
                 }
             }

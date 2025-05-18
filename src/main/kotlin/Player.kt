@@ -128,19 +128,6 @@ class Player(private val renderCast: RenderCast, private val map: Map) {
             keys += 1
             renderCast.playSound("8exp.wav", volume = 0.65f)
         }
-
-        ammoToDeactivate.forEach { ammo ->
-            ammo.active = false
-            val random = Random.nextFloat()
-            val ammoRNG = when {
-                random < 0.33f -> 6
-                random < 0.66f -> 10
-                else -> 14
-            }
-            currentAmmo += ammoRNG
-            renderCast.playSound("8exp.wav", volume = 0.65f)
-        }
-
         medicationsToDeactivate.forEach { medication ->
             medication.active = false
             playerHealth += medication.heal

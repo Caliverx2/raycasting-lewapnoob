@@ -22,7 +22,7 @@ import kotlin.random.Random
 var playerHealth: Int = 100
 var level: Int = 1
 var points: Int = 0
-var keys: Int = 0
+var keys: Int = 2
 var selectSlot: Int = 1
 var activateSlot: Boolean = false
 
@@ -105,7 +105,6 @@ class Chest(
 }
 
 data class Item(val type: ItemType, var quantity: Int = 1) {
-    // Maksymalna ilość przedmiotów na slot
     companion object {
         const val MAX_KEYS_PER_SLOT = 64
         const val MAX_AMMO_PER_SLOT = 46
@@ -169,7 +168,7 @@ fun main() = runBlocking {
         slotIndexAmmo++
     }
 
-    var remainingKeys = 2
+    var remainingKeys = 200
     var slotIndexKey = 1
     while (remainingKeys > 0 && slotIndexKey < playerInventory.size) {
         val quantity = minOf(remainingKeys, Item.MAX_KEYS_PER_SLOT)
@@ -231,12 +230,8 @@ fun main() = runBlocking {
                     println(selectSlot)
                     println(playerInventory[selectSlot])
                     if (playerInventory[selectSlot] != null) {
-                        val ammoSlot = playerInventory.indexOfFirst { it?.type == ItemType.MEDKIT && it.quantity > 0 }
-                        println(ammoSlot)
-                        if (playerInventory[selectSlot] == when {
-                                (ammoSlot <= 0) -> null
-                                else -> playerInventory[ammoSlot]
-                            }) {
+                        //playerInventory.indexOfFirst { it?.type == ItemType.MEDKIT && it.quantity > 0 }
+                        if (playerInventory[selectSlot]?.type == ItemType.MEDKIT && playerInventory[selectSlot]?.quantity in 1..2) {
                             if (playerInventory[selectSlot]!!.quantity <= 0) {
                                 playerInventory[selectSlot] = null
                             }
