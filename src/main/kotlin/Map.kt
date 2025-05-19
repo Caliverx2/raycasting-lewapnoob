@@ -1,5 +1,6 @@
 package org.example.MainKt
 
+import org.example.MainKt.Map.Direction
 import org.example.MainKt.Map.RoomTemplate
 import java.awt.BasicStroke
 import java.awt.Color
@@ -16,6 +17,10 @@ import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.random.Random
 
+
+var directionForRoom = "UP"
+
+//0-air 1-wall 2-black_wall 3-enemy 4-ammo 5-door 6-lightSource 7-medication 8-key 10-chest
 val rooms = listOf(
     RoomTemplate(
         grid = arrayOf(
@@ -76,6 +81,26 @@ val rooms = listOf(
             intArrayOf(2, 2, 2, 2, 5, 2, 2, 2, 2)
         ),
         scale = 9
+    ),
+    RoomTemplate(
+        grid = arrayOf(
+            intArrayOf(2, 2, 2, 2, 2, 2, 2, 5, 2, 2, 2, 2, 2, 2, 2),
+            intArrayOf(2, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 2),
+            intArrayOf(2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2),
+            intArrayOf(2, 1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1, 2),
+            intArrayOf(2, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 2),
+            intArrayOf(2, 0, 0, 1, 0, 3, 0, 0, 0, 3, 0, 1, 0, 0, 2),
+            intArrayOf(2, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 2),
+            intArrayOf(5, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 5),
+            intArrayOf(2, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 2),
+            intArrayOf(2, 0, 0, 1, 0, 3, 0, 0, 0, 0, 0, 1, 0, 0, 2),
+            intArrayOf(2, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 2),
+            intArrayOf(2, 1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1, 2),
+            intArrayOf(2, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 2),
+            intArrayOf(2, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 2),
+            intArrayOf(2, 2, 2, 2, 2, 2, 2, 5, 2, 2, 2, 2, 2, 2, 2)
+        ),
+        scale = 15
     )
 )
 
@@ -169,6 +194,8 @@ class Map(var renderCast: RenderCast? = null) {
     }
 
     fun generateRoom(x: Int = 0, y: Int = 0, enterdirection: Direction) {
+        directionForRoom = enterdirection.toString()
+        println(directionForRoom)
         //0-air 1-wall 2-black_wall 3-enemy 4-ammo 5-door 6-lightSource 7-medication 8-key 10-chest
         val roomTemplates = rooms
         var roomTemplate = roomTemplates.random()
