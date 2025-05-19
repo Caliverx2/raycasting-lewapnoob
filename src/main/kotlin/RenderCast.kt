@@ -33,6 +33,7 @@ class RenderCast(private val map: Map) : JPanel() {
     private val rayCount = screenWidth
     private val wallHeight = 32.0
     private val maxRayDistance = 22.0
+    private var levelUp = false
     val slotSize = 39
 
     private val textureMap: MutableMap<Int, BufferedImage> = mutableMapOf()
@@ -52,12 +53,12 @@ class RenderCast(private val map: Map) : JPanel() {
     private var lastRenderFpsUpdate = System.nanoTime()
     private var lastRenderFrameTime = System.nanoTime()
 
-    private var levelUp = false
-    private val minBrightness = 0.25
-    private val maxBrightness = 1.0
+    private val minBrightness = 0.0
+    private val maxBrightness = 1.9
     private val shadeDistanceScale = 10.0
     private val fogColor = Color(180, 180, 180)
-    private val fogDensity = 0.05
+    private val fogDensity = 0.5/4
+
     private val rayCosines = DoubleArray(rayCount)
     private val raySines = DoubleArray(rayCount)
     private val rayAngles = DoubleArray(rayCount)
@@ -169,7 +170,6 @@ class RenderCast(private val map: Map) : JPanel() {
         g2d.scale(1.0 / scaleX, 1.0 / scaleY)
         renderInventoryUI(g2d)
         if (levelUp) {
-            println("sex")
             Mappingmap(map, this).levelUp(g2d)
         }
     }

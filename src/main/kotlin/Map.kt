@@ -746,7 +746,7 @@ class Mappingmap(private val map: Map, private val renderCast: RenderCast) : JPa
         g2.drawString("POINTS: ${points}", 10, 380)
         g2.drawString("AMMO: ${totalAmmo}", 10, 400)
         if (lookchest and !inventoryVisible) {
-            g2.drawString("Click E", (1366+g2.font.size)/2, (768+g2.font.size)/2)
+            g2.drawString("Open chest[E]", (1366+g2.font.size)/2, (768+g2.font.size)/2)
         }
         g2.font = font?.deriveFont(Font.BOLD, 50f) ?: Font("Arial", Font.BOLD, 50)
         g2.drawString("${totalKeys}", 85, 290)
