@@ -169,7 +169,9 @@ class RenderCast(private val map: Map) : JPanel() {
         g2d.drawImage(buffer, 0, 0, null)
         g2d.scale(1.0 / scaleX, 1.0 / scaleY)
         renderInventoryUI(g2d)
+        renderPerkGUI(g2d)
         if (levelUp) {
+            perkGUI = true
             Mappingmap(map, this).levelUp(g2d)
         }
     }
@@ -704,6 +706,52 @@ class RenderCast(private val map: Map) : JPanel() {
         renderMedications()
         renderAmmo()
         renderChest()
+    }
+
+    fun handlePerkGUI(mouseX: Int, mouseY: Int) {
+        if (!perkGUI) return
+
+        val scaleUI = 100
+        val spacing = scaleUI/10
+        val heightUI = 500
+
+        if (mouseX in (1366/2)+scaleUI+spacing until (1366/2)+(scaleUI*3+10) && mouseY in ((768/2)-(heightUI/2)) until ((768/2)-(heightUI/2))+heightUI) {
+            println("sigma3")
+            perkGUI = false
+        }
+        if (mouseX in (1366/2)-scaleUI until (1366/2)+scaleUI && mouseY in ((768/2)-(heightUI/2)) until ((768/2)-(heightUI/2))+heightUI) {
+            println("sigma2")
+            perkGUI = false
+        }
+        if (mouseX in (1366/2)-(scaleUI*3+10) until (1366/2)-scaleUI-10 && mouseY in ((768/2)-(heightUI/2)) until ((768/2)-(heightUI/2))+heightUI) {
+            println("sigma1")
+            perkGUI = false
+        }
+    }
+
+    fun renderPerkGUI(g2: Graphics2D) {
+        if (!perkGUI) return
+        val scaleUI = 100
+        val spacing = scaleUI/10
+        val heightUI = 500
+
+        g2.color = Color(250, 250, 250, 180)
+        g2.fillRect((1366/2)-(scaleUI*3+10), 768/2-heightUI/2, scaleUI*2, heightUI)
+        g2.color = Color.WHITE
+        g2.font = font?.deriveFont(Font.TYPE1_FONT, 16.toFloat()) ?: Font("Arial", Font.BOLD, 1)
+        g2.drawString("sigma1", (1366/2)-(scaleUI*3+10), 768/2+8)
+
+        g2.color = Color(150, 150, 150, 180)
+        g2.fillRect((1366/2)-scaleUI, 768/2-heightUI/2, scaleUI*2, heightUI)
+        g2.color = Color.WHITE
+        g2.font = font?.deriveFont(Font.TYPE1_FONT, 16.toFloat()) ?: Font("Arial", Font.BOLD, 1)
+        g2.drawString("sigma2", (1366/2)-scaleUI, 768/2+8)
+
+        g2.color = Color(50, 50, 50, 180)
+        g2.fillRect((1366/2)+scaleUI+spacing, 768/2-heightUI/2, scaleUI*2, heightUI)
+        g2.color = Color.WHITE
+        g2.font = font?.deriveFont(Font.TYPE1_FONT, 16.toFloat()) ?: Font("Arial", Font.BOLD, 1)
+        g2.drawString("sigma3", (1366/2)+scaleUI+spacing, 768/2+8)
     }
 
     fun handleInventoryClick(mouseX: Int, mouseY: Int) {

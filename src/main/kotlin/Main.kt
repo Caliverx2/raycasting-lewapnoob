@@ -25,6 +25,7 @@ var points: Int = 0
 var keys: Int = 2
 var selectSlot: Int = 1
 var activateSlot: Boolean = false
+var perkGUI: Boolean = true
 
 var map = true
 var currentangle = 45
@@ -182,6 +183,10 @@ fun main() = runBlocking {
             if (event.button == MouseEvent.BUTTON1) {
                 if (inventoryVisible) {
                     renderCast.handleInventoryClick(event.x, event.y)
+                    return
+                }
+                if (perkGUI) {
+                    renderCast.handlePerkGUI(event.x, event.y)
                     return
                 }
                 renderCast.shotgun()
