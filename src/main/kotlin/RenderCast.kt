@@ -24,7 +24,6 @@ import kotlin.jvm.java
 import kotlin.math.min
 import kotlin.math.pow
 
-
 class RenderCast(private val map: Map) : JPanel() {
     private val screenWidth = 320
     private val screenHeight = 200
@@ -69,7 +68,7 @@ class RenderCast(private val map: Map) : JPanel() {
     private var visibleAmmo = mutableListOf<Triple<Ammo, Int, Double>>()
     private val zBuffer = DoubleArray(rayCount) { Double.MAX_VALUE }
     private var lastShotTime = 0L
-    private val SHOT_COOLDOWN = 500_000_000L
+    private val SHOT_COOLDOWN = 500_000_000L * FastReload
     private var lastLightMoveTime = 0L
     private val LIGHT_MOVE_INTERVAL = 250_000_000L / 4
     private var lightMoveDirection = 0.0
@@ -708,12 +707,14 @@ class RenderCast(private val map: Map) : JPanel() {
         renderChest()
     }
 
+    enum class Perk { HealBoost, SpeedMovement, MoreHitShot, FastReload }
+
     fun handlePerkGUI(mouseX: Int, mouseY: Int) {
         if (!perkGUI) return
 
-        val scaleUI = 100
+        val scaleUI = 150
         val spacing = scaleUI/10
-        val heightUI = 500
+        val heightUI = 400
 
         if (mouseX in (1366/2)+scaleUI+spacing until (1366/2)+(scaleUI*3+10) && mouseY in ((768/2)-(heightUI/2)) until ((768/2)-(heightUI/2))+heightUI) {
             println("sigma3")
@@ -731,24 +732,25 @@ class RenderCast(private val map: Map) : JPanel() {
 
     fun renderPerkGUI(g2: Graphics2D) {
         if (!perkGUI) return
-        val scaleUI = 100
+        val scaleUI = 150
         val spacing = scaleUI/10
-        val heightUI = 500
+        val heightUI = 400
+        val arcSize = 50
 
-        g2.color = Color(250, 250, 250, 180)
-        g2.fillRect((1366/2)-(scaleUI*3+10), 768/2-heightUI/2, scaleUI*2, heightUI)
+        g2.color = Color(150, 250, 250, 180)
+        g2.fillRoundRect((1366/2)-(scaleUI*3+10), 768/2-heightUI/2, scaleUI*2, heightUI, arcSize, arcSize)
         g2.color = Color.WHITE
         g2.font = font?.deriveFont(Font.TYPE1_FONT, 16.toFloat()) ?: Font("Arial", Font.BOLD, 1)
         g2.drawString("sigma1", (1366/2)-(scaleUI*3+10), 768/2+8)
 
         g2.color = Color(150, 150, 150, 180)
-        g2.fillRect((1366/2)-scaleUI, 768/2-heightUI/2, scaleUI*2, heightUI)
+        g2.fillRoundRect((1366/2)-scaleUI, 768/2-heightUI/2, scaleUI*2, heightUI, arcSize, arcSize)
         g2.color = Color.WHITE
         g2.font = font?.deriveFont(Font.TYPE1_FONT, 16.toFloat()) ?: Font("Arial", Font.BOLD, 1)
         g2.drawString("sigma2", (1366/2)-scaleUI, 768/2+8)
 
-        g2.color = Color(50, 50, 50, 180)
-        g2.fillRect((1366/2)+scaleUI+spacing, 768/2-heightUI/2, scaleUI*2, heightUI)
+        g2.color = Color(150, 150, 150, 180)
+        g2.fillRoundRect((1366/2)+scaleUI+spacing, 768/2-heightUI/2, scaleUI*2, heightUI, arcSize, arcSize)
         g2.color = Color.WHITE
         g2.font = font?.deriveFont(Font.TYPE1_FONT, 16.toFloat()) ?: Font("Arial", Font.BOLD, 1)
         g2.drawString("sigma3", (1366/2)+scaleUI+spacing, 768/2+8)
@@ -1574,7 +1576,7 @@ class RenderCast(private val map: Map) : JPanel() {
                         angleDiff = min(angleDiff, 2 * Math.PI - angleDiff)
 
                         if (angleDiff < Math.toRadians(35.0/3)) {
-                            enemy.health -= 25
+                            enemy.health -= (25 * MoreHitShot).toInt()
                             println("enemy: ${enemy} heal: ${enemy.health}")
                             if (enemy.health <= 0) {
                                 val spawnRadius = 1.0 * tileSize

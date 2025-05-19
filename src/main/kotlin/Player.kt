@@ -6,12 +6,11 @@ import java.awt.event.KeyEvent
 import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.math.sqrt
-import kotlin.random.Random
 
 class Player(private val renderCast: RenderCast, private val map: Map) {
     private val playerSize = 5.0
     private val margin = 2.0
-    private var movementSpeed = 1.5
+    private var movementSpeed = 1.5*SpeedMovement
     private val rotationSpeed = 2
     private val sensitivity = 0.07
 
@@ -130,7 +129,7 @@ class Player(private val renderCast: RenderCast, private val map: Map) {
         }
         medicationsToDeactivate.forEach { medication ->
             medication.active = false
-            playerHealth += medication.heal
+            playerHealth += (medication.heal * HealBoost).toInt()
             renderCast.playSound("8exp.wav", volume = 0.65f)
         }
     }

@@ -25,13 +25,18 @@ var points: Int = 0
 var keys: Int = 2
 var selectSlot: Int = 1
 var activateSlot: Boolean = false
-var perkGUI: Boolean = true
+var perkGUI: Boolean = false
 
 var map = true
 var currentangle = 45
 var tileSize = 40.0
 val mapa = 0.5
 var MouseSupport = false
+
+var HealBoost = 1.0
+var SpeedMovement = 1.0
+var MoreHitShot = 1.0
+var FastReload = 1.0
 
 val TARGET_FPS = 90
 val FRAME_TIME_NS = 1_000_000_000 / TARGET_FPS
@@ -235,7 +240,6 @@ fun main() = runBlocking {
                     println(selectSlot)
                     println(playerInventory[selectSlot])
                     if (playerInventory[selectSlot] != null) {
-                        //playerInventory.indexOfFirst { it?.type == ItemType.MEDKIT && it.quantity > 0 }
                         if (playerInventory[selectSlot]?.type == ItemType.MEDKIT && playerInventory[selectSlot]?.quantity in 1..2) {
                             if (playerInventory[selectSlot]!!.quantity <= 0) {
                                 playerInventory[selectSlot] = null
