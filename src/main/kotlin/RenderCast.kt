@@ -1710,7 +1710,7 @@ class RenderCast(private val map: Map) : JPanel() {
                                     perkGUI = true
                                     levelUp = true
                                     level += 1
-                                    points = 0
+                                    if (level == 2) { points = 0 } else{ points -= 100 }
                                     levelUpTimer?.stop()
                                     levelUpTimer = Timer(2500, {
                                         levelUp = false
