@@ -37,6 +37,7 @@ var HealBoost = 1.0
 var SpeedMovement = 1.0
 var MoreHitShot = 1.0
 var FastReload = 1.0
+var AmmoBoost = 1.0
 
 val TARGET_FPS = 90
 val FRAME_TIME_NS = 1_000_000_000 / TARGET_FPS
@@ -191,7 +192,7 @@ fun main() = runBlocking {
                     return
                 }
                 if (perkGUI) {
-                    renderCast.handlePerkGUI(event.x, event.y)
+                    renderCast.ClickPerkGUI(event.x, event.y)
                     return
                 }
                 renderCast.shotgun()

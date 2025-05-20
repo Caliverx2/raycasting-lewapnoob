@@ -34,6 +34,8 @@ class RenderCast(private val map: Map) : JPanel() {
     private val maxRayDistance = 22.0
     private var levelUp = false
     val slotSize = 39
+    val perkSlots = arrayOfNulls<Perk>(3)
+    var resetPerkSlot = true
 
     private val textureMap: MutableMap<Int, BufferedImage> = mutableMapOf()
     private val wallIndices: Set<Int> = setOf(1, 2, 5)
@@ -76,6 +78,8 @@ class RenderCast(private val map: Map) : JPanel() {
     private var font: Font? = null
     val fontStream = this::class.java.classLoader.getResourceAsStream("font/mojangles.ttf")
         ?: throw IllegalArgumentException("Font file not found: mojangles.ttf")
+
+    enum class Perk { HealBoost, SpeedMovement, MoreHitShot, FastReload, AmmoBoost }
 
     fun getEnemies(): List<Enemy> = enemies
 
@@ -170,7 +174,6 @@ class RenderCast(private val map: Map) : JPanel() {
         renderInventoryUI(g2d)
         renderPerkGUI(g2d)
         if (levelUp) {
-            perkGUI = true
             Mappingmap(map, this).levelUp(g2d)
         }
     }
@@ -707,26 +710,81 @@ class RenderCast(private val map: Map) : JPanel() {
         renderChest()
     }
 
-    enum class Perk { HealBoost, SpeedMovement, MoreHitShot, FastReload }
-
-    fun handlePerkGUI(mouseX: Int, mouseY: Int) {
+    fun ClickPerkGUI(mouseX: Int, mouseY: Int) {
         if (!perkGUI) return
-
         val scaleUI = 150
         val spacing = scaleUI/10
         val heightUI = 400
 
-        if (mouseX in (1366/2)+scaleUI+spacing until (1366/2)+(scaleUI*3+10) && mouseY in ((768/2)-(heightUI/2)) until ((768/2)-(heightUI/2))+heightUI) {
-            println("sigma3")
-            perkGUI = false
-        }
-        if (mouseX in (1366/2)-scaleUI until (1366/2)+scaleUI && mouseY in ((768/2)-(heightUI/2)) until ((768/2)-(heightUI/2))+heightUI) {
-            println("sigma2")
-            perkGUI = false
-        }
         if (mouseX in (1366/2)-(scaleUI*3+10) until (1366/2)-scaleUI-10 && mouseY in ((768/2)-(heightUI/2)) until ((768/2)-(heightUI/2))+heightUI) {
-            println("sigma1")
+            println("${perkSlots[0]}")
+            SelectedPerk(perkSlots[0])
             perkGUI = false
+            resetPerkSlot = true
+        }
+
+        if (mouseX in (1366/2)-scaleUI until (1366/2)+scaleUI && mouseY in ((768/2)-(heightUI/2)) until ((768/2)-(heightUI/2))+heightUI) {
+            println("${perkSlots[1]}")
+            SelectedPerk(perkSlots[1])
+            perkGUI = false
+            resetPerkSlot = true
+        }
+
+        if (mouseX in (1366/2)+scaleUI+spacing until (1366/2)+(scaleUI*3+10) && mouseY in ((768/2)-(heightUI/2)) until ((768/2)-(heightUI/2))+heightUI) {
+            println("${perkSlots[2]}")
+            SelectedPerk(perkSlots[2])
+            perkGUI = false
+            resetPerkSlot = true
+        }
+    }
+
+    fun SelectedPerk(perk: Perk?) {
+        if (perk == Perk.HealBoost) {
+            println("$HealBoost HB")
+            HealBoost += HealBoost * (0.5/4)
+            playerHealth += (HealBoost * 100).toInt()
+            println("$HealBoost HB")
+        }
+        if (perk == Perk.SpeedMovement) {
+            println("$SpeedMovement SM")
+            SpeedMovement += 0.15
+            println("$SpeedMovement SM")
+        }
+        if (perk == Perk.MoreHitShot) {
+            println("$MoreHitShot MHS")
+            MoreHitShot += MoreHitShot/4
+            println("$MoreHitShot MHS")
+        }
+        if (perk == Perk.FastReload) {
+            println("$FastReload FR")
+            FastReload -= -0.1
+            println("$FastReload FR")
+        }
+        if (perk == Perk.AmmoBoost) {
+            var remainingAmmo = (46 * AmmoBoost).toInt()
+            val ammoSlots = playerInventory.indices.filter {
+                playerInventory[it]?.type == ItemType.AMMO && playerInventory[it]!!.quantity < Item.MAX_AMMO_PER_SLOT
+            }
+
+            for (slot in ammoSlots) {
+                if (remainingAmmo <= 0) break
+                val currentSlot = playerInventory[slot]!!
+                val spaceInSlot = Item.MAX_AMMO_PER_SLOT - currentSlot.quantity
+                val ammoToAdd = minOf(remainingAmmo, spaceInSlot)
+                currentSlot.quantity += ammoToAdd
+                remainingAmmo -= ammoToAdd
+            }
+
+            while (remainingAmmo > 0) {
+                val emptySlot = playerInventory.indexOfFirst { it == null }
+                if (emptySlot == -1) break
+                val ammoToAdd = minOf(remainingAmmo, Item.MAX_AMMO_PER_SLOT)
+                playerInventory[emptySlot] = Item(ItemType.AMMO, ammoToAdd)
+                remainingAmmo -= ammoToAdd
+            }
+            println("$AmmoBoost AB")
+            AmmoBoost += 0.20
+            println("$AmmoBoost AB")
         }
     }
 
@@ -737,23 +795,25 @@ class RenderCast(private val map: Map) : JPanel() {
         val heightUI = 400
         val arcSize = 50
 
-        g2.color = Color(150, 250, 250, 180)
-        g2.fillRoundRect((1366/2)-(scaleUI*3+10), 768/2-heightUI/2, scaleUI*2, heightUI, arcSize, arcSize)
-        g2.color = Color.WHITE
-        g2.font = font?.deriveFont(Font.TYPE1_FONT, 16.toFloat()) ?: Font("Arial", Font.BOLD, 1)
-        g2.drawString("sigma1", (1366/2)-(scaleUI*3+10), 768/2+8)
+        if (perkGUI) {
+            g2.color = Color(150, 250, 250, 180)
+            g2.fillRoundRect((1366/2)-(scaleUI*3+10), 768/2-heightUI/2, scaleUI*2, heightUI, arcSize, arcSize)
+            g2.color = Color.WHITE
+            g2.font = font?.deriveFont(Font.TYPE1_FONT, 16.toFloat()) ?: Font("Arial", Font.BOLD, 1)
+            g2.drawString("${perkSlots[0]}", (1366/2)-(scaleUI*3+10), 768/2+8)
 
-        g2.color = Color(150, 150, 150, 180)
-        g2.fillRoundRect((1366/2)-scaleUI, 768/2-heightUI/2, scaleUI*2, heightUI, arcSize, arcSize)
-        g2.color = Color.WHITE
-        g2.font = font?.deriveFont(Font.TYPE1_FONT, 16.toFloat()) ?: Font("Arial", Font.BOLD, 1)
-        g2.drawString("sigma2", (1366/2)-scaleUI, 768/2+8)
+            g2.color = Color(150, 150, 150, 180)
+            g2.fillRoundRect((1366/2)-scaleUI, 768/2-heightUI/2, scaleUI*2, heightUI, arcSize, arcSize)
+            g2.color = Color.WHITE
+            g2.font = font?.deriveFont(Font.TYPE1_FONT, 16.toFloat()) ?: Font("Arial", Font.BOLD, 1)
+            g2.drawString("${perkSlots[1]}", (1366/2)-scaleUI, 768/2+8)
 
-        g2.color = Color(150, 150, 150, 180)
-        g2.fillRoundRect((1366/2)+scaleUI+spacing, 768/2-heightUI/2, scaleUI*2, heightUI, arcSize, arcSize)
-        g2.color = Color.WHITE
-        g2.font = font?.deriveFont(Font.TYPE1_FONT, 16.toFloat()) ?: Font("Arial", Font.BOLD, 1)
-        g2.drawString("sigma3", (1366/2)+scaleUI+spacing, 768/2+8)
+            g2.color = Color(150, 150, 150, 180)
+            g2.fillRoundRect((1366/2)+scaleUI+spacing, 768/2-heightUI/2, scaleUI*2, heightUI, arcSize, arcSize)
+            g2.color = Color.WHITE
+            g2.font = font?.deriveFont(Font.TYPE1_FONT, 16.toFloat()) ?: Font("Arial", Font.BOLD, 1)
+            g2.drawString("${perkSlots[2]}", (1366/2)+scaleUI+spacing, 768/2+8)
+        }
     }
 
     fun handleInventoryClick(mouseX: Int, mouseY: Int) {
@@ -1638,6 +1698,16 @@ class RenderCast(private val map: Map) : JPanel() {
                                 if (points >= 100) {
                                     playSound("levelup.wav", volume = 0.65f)
                                     var levelUpTimer: Timer? = null
+                                    val availablePerks = Perk.values().toMutableList()
+                                    if (resetPerkSlot) {
+                                        resetPerkSlot = false
+                                        repeat(3) {
+                                            val randomPerk = availablePerks.random()
+                                            perkSlots[it] = randomPerk
+                                            availablePerks.remove(randomPerk)
+                                        }
+                                    }
+                                    perkGUI = true
                                     levelUp = true
                                     level += 1
                                     points = 0
@@ -1727,7 +1797,7 @@ class RenderCast(private val map: Map) : JPanel() {
                 val distance = sqrt(dx * dx + dy * dy)
                 if (distance < ammo.pickupDistance) {
                     ammo.active = false
-                    var remainingAmmo = ammo.amount
+                    var remainingAmmo = (ammo.amount * AmmoBoost).toInt()
 
                     val ammoSlots = playerInventory.indices.filter {
                         playerInventory[it]?.type == ItemType.AMMO && playerInventory[it]!!.quantity < Item.MAX_AMMO_PER_SLOT

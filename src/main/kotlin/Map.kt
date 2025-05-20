@@ -34,6 +34,26 @@ val rooms = listOf(
     ),
     RoomTemplate(
         grid = arrayOf(
+            intArrayOf(2, 2, 5, 2, 2),
+            intArrayOf(2, 0, 0, 0, 2),
+            intArrayOf(5, 0, 10, 0, 5),
+            intArrayOf(2, 0, 0, 0, 2),
+            intArrayOf(2, 2, 5, 2, 2)
+        ),
+        scale = 5
+    ),
+    RoomTemplate(
+        grid = arrayOf(
+            intArrayOf(2, 2, 5, 2, 2),
+            intArrayOf(2, 0, 0, 0, 2),
+            intArrayOf(5, 0, 4, 0, 5),
+            intArrayOf(2, 0, 0, 0, 2),
+            intArrayOf(2, 2, 5, 2, 2)
+        ),
+        scale = 5
+    ),
+    RoomTemplate(
+        grid = arrayOf(
             intArrayOf(2, 2, 2, 5, 2, 2, 2),
             intArrayOf(2, 0, 0, 0, 0, 0, 2),
             intArrayOf(2, 0, 7, 0, 4, 0, 2),

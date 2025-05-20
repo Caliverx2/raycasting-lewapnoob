@@ -10,7 +10,7 @@ import kotlin.math.sqrt
 class Player(private val renderCast: RenderCast, private val map: Map) {
     private val playerSize = 5.0
     private val margin = 2.0
-    private var movementSpeed = 1.5*SpeedMovement
+    private var movementSpeed = 1.5 * SpeedMovement
     private val rotationSpeed = 2
     private val sensitivity = 0.07
 
@@ -184,9 +184,9 @@ class Player(private val renderCast: RenderCast, private val map: Map) {
         if (keysPressed.getOrDefault(KeyEvent.VK_LEFT, false)) anglea()
         if (keysPressed.getOrDefault(KeyEvent.VK_RIGHT, false)) angled()
         if (((keysPressed.getOrDefault(KeyEvent.VK_W, false)) and (keysPressed.getOrDefault(KeyEvent.VK_SHIFT, false)))) {
-            movementSpeed = 2.5
+            movementSpeed = 2.5 * SpeedMovement
         } else {
-            movementSpeed = 1.5
+            movementSpeed = 1.5 * SpeedMovement
         }
 
         val gridX = (positionX / tileSize).toInt()
