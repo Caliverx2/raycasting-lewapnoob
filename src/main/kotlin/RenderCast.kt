@@ -919,7 +919,7 @@ class RenderCast(private val map: Map) : JPanel() {
                 }
                 // Wyświetl ilość
                 g2.color = Color.WHITE
-                g2.font = font?.deriveFont(Font.TYPE1_FONT, 16.toFloat()) ?: Font("Arial", Font.BOLD, 1)//Font("Arial", Font.BOLD, 12)
+                g2.font = font?.deriveFont(Font.TYPE1_FONT, 16.toFloat()) ?: Font("Arial", Font.BOLD, 1)
                 if (item.quantity > 9) {
                 g2.drawString("${item.quantity}", x + slotSize - 20, y + slotSize - 5)} else {
                     g2.drawString("  ${item.quantity}", x + slotSize - 20, y + slotSize - 5)
@@ -941,7 +941,7 @@ class RenderCast(private val map: Map) : JPanel() {
                 g2.drawImage(getItemTexture(chest.loot[i].type), x, y, slotSize, slotSize, null)
                 // Wyświetl ilość
                 g2.color = Color.WHITE
-                g2.font = font?.deriveFont(Font.BOLD, 8.toFloat()) ?: Font("Arial", Font.BOLD, 8)
+                g2.font = font?.deriveFont(Font.TYPE1_FONT, 16.toFloat()) ?: Font("Arial", Font.BOLD, 1)
                 if (chest.loot[i].quantity > 9) {
                 g2.drawString("${chest.loot[i].quantity}", x + slotSize - 20, y + slotSize - 5)} else {
                     g2.drawString("  ${chest.loot[i].quantity}", x + slotSize - 20, y + slotSize - 5)
@@ -956,12 +956,14 @@ class RenderCast(private val map: Map) : JPanel() {
                 ItemType.MEDKIT -> ImageIO.read(this::class.java.classLoader.getResource("textures/medication.png"))
                 ItemType.AMMO -> ImageIO.read(this::class.java.classLoader.getResource("textures/ammo.png"))
                 ItemType.KEY -> ImageIO.read(this::class.java.classLoader.getResource("textures/key.png"))
+                ItemType.COIN -> ImageIO.read(this::class.java.classLoader.getResource("textures/coin.png"))
             }
         } catch (e: Exception) {
             return when (type) {
                 ItemType.MEDKIT -> createTexture(Color(20,220,20))
                 ItemType.AMMO -> createTexture(Color(80,80,80))
                 ItemType.KEY -> createTexture(Color(255, 215, 0))
+                ItemType.COIN -> createTexture(Color(255, 255, 0))
             }
         }
     }

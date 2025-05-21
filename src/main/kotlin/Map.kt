@@ -221,7 +221,7 @@ class Map(var renderCast: RenderCast? = null) {
         var roomTemplate = roomTemplates.random()
         gridmod = false
         val (newX, newY, offsets) = ensureGridCapacity(x, y, roomTemplate, enterdirection)
-        var (offsetX, offsetY) = offsets
+        val (offsetX, offsetY) = offsets
 
         if (gridmod && (offsetX != 0 || offsetY != 0)) {
             positionX += offsetX*tileSize
@@ -533,13 +533,15 @@ class Map(var renderCast: RenderCast? = null) {
 
                     for (i in 0 until itemCount) {
                         val itemType = when (Random.nextFloat()) {
-                            in 0.0f..0.34f -> ItemType.KEY
-                            in 0.35f..0.6f -> ItemType.AMMO
+                            in 0.0f..0.25f -> ItemType.KEY
+                            in 0.25f..0.50f -> ItemType.AMMO
+                            in 0.50f..0.75f -> ItemType.COIN
                             else -> ItemType.MEDKIT
                         }
                         val quantity = when (itemType) {
                             ItemType.KEY -> Random.nextInt(1, Item.MAX_KEYS_PER_SLOT / 4)
                             ItemType.AMMO -> Random.nextInt(7, Item.MAX_AMMO_PER_SLOT / 3)
+                            ItemType.COIN -> Random.nextInt(1, 15)
                             ItemType.MEDKIT -> 1
                         }
                         items.add(Item(itemType, quantity))
@@ -576,7 +578,7 @@ class Mappingmap(private val map: Map, private val renderCast: RenderCast) : JPa
     private val offsetY = 10
     private var bufferedImage: BufferedImage? = null
     private var lastGrid: Array<IntArray>? = null
-    private val maxRenderTiles = 25
+    private val maxRenderTiles = 20
     private val enemyPathColors = mutableMapOf<Enemy, Color>()
     var keypng: BufferedImage? = null
     var sliderpng: BufferedImage? = null
@@ -616,6 +618,10 @@ class Mappingmap(private val map: Map, private val renderCast: RenderCast) : JPa
             .filter { it.type == ItemType.KEY }
             .sumOf { it.quantity }
 
+        val totalCoins = playerInventory.filterNotNull()
+            .filter { it.type == ItemType.COIN }
+            .sumOf { it.quantity }
+
         // Cache map
         if (bufferedImage == null || !map.grid.contentDeepEquals(lastGrid)) {
             bufferedImage = BufferedImage(miniMapSize + offsetX * 2, miniMapSize + offsetY * 2, BufferedImage.TYPE_INT_ARGB)
@@ -645,7 +651,7 @@ class Mappingmap(private val map: Map, private val renderCast: RenderCast) : JPa
                     if (x >= offsetX && x < miniMapSize + offsetX && y >= offsetY && y < miniMapSize + offsetY) {
                         when (map.grid[row][col]) {
                             1 -> {
-                                bufferGraphics.color = Color(0, 255, 0)
+                                bufferGraphics.color = Color(130, 150, 130)
                                 bufferGraphics.fillRect(x, y, scaledTileSize, scaledTileSize)
                             }
                             2 -> {
@@ -666,12 +672,15 @@ class Mappingmap(private val map: Map, private val renderCast: RenderCast) : JPa
 
         g2.drawImage(bufferedImage, 0, 0, null)
 
+        //draw GUI stats
+        val offsetx = 3
+        val offsety = 232
+        val arcSize = 20
 
-        sliderpng?.let {
-            val offsetx = 3
-            val offsety = 232
-            g2.drawImage(it, offsetx, offsety, (50*4)+offsetx, (20*4)+offsety, 0, 0, it.width, it.height, null)
-        }
+        g2.color = Color(50, 50, 50, 180)
+        g2.fillRoundRect(offsetx, offsety, 200+offsetx,200, arcSize, arcSize)
+        g2.color = Color(80, 80, 80, 180)
+        g2.fillRoundRect(offsetx+5, offsety+5, (200+offsetx)-10,80-5, arcSize, arcSize)
 
         keypng?.let {
             val offsetx = 10
@@ -792,12 +801,14 @@ class Mappingmap(private val map: Map, private val renderCast: RenderCast) : JPa
         g2.drawString("LEVEL: ${level}", 10, 360)
         g2.drawString("POINTS: ${points}", 10, 380)
         g2.drawString("AMMO: ${totalAmmo}", 10, 400)
+        g2.drawString("COINS: ${coins}", 10, 420)
         if (lookchest and !inventoryVisible) {
             g2.drawString("Open chest[E]", (1366+g2.font.size)/2, (768+g2.font.size)/2)
         }
         g2.font = font?.deriveFont(Font.BOLD, 50f) ?: Font("Arial", Font.BOLD, 50)
         g2.drawString("${totalKeys}", 85, 290)
         keys = totalKeys
+        coins = totalCoins
     }
 
     override fun getPreferredSize(): Dimension {

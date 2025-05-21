@@ -22,6 +22,7 @@ import kotlin.random.Random
 var playerHealth: Int = 100
 var level: Int = 1
 var points: Int = 0
+var coins: Int = 0
 var keys: Int = 2
 var selectSlot: Int = 1
 var activateSlot: Boolean = false
@@ -56,7 +57,7 @@ var openChest: Chest? = null
 var lookchest = false
 var playerInventory = MutableList<Item?>(9) { null }
 var isShooting = false
-var currentAmmo = 45
+var currentAmmo = 46
 
 class Medication(
     var x: Double,
@@ -116,17 +117,19 @@ data class Item(val type: ItemType, var quantity: Int = 1) {
         const val MAX_KEYS_PER_SLOT = 64
         const val MAX_AMMO_PER_SLOT = 46
         const val MAX_MEDKIT_PER_SLOT = 2
+        const val MAX_COINS_PER_SLOT = 128
 
         fun getMaxQuantity(type: ItemType): Int = when (type) {
             ItemType.KEY -> MAX_KEYS_PER_SLOT
             ItemType.AMMO -> MAX_AMMO_PER_SLOT
             ItemType.MEDKIT -> MAX_MEDKIT_PER_SLOT
+            ItemType.COIN -> MAX_COINS_PER_SLOT
         }
     }
 }
 
 enum class ItemType {
-    MEDKIT, AMMO, KEY
+    MEDKIT, AMMO, KEY, COIN
 }
 
 fun main() = runBlocking {

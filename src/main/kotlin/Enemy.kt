@@ -50,7 +50,7 @@ class Enemy(
     private val ENEMY_AVOIDANCE_COST = 10.0 // Cost penalty for being near another enemy
     private val ALIGNMENT_PENALTY = 5.0 // Penalty for aligning with other enemies
     private var shootTimer = 0
-    private val minShootInterval = (1.0 * TARGET_FPS).toInt()
+    private val minShootInterval = (1.25 * TARGET_FPS).toInt()
     private val maxShootInterval = (2.5 * TARGET_FPS).toInt()
     private var nextShootTime = Random.nextInt(minShootInterval, maxShootInterval + 1)
     private val projectiles = mutableListOf<Projectile>()
