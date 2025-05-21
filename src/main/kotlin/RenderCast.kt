@@ -717,6 +717,7 @@ class RenderCast(private val map: Map) : JPanel() {
         val heightUI = 400
 
         if (mouseX in (1366/2)-(scaleUI*3+10) until (1366/2)-scaleUI-10 && mouseY in ((768/2)-(heightUI/2)) until ((768/2)-(heightUI/2))+heightUI) {
+            playSound("click.wav")
             println("${perkSlots[0]}")
             SelectedPerk(perkSlots[0])
             perkGUI = false
@@ -724,6 +725,7 @@ class RenderCast(private val map: Map) : JPanel() {
         }
 
         if (mouseX in (1366/2)-scaleUI until (1366/2)+scaleUI && mouseY in ((768/2)-(heightUI/2)) until ((768/2)-(heightUI/2))+heightUI) {
+            playSound("click.wav")
             println("${perkSlots[1]}")
             SelectedPerk(perkSlots[1])
             perkGUI = false
@@ -731,6 +733,7 @@ class RenderCast(private val map: Map) : JPanel() {
         }
 
         if (mouseX in (1366/2)+scaleUI+spacing until (1366/2)+(scaleUI*3+10) && mouseY in ((768/2)-(heightUI/2)) until ((768/2)-(heightUI/2))+heightUI) {
+            playSound("click.wav")
             println("${perkSlots[2]}")
             SelectedPerk(perkSlots[2])
             perkGUI = false
@@ -1706,6 +1709,17 @@ class RenderCast(private val map: Map) : JPanel() {
                                             perkSlots[it] = randomPerk
                                             availablePerks.remove(randomPerk)
                                         }
+                                    }
+                                    when {
+                                        random < 0.8f -> null
+                                        else -> medications.add(
+                                            Medication(
+                                                x = enemy.x,
+                                                y = enemy.y,
+                                                medicationTextureID!!,
+                                                heal = 35
+                                            )
+                                        )
                                     }
                                     perkGUI = true
                                     levelUp = true
