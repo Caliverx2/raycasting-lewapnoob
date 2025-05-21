@@ -1692,8 +1692,9 @@ class RenderCast(private val map: Map) : JPanel() {
                                     }
 
                                     val randomItem = when {
-                                        random < 0.80f -> keysList.add(Key(itemX, itemY, keyTextureId!!))
-                                        else -> ammo.add(Ammo(itemX, itemY, ammoTextureID!!))
+                                        random < 0.80f -> keysList.add(Key(x = itemX, y = itemY, texture = keyTextureId!!))
+                                        random  < 0.90f -> medications.add(Medication(x = itemX, y = itemY, texture = medicationTextureID!!, heal = 35))
+                                        else -> ammo.add(Ammo(x = itemX, y = itemY, texture = ammoTextureID!!))
                                     }
                                     randomItem
                                 }
@@ -1709,17 +1710,6 @@ class RenderCast(private val map: Map) : JPanel() {
                                             perkSlots[it] = randomPerk
                                             availablePerks.remove(randomPerk)
                                         }
-                                    }
-                                    when {
-                                        random < 0.8f -> null
-                                        else -> medications.add(
-                                            Medication(
-                                                x = enemy.x,
-                                                y = enemy.y,
-                                                medicationTextureID!!,
-                                                heal = 35
-                                            )
-                                        )
                                     }
                                     perkGUI = true
                                     levelUp = true

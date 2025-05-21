@@ -426,8 +426,8 @@ class Map(var renderCast: RenderCast? = null) {
                     renderCast?.let {
                         enemies.add(
                             Enemy(
-                                (tileSize * (distItemX)) - (tileSize / 2),
-                                (tileSize * (distItemY)) - (tileSize / 2),
+                                (tileSize * (distItemX+1)) - (tileSize / 2),
+                                (tileSize * (distItemY+1)) - (tileSize / 2),
                                 (100 + (level * 7.5) * 2).toInt(),
                                 renderCast!!.enemyTextureId!!,
                                 renderCast = it,
