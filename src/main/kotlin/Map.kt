@@ -812,6 +812,13 @@ class Mappingmap(private val map: Map, private val renderCast: RenderCast) : JPa
             g2.color = Color.YELLOW
             g2.drawString("Open chest[E]", (1366+g2.font.size)/2, (768+g2.font.size)/2)
         }
+
+        if (looktrader and !inventoryVisible) {
+            g2.color = Color(50, 50, 50, 180)
+            g2.fillRoundRect(((1366+g2.font.size)/2)-10, ((768+g2.font.size)/2)-25, 150, 40, arcSize, arcSize)
+            g2.color = Color.YELLOW
+            g2.drawString("Trade[E]", (1366+g2.font.size)/2, (768+g2.font.size)/2)
+        }
         g2.font = font?.deriveFont(Font.BOLD, 50f) ?: Font("Arial", Font.BOLD, 50)
         g2.drawString("${totalKeys}", 85, 290)
         keys = totalKeys

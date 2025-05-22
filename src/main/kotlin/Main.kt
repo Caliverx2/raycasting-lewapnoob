@@ -55,6 +55,7 @@ var ammo = mutableListOf<Ammo>()
 var inventoryVisible = false
 var openChest: Chest? = null
 var lookchest = false
+var looktrader = false
 var playerInventory = MutableList<Item?>(9) { null }
 var isShooting = false
 var currentAmmo = 46
@@ -106,6 +107,16 @@ class Chest(
     var x: Double,
     var y: Double,
     var loot: MutableList<Item>,
+    var active: Boolean = true,
+) {
+    val size = 1.5 * tileSize
+    val pickupDistance = 1.3*2
+}
+
+class Trader(
+    var x: Double,
+    var y: Double,
+    var offer: MutableList<Item>,
     var active: Boolean = true,
 ) {
     val size = 1.5 * tileSize

@@ -314,6 +314,7 @@ class RenderCast(private val map: Map) : JPanel() {
         visibleMedications.clear()
         visibleChests.clear()
         lookchest = false
+        looktrader = false
 
         for (ray in 0 until rayCount) {
             val rayAngle = currentangle + rayAngles[ray]
