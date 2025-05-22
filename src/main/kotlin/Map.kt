@@ -224,9 +224,9 @@ class Map(var renderCast: RenderCast? = null) {
         val (offsetX, offsetY) = offsets
 
         if (gridmod && (offsetX != 0 || offsetY != 0)) {
-            positionX += offsetX*tileSize
-            positionY += offsetY*tileSize
-            if (grid[(positionY/tileSize).toInt()][(positionX/tileSize).toInt()] != 0) {
+            positionX = positionX.toInt() + offsetX*tileSize
+            positionY = positionY.toInt() + offsetY*tileSize
+            if ((grid[(positionY/tileSize).toInt()][(positionX/tileSize).toInt()] == 1) or (grid[(positionY/tileSize).toInt()][(positionX/tileSize).toInt()] == 2)) {
                 positionX -= 0.2*tileSize
                 positionY -= 0.2*tileSize
             }
