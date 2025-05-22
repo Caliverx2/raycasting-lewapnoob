@@ -798,24 +798,46 @@ class RenderCast(private val map: Map) : JPanel() {
         val heightUI = 400
         val arcSize = 50
 
+
         if (perkGUI) {
-            g2.color = Color(150, 250, 250, 180)
+            when {
+                perkSlots[0] == Perk.SpeedMovement -> g2.color = Color(150, 250, 250, 180)
+                perkSlots[0] == Perk.AmmoBoost -> g2.color = Color(255, 127, 0, 180)
+                perkSlots[0] == Perk.FastReload -> g2.color = Color(100, 200, 200, 180)
+                perkSlots[0] == Perk.MoreHitShot -> g2.color = Color(250, 70, 70, 180)
+                perkSlots[0] == Perk.HealBoost -> g2.color = Color(110, 250, 110, 180)
+                else -> g2.color = Color(150, 150, 150, 180)
+            }
             g2.fillRoundRect((1366/2)-(scaleUI*3+10), 768/2-heightUI/2, scaleUI*2, heightUI, arcSize, arcSize)
             g2.color = Color.WHITE
-            g2.font = font?.deriveFont(Font.TYPE1_FONT, 16.toFloat()) ?: Font("Arial", Font.BOLD, 1)
-            g2.drawString("${perkSlots[0]}", (1366/2)-(scaleUI*3+10), 768/2+8)
+            g2.font = font?.deriveFont(Font.TYPE1_FONT, 20.toFloat()) ?: Font("Arial", Font.BOLD, 1)
+            g2.drawString("${perkSlots[0]}", (1366/2)-(scaleUI*3+10)+80, 768/2+8)
 
-            g2.color = Color(150, 150, 150, 180)
+            when {
+                perkSlots[1] == Perk.SpeedMovement -> g2.color = Color(150, 250, 250, 180)
+                perkSlots[1] == Perk.AmmoBoost -> g2.color = Color(255, 127, 0, 180)
+                perkSlots[1] == Perk.FastReload -> g2.color = Color(100, 200, 200, 180)
+                perkSlots[1] == Perk.MoreHitShot -> g2.color = Color(250, 70, 70, 180)
+                perkSlots[1] == Perk.HealBoost -> g2.color = Color(110, 250, 110, 180)
+                else -> g2.color = Color(150, 150, 150, 180)
+            }
             g2.fillRoundRect((1366/2)-scaleUI, 768/2-heightUI/2, scaleUI*2, heightUI, arcSize, arcSize)
             g2.color = Color.WHITE
-            g2.font = font?.deriveFont(Font.TYPE1_FONT, 16.toFloat()) ?: Font("Arial", Font.BOLD, 1)
-            g2.drawString("${perkSlots[1]}", (1366/2)-scaleUI, 768/2+8)
+            g2.font = font?.deriveFont(Font.TYPE1_FONT, 20.toFloat()) ?: Font("Arial", Font.BOLD, 1)
+            g2.drawString("${perkSlots[1]}", (1366/2)-scaleUI+80, 768/2+8)
 
-            g2.color = Color(150, 150, 150, 180)
+            when {
+                perkSlots[2] == Perk.SpeedMovement -> g2.color = Color(150, 250, 250, 180)
+                perkSlots[2] == Perk.AmmoBoost -> g2.color = Color(255, 127, 0, 180)
+                perkSlots[2] == Perk.FastReload -> g2.color = Color(100, 200, 200, 180)
+                perkSlots[2] == Perk.MoreHitShot -> g2.color = Color(250, 70, 70, 180)
+                perkSlots[2] == Perk.HealBoost -> g2.color = Color(110, 250, 110, 180)
+                else -> g2.color = Color(150, 150, 150, 180)
+            }
             g2.fillRoundRect((1366/2)+scaleUI+spacing, 768/2-heightUI/2, scaleUI*2, heightUI, arcSize, arcSize)
             g2.color = Color.WHITE
-            g2.font = font?.deriveFont(Font.TYPE1_FONT, 16.toFloat()) ?: Font("Arial", Font.BOLD, 1)
-            g2.drawString("${perkSlots[2]}", (1366/2)+scaleUI+spacing, 768/2+8)
+            g2.font = font?.deriveFont(Font.TYPE1_FONT, 20.toFloat()) ?: Font("Arial", Font.BOLD, 1)
+            g2.drawString("${perkSlots[2]}", (1366/2)+scaleUI+spacing+80, 768/2+8)
         }
     }
 
@@ -913,12 +935,12 @@ class RenderCast(private val map: Map) : JPanel() {
             g2.color = Color(100, 100, 100)
             g2.fillRect(x, y, slotSize, slotSize)
             playerInventory[i]?.let { item ->
-                if (item.type != ItemType.AMMO){
+                if ((item.type != ItemType.AMMO) and (item.type != ItemType.COIN) and (item.type != ItemType.MEDKIT)){
                 g2.drawImage(getItemTexture(item.type), x, y, (slotSize), (slotSize), null)} else {
                     g2.drawImage(getItemTexture(item.type), x + (slotSize/5), y + (slotSize/5), (slotSize/4)*3, (slotSize/4)*3, null)
                 }
                 // Wyświetl ilość
-                g2.color = Color.WHITE
+                g2.color = Color(230, 230, 230)
                 g2.font = font?.deriveFont(Font.TYPE1_FONT, 16.toFloat()) ?: Font("Arial", Font.BOLD, 1)
                 if (item.quantity > 9) {
                 g2.drawString("${item.quantity}", x + slotSize - 20, y + slotSize - 5)} else {
@@ -938,9 +960,13 @@ class RenderCast(private val map: Map) : JPanel() {
                 val y = chestY
                 g2.color = Color(100, 100, 100)
                 g2.fillRect(x, y, slotSize, slotSize)
-                g2.drawImage(getItemTexture(chest.loot[i].type), x, y, slotSize, slotSize, null)
+                if ((chest.loot[i].type!= ItemType.AMMO) and (chest.loot[i].type!= ItemType.COIN) and (chest.loot[i].type!= ItemType.MEDKIT)){
+                    g2.drawImage(getItemTexture(chest.loot[i].type), x, y, (slotSize), (slotSize), null)}
+                else {
+                    g2.drawImage(getItemTexture(chest.loot[i].type), x + (slotSize/5), y + (slotSize/5), (slotSize/4)*3, (slotSize/4)*3, null)
+                }
                 // Wyświetl ilość
-                g2.color = Color.WHITE
+                g2.color = Color(230, 230, 230)
                 g2.font = font?.deriveFont(Font.TYPE1_FONT, 16.toFloat()) ?: Font("Arial", Font.BOLD, 1)
                 if (chest.loot[i].quantity > 9) {
                 g2.drawString("${chest.loot[i].quantity}", x + slotSize - 20, y + slotSize - 5)} else {

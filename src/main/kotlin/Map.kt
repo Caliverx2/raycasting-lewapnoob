@@ -226,6 +226,10 @@ class Map(var renderCast: RenderCast? = null) {
         if (gridmod && (offsetX != 0 || offsetY != 0)) {
             positionX += offsetX*tileSize
             positionY += offsetY*tileSize
+            if (grid[(positionY/tileSize).toInt()][(positionX/tileSize).toInt()] != 0) {
+                positionX -= 0.2*tileSize
+                positionY -= 0.2*tileSize
+            }
         }
 
         if (keys > 0) {
@@ -803,6 +807,9 @@ class Mappingmap(private val map: Map, private val renderCast: RenderCast) : JPa
         g2.drawString("AMMO: ${totalAmmo}", 10, 400)
         g2.drawString("COINS: ${coins}", 10, 420)
         if (lookchest and !inventoryVisible) {
+            g2.color = Color(50, 50, 50, 180)
+            g2.fillRoundRect(((1366+g2.font.size)/2)-10, ((768+g2.font.size)/2)-25, 150, 40, arcSize, arcSize)
+            g2.color = Color.YELLOW
             g2.drawString("Open chest[E]", (1366+g2.font.size)/2, (768+g2.font.size)/2)
         }
         g2.font = font?.deriveFont(Font.BOLD, 50f) ?: Font("Arial", Font.BOLD, 50)
@@ -818,6 +825,8 @@ class Mappingmap(private val map: Map, private val renderCast: RenderCast) : JPa
     fun levelUp(v: Graphics) {
         super.paintComponent(v)
         val g2 = v as Graphics2D
+        g2.color = Color(80, 80, 80, 180)
+        g2.fillRoundRect((1366/2)-80, (768/2)-305, 110,30, 20, 20)
         g2.color = Color.YELLOW
         g2.font = font?.deriveFont(Font.BOLD, 17f) ?: Font("Arial", Font.BOLD, 50)
         g2.drawString("level up", (1366/2)-70, 100)
