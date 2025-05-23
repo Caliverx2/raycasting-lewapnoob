@@ -258,6 +258,10 @@ class Map(var renderCast: RenderCast? = null) {
                         ammo.x += offsetX*tileSize
                         ammo.y += offsetY*tileSize
                     }
+                    traders.forEach { trader ->
+                        trader.x += offsetX*tileSize
+                        trader.y += offsetY*tileSize
+                    }
                     lightSources.forEach { lightSource ->
                         lightSource.x += offsetX
                         lightSource.y += offsetY
@@ -347,6 +351,10 @@ class Map(var renderCast: RenderCast? = null) {
                     chests.forEach { chest ->
                         chest.x += offsetX*tileSize
                         chest.y += offsetY*tileSize
+                    }
+                    traders.forEach { trader ->
+                        trader.x += offsetX*tileSize
+                        trader.y += offsetY*tileSize
                     }
                 }
             }
@@ -464,9 +472,20 @@ class Map(var renderCast: RenderCast? = null) {
                             active = true
                         )
                     )
+                    traders.add(
+                        Trader(
+                            x = (tileSize * (distItemX+1)),
+                            y = (tileSize * (distItemY+1)),
+                            offer = playerInventory as MutableList<Item>,
+                            texture = renderCast?.traderTextureID!!,
+                            active = true
+                        )
+                    )
                     if (gridmod && (offsetX != 0 || offsetY != 0)) {
                         ammo.get(ammo.size-1).x -= offsetX*tileSize
                         ammo.get(ammo.size-1).y -= offsetY*tileSize
+                        traders.get(traders.size-1).x -= offsetX*tileSize
+                        traders.get(traders.size-1).y -= offsetY*tileSize
                     }
                 }
                 if (roomTemplate.grid[XX][YY] == 6) {
@@ -738,7 +757,19 @@ class Mappingmap(private val map: Map, private val renderCast: RenderCast) : JPa
                 }
             }
         }
-
+        // draw trader
+        traders.forEach { trader ->
+            if (trader.active) {
+                val relativeX = (trader.x / tileSize) - playerGridX
+                val relativeY = (trader.y / tileSize) - playerGridY
+                val keyX = (playerMapX + relativeX * tileScale).toInt()
+                val keyY = (playerMapY + relativeY * tileScale).toInt()
+                if (keyX >= offsetX && keyX < miniMapSize + offsetX && keyY >= offsetY && keyY < miniMapSize + offsetY) {
+                    g2.color = Color.MAGENTA
+                    g2.fillOval(keyX - 3, keyY - 3, 6, 6)
+                }
+            }
+        }
         //draw chest
         chests.forEach { chest ->
             if (chest.active) {

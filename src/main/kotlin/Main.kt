@@ -52,6 +52,7 @@ var keysList = mutableListOf<Key>()
 var medications = mutableListOf<Medication>()
 var chests = mutableListOf<Chest>()
 var ammo = mutableListOf<Ammo>()
+var traders = mutableListOf<Trader>()
 var inventoryVisible = false
 var openChest: Chest? = null
 var lookchest = false
@@ -116,6 +117,7 @@ class Chest(
 class Trader(
     var x: Double,
     var y: Double,
+    var texture: BufferedImage,
     var offer: MutableList<Item>,
     var active: Boolean = true,
 ) {
