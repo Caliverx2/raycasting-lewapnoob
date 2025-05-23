@@ -1013,6 +1013,31 @@ class RenderCast(private val map: Map) : JPanel() {
                 }
             }
         }
+
+        openTrader?.let { trade ->
+            val chestY = 500
+            g2.color = Color(50, 50, 50, 220)
+            g2.fillRect(startX - 10, chestY-(slotSize + 20)*3, (slotSize + spacing) * totalSlots + 20, (slotSize + 20)*4)
+
+            for (i in trade.offer.indices) {
+                val x = startX //+ i * (slotSize + spacing)
+                val y = (chestY - 3 * (slotSize + spacing))+ i * (slotSize + spacing)
+                g2.color = Color(100, 100, 100)
+                g2.fillRect(x, y, slotSize, slotSize)
+                if ((trade.offer[i].type!= ItemType.AMMO) and (trade.offer[i].type!= ItemType.COIN) and (trade.offer[i].type!= ItemType.MEDKIT)){
+                    g2.drawImage(getItemTexture(trade.offer[i].type), x, y, (slotSize), (slotSize), null)}
+                else {
+                    g2.drawImage(getItemTexture(trade.offer[i].type), x + (slotSize/5), y + (slotSize/5), (slotSize/4)*3, (slotSize/4)*3, null)
+                }
+                // Wyświetl ilość
+                g2.color = Color(230, 230, 230)
+                g2.font = font?.deriveFont(Font.TYPE1_FONT, 16.toFloat()) ?: Font("Arial", Font.BOLD, 1)
+                if (trade.offer[i].quantity > 9) {
+                    g2.drawString("${trade.offer[i].quantity}", x + slotSize - 20, y + slotSize - 5)} else {
+                    g2.drawString("  ${trade.offer[i].quantity}", x + slotSize - 20, y + slotSize - 5)
+                }
+            }
+        }
     }
 
     fun getItemTexture(type: ItemType): BufferedImage {
@@ -1065,6 +1090,41 @@ class RenderCast(private val map: Map) : JPanel() {
             val dx = chest.x - positionX
             val dy = chest.y - positionY
             sqrt(dx * dx + dy * dy) < tileSize * chest.pickupDistance
+        }
+    }
+
+    fun updateOpenTrader() {
+        val playerPosX = positionX / tileSize
+        val playerPosY = positionY / tileSize
+        val rayDirX = cos(Math.toRadians(currentangle.toDouble()))
+        val rayDirY = sin(Math.toRadians(currentangle.toDouble()))
+        val shotAngleRad = atan2(rayDirY, rayDirX)
+
+        val closestTrader = traders.minByOrNull { trader ->
+            val dx = trader.x / tileSize - playerPosX
+            val dy = trader.y / tileSize - playerPosY
+            val rayLength = dx * rayDirX + dy * rayDirY
+
+            if (rayLength <= 0) return@minByOrNull Double.MAX_VALUE
+
+            val perpendicularDistance = abs(dx * rayDirY - dy * rayDirX)
+            if (perpendicularDistance >= 0.5) return@minByOrNull Double.MAX_VALUE
+
+            val angleToChest = atan2(dy, dx)
+            var angleDiff = abs(angleToChest - shotAngleRad)
+            angleDiff = min(angleDiff, 2 * Math.PI - angleDiff)
+
+            if (angleDiff < Math.toRadians(35*3.0)) {
+                rayLength
+            } else {
+                Double.MAX_VALUE
+            }
+        }
+
+        openTrader = closestTrader?.takeIf { trader ->
+            val dx = trader.x - positionX
+            val dy = trader.y - positionY
+            sqrt(dx * dx + dy * dy) < tileSize * trader.pickupDistance
         }
     }
 
@@ -1582,6 +1642,82 @@ class RenderCast(private val map: Map) : JPanel() {
             val shadowSize = (spriteSize * 1.2).toInt() // Slightly larger than medication, matching enemy shadow scaling
             val shadowStartY = floorY.coerceIn(0, screenHeight - 1)
             val shadowEndY = (floorY + shadowSize / 4).coerceIn(0, screenHeight - 1) // Minimal vertical extent for floor shadow
+
+            //chest interact
+            val playerPosX = positionX / tileSize
+            val playerPosY = positionY / tileSize
+            val chestPosX = trader.x / tileSize
+            val chestPosY = trader.y / tileSize
+            val dx = chestPosX - playerPosX
+            val dy = chestPosY - playerPosY
+            val rayLength = sqrt(dx * dx + dy * dy)
+
+            if (rayLength <= trader.pickupDistance) {
+                val rayDirX = dx / rayLength
+                val rayDirY = dy / rayLength
+                val shotAngleRad = Math.toRadians(currentangle.toDouble())
+                val angleToChest = atan2(dy, dx)
+                var angleDiff = abs(angleToChest - shotAngleRad)
+                angleDiff = min(angleDiff, 2 * Math.PI - angleDiff)
+
+                if (angleDiff < Math.toRadians(15.0)) {
+                    var mapX = playerPosX.toInt()
+                    var mapY = playerPosY.toInt()
+                    val deltaDistX = if (rayDirX == 0.0) 1e30 else abs(1 / rayDirX)
+                    val deltaDistY = if (rayDirY == 0.0) 1e30 else abs(1 / rayDirY)
+                    var stepX: Int
+                    var stepY: Int
+                    var sideDistX: Double
+                    var sideDistY: Double
+                    var side: Int
+
+                    if (rayDirX < 0) {
+                        stepX = -1
+                        sideDistX = (playerPosX - mapX) * deltaDistX
+                    } else {
+                        stepX = 1
+                        sideDistX = (mapX + 1.0 - playerPosX) * deltaDistX
+                    }
+                    if (rayDirY < 0) {
+                        stepY = -1
+                        sideDistY = (playerPosY - mapY) * deltaDistY
+                    } else {
+                        stepY = 1
+                        sideDistY = (mapY + 1.0 - playerPosY) * deltaDistY
+                    }
+
+                    var hitWall = false
+                    var wallDistance = Double.MAX_VALUE
+
+                    while (!hitWall) {
+                        if (sideDistX < sideDistY) {
+                            sideDistX += deltaDistX
+                            mapX += stepX
+                            side = 0
+                        } else {
+                            sideDistY += deltaDistY
+                            mapY += stepY
+                            side = 1
+                        }
+                        if (mapY !in map.grid.indices || mapX !in map.grid[0].indices) {
+                            break
+                        }
+                        if (wallIndices.contains(map.grid[mapY][mapX])) {
+                            hitWall = true
+                            wallDistance = if (side == 0) {
+                                (mapX - playerPosX + (1 - stepX) / 2.0) / rayDirX
+                            } else {
+                                (mapY - playerPosY + (1 - stepY) / 2.0) / rayDirY
+                            }
+                            if (wallDistance < 0.01) wallDistance = 0.01
+                        }
+                    }
+
+                    if (!hitWall || rayLength < wallDistance) {
+                        looktrader = true
+                    }
+                }
+            }
 
             val shadowLeftX = screenX - shadowSize / 2.0
             val shadowRightX = screenX + shadowSize / 2.0

@@ -472,11 +472,31 @@ class Map(var renderCast: RenderCast? = null) {
                             active = true
                         )
                     )
+
+                    //
+                    val items = mutableListOf<Item>()
+                    var random = Random.nextFloat()
+
+                    for (i in 0 until 4) {
+                        val itemType = when (Random.nextFloat()) {
+                            in 0.0f..0.25f -> ItemType.KEY
+                            in 0.25f..0.50f -> ItemType.AMMO
+                            in 0.50f..0.75f -> ItemType.COIN
+                            else -> ItemType.MEDKIT
+                        }
+                        val quantity = when (itemType) {
+                            ItemType.KEY -> Random.nextInt(1, Item.MAX_KEYS_PER_SLOT / 4)
+                            ItemType.AMMO -> Random.nextInt(7, Item.MAX_AMMO_PER_SLOT / 3)
+                            ItemType.COIN -> Random.nextInt(1, 15)
+                            ItemType.MEDKIT -> 1
+                        }
+                        items.add(Item(itemType, quantity))
+                    }
                     traders.add(
                         Trader(
                             x = (tileSize * (distItemX+1)),
                             y = (tileSize * (distItemY+1)),
-                            offer = playerInventory as MutableList<Item>,
+                            offer = items,
                             texture = renderCast?.traderTextureID!!,
                             active = true
                         )
@@ -846,7 +866,7 @@ class Mappingmap(private val map: Map, private val renderCast: RenderCast) : JPa
 
         if (looktrader and !inventoryVisible) {
             g2.color = Color(50, 50, 50, 180)
-            g2.fillRoundRect(((1366+g2.font.size)/2)-10, ((768+g2.font.size)/2)-25, 150, 40, arcSize, arcSize)
+            g2.fillRoundRect(((1366+g2.font.size)/2)-10, ((768+g2.font.size)/2)-25, 105, 40, arcSize, arcSize)
             g2.color = Color.YELLOW
             g2.drawString("Trade[E]", (1366+g2.font.size)/2, (768+g2.font.size)/2)
         }

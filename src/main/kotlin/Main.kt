@@ -55,6 +55,7 @@ var ammo = mutableListOf<Ammo>()
 var traders = mutableListOf<Trader>()
 var inventoryVisible = false
 var openChest: Chest? = null
+var openTrader: Trader? = null
 var lookchest = false
 var looktrader = false
 var playerInventory = MutableList<Item?>(9) { null }
@@ -293,7 +294,9 @@ fun main() = runBlocking {
     while (true) {
         if (inventoryVisible) {
             renderCast.updateOpenChest()
+            renderCast.updateOpenTrader()
         } else {
+            openTrader = null
             openChest = null
         }
 
