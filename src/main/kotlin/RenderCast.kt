@@ -97,7 +97,7 @@ class RenderCast(private val map: Map) : JPanel() {
             medicationTextureID = ImageIO.read(this::class.java.classLoader.getResource("textures/medication.png"))
             chestTextureID = ImageIO.read(this::class.java.classLoader.getResource("textures/chest.png"))
             ammoTextureID = ImageIO.read(this::class.java.classLoader.getResource("textures/ammo.png"))
-            traderTextureID = ImageIO.read(this::class.java.classLoader.getResource("textures/boguch.jpg"))
+            traderTextureID = ImageIO.read(this::class.java.classLoader.getResource("textures/villager.png"))
 
             loadTexture(1, "textures/bricks.jpg")
             loadTexture(2, "textures/black_bricks.png")
