@@ -964,22 +964,21 @@ class RenderCast(private val map: Map) : JPanel() {
         val totalSlots = playerInventory.size
 
         g2.color = Color(50, 50, 50, 180)
-        g2.fillRect(startX-scaleUI, startY - scaleUI, (slotSize + spacing) * totalSlots, slotSize + (scaleUI*2))
+        g2.fillRoundRect(startX-scaleUI, startY - scaleUI, (slotSize + spacing) * totalSlots, slotSize + (scaleUI*2), 20, 20)
 
         g2.color = Color(150, 150, 150, 180)
-        g2.fillRect((startX-scaleUI)+((slotSize + spacing) * selectSlot), startY - scaleUI, (slotSize + spacing), slotSize + (scaleUI*2))
+        g2.fillRoundRect((startX-scaleUI)+((slotSize + spacing) * selectSlot), startY - scaleUI, (slotSize + spacing), slotSize + (scaleUI*2), 20, 20)
 
         for (i in 0 until totalSlots) {
             val x = startX + i * (slotSize + spacing)
             val y = startY
             g2.color = Color(100, 100, 100)
-            g2.fillRect(x, y, slotSize, slotSize)
+            g2.fillRoundRect(x, y, slotSize, slotSize, 17, 17)
             playerInventory[i]?.let { item ->
                 if ((item.type != ItemType.AMMO) and (item.type != ItemType.COIN) and (item.type != ItemType.MEDKIT)){
                 g2.drawImage(getItemTexture(item.type), x, y, (slotSize), (slotSize), null)} else {
                     g2.drawImage(getItemTexture(item.type), x + (slotSize/5), y + (slotSize/5), (slotSize/4)*3, (slotSize/4)*3, null)
                 }
-                // Wyświetl ilość
                 g2.color = Color(230, 230, 230)
                 g2.font = font?.deriveFont(Font.TYPE1_FONT, 16.toFloat()) ?: Font("Arial", Font.BOLD, 1)
                 if (item.quantity > 9) {
@@ -993,13 +992,13 @@ class RenderCast(private val map: Map) : JPanel() {
         openChest?.let { chest ->
             val chestY = 500
             g2.color = Color(50, 50, 50, 220)
-            g2.fillRect(startX - 10, chestY - 10, (slotSize + spacing) * totalSlots + 20, slotSize + 20)
+            g2.fillRoundRect(startX - 10, chestY - 10, (slotSize + spacing) * totalSlots + 20, slotSize + 20, 20, 20)
 
             for (i in chest.loot.indices) {
                 val x = startX + i * (slotSize + spacing)
                 val y = chestY
                 g2.color = Color(100, 100, 100)
-                g2.fillRect(x, y, slotSize, slotSize)
+                g2.fillRoundRect(x, y, slotSize, slotSize, 17, 17)
                 if ((chest.loot[i].type!= ItemType.AMMO) and (chest.loot[i].type!= ItemType.COIN) and (chest.loot[i].type!= ItemType.MEDKIT)){
                     g2.drawImage(getItemTexture(chest.loot[i].type), x, y, (slotSize), (slotSize), null)}
                 else {
@@ -1018,7 +1017,7 @@ class RenderCast(private val map: Map) : JPanel() {
         openTrader?.let { trade ->
             val chestY = 500
             g2.color = Color(50, 50, 50, 220)
-            g2.fillRect(startX - 10, chestY-(slotSize + 20)*3, (slotSize + spacing) * totalSlots + 20, (slotSize + 20)*4)
+            g2.fillRoundRect(startX - 10, chestY-(slotSize + 20)*3, (slotSize + spacing) * totalSlots + 20, (slotSize + 20)*4, 20 ,20)
             g2.font = font?.deriveFont(Font.TYPE1_FONT, 16.toFloat()) ?: Font("Arial", Font.BOLD, 1)
 
             trade.offer.forEachIndexed { index, item ->
@@ -1028,7 +1027,6 @@ class RenderCast(private val map: Map) : JPanel() {
                 g2.drawString(itemText, startX+100, yPos+20)
             }
 
-            // Optional: Highlight selected item (assuming a selection variable)
             if (selectedOfferIndex in 0 until trade.offer.size) {
                 g2.color = Color.YELLOW
                 val yPos = (chestY - 3 * (slotSize + spacing))+ selectedOfferIndex * (slotSize + spacing)
@@ -1039,13 +1037,12 @@ class RenderCast(private val map: Map) : JPanel() {
                 val x = startX //+ i * (slotSize + spacing)
                 val y = (chestY - 3 * (slotSize + spacing))+ i * (slotSize + spacing)
                 g2.color = Color(100, 100, 100)
-                g2.fillRect(x, y, slotSize, slotSize)
+                g2.fillRoundRect(x, y, slotSize, slotSize, 17, 17)
                 if ((trade.offer[i].type!= ItemType.AMMO) and (trade.offer[i].type!= ItemType.COIN) and (trade.offer[i].type!= ItemType.MEDKIT)){
                     g2.drawImage(getItemTexture(trade.offer[i].type), x, y, (slotSize), (slotSize), null)}
                 else {
                     g2.drawImage(getItemTexture(trade.offer[i].type), x + (slotSize/5), y + (slotSize/5), (slotSize/4)*3, (slotSize/4)*3, null)
                 }
-                // Wyświetl ilość
                 g2.color = Color(230, 230, 230)
                 g2.font = font?.deriveFont(Font.TYPE1_FONT, 16.toFloat()) ?: Font("Arial", Font.BOLD, 1)
                 if (trade.offer[i].quantity > 9) {
