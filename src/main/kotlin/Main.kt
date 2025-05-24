@@ -121,7 +121,7 @@ class Trader(
     var y: Double,
     var texture: BufferedImage,
     var offer: MutableList<Item> = mutableListOf(Item(ItemType.MEDKIT, 1), Item(ItemType.AMMO, 10), Item(ItemType.KEY, 1), Item(ItemType.AMMO, 20)),
-    var prices: MutableList<Int> = mutableListOf(50, 20, 30, 40),
+    var prices: MutableList<Int> = mutableListOf(15, 9, 30, 12),
     var active: Boolean = true,
 ) {
     val size = 1.5 * tileSize

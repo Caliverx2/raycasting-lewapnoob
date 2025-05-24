@@ -473,29 +473,33 @@ class Map(var renderCast: RenderCast? = null) {
                         )
                     )
 
-                    //
                     val items = mutableListOf<Item>()
-                    var random = Random.nextFloat()
+                    val availableItemTypes = mutableListOf(
+                        ItemType.KEY,
+                        ItemType.AMMO,
+                        ItemType.COIN,
+                        ItemType.MEDKIT
+                    )
 
                     for (i in 0 until 4) {
-                        val itemType = when (Random.nextFloat()) {
-                            in 0.0f..0.25f -> ItemType.KEY
-                            in 0.25f..0.50f -> ItemType.AMMO
-                            in 0.50f..0.75f -> ItemType.COIN
-                            else -> ItemType.MEDKIT
-                        }
+                        if (availableItemTypes.isEmpty()) break
+                        val randomIndex = Random.nextInt(availableItemTypes.size)
+                        val itemType = availableItemTypes[randomIndex]
+                        availableItemTypes.removeAt(randomIndex)
+
                         val quantity = when (itemType) {
-                            ItemType.KEY -> Random.nextInt(1, Item.MAX_KEYS_PER_SLOT / 4)
-                            ItemType.AMMO -> Random.nextInt(7, Item.MAX_AMMO_PER_SLOT / 3)
-                            ItemType.COIN -> Random.nextInt(1, 15)
-                            ItemType.MEDKIT -> 1
+                            ItemType.KEY -> Random.nextInt(1, Item.MAX_KEYS_PER_SLOT / 2)
+                            ItemType.AMMO -> Random.nextInt(7, Item.MAX_AMMO_PER_SLOT / 2)
+                            ItemType.COIN -> Random.nextInt(1, 8)
+                            ItemType.MEDKIT -> Random.nextInt(1, 2)
                         }
                         items.add(Item(itemType, quantity))
                     }
+
                     traders.add(
                         Trader(
-                            x = (tileSize * (distItemX+1)),
-                            y = (tileSize * (distItemY+1)),
+                            x = (tileSize * (distItemX + 1)),
+                            y = (tileSize * (distItemY + 1)),
                             offer = items,
                             texture = renderCast?.traderTextureID!!,
                             active = true
