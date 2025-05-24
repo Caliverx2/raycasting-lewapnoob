@@ -25,6 +25,7 @@ var points: Int = 0
 var coins: Int = 0
 var keys: Int = 2
 var selectSlot: Int = 1
+var selectedOfferIndex = 0
 var activateSlot: Boolean = false
 var perkGUI: Boolean = false
 
@@ -119,7 +120,8 @@ class Trader(
     var x: Double,
     var y: Double,
     var texture: BufferedImage,
-    var offer: MutableList<Item>,
+    var offer: MutableList<Item> = mutableListOf(Item(ItemType.MEDKIT, 1), Item(ItemType.AMMO, 10), Item(ItemType.KEY, 1), Item(ItemType.AMMO, 20)),
+    var prices: MutableList<Int> = mutableListOf(50, 20, 30, 40),
     var active: Boolean = true,
 ) {
     val size = 1.5 * tileSize
@@ -201,6 +203,15 @@ fun main() = runBlocking {
         slotIndexKey++
     }
 
+    var remainingCOINS = 128
+    var slotIndexCOIN = 5
+    while (remainingCOINS > 0 && slotIndexCOIN < playerInventory.size) {
+        val quantity = minOf(remainingCOINS, Item.MAX_COINS_PER_SLOT)
+        playerInventory[slotIndexCOIN] = Item(ItemType.COIN, quantity)
+        remainingCOINS -= quantity
+        slotIndexCOIN++
+    }
+
     frame.addMouseListener(object : MouseAdapter() {
         override fun mousePressed(event: MouseEvent) {
             if (event.button == MouseEvent.BUTTON1) {
@@ -251,10 +262,25 @@ fun main() = runBlocking {
             keysPressed[event.keyCode] = false
             when (event.keyCode) {
                 KeyEvent.VK_SPACE -> isShooting = false
-                KeyEvent.VK_E -> inventoryVisible = !inventoryVisible
+                KeyEvent.VK_E -> {
+                    openTrader?.let { trader ->
+                        if (looktrader) {
+                            if (renderCast.purchaseItem(trader, selectedOfferIndex)) {
+                                println("Purchased ${trader.offer[selectedOfferIndex].type} for ${trader.prices[selectedOfferIndex]} COINs")
+                            } else {
+                                println("Purchase failed: Not enough COINs or inventory full")
+                            }
+                        } else {
+                            inventoryVisible = !inventoryVisible
+                        }
+                    } ?: run {
+                        inventoryVisible = !inventoryVisible
+                    }
+                }
                 in KeyEvent.VK_1..KeyEvent.VK_9 -> {
                     selectSlot = event.keyCode - KeyEvent.VK_0-1
                     activateSlot = true
+                    selectedOfferIndex = selectSlot
                     println(selectSlot)
                     println(playerInventory[selectSlot])
                     if (playerInventory[selectSlot] != null) {

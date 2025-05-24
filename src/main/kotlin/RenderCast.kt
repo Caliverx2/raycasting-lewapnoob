@@ -923,6 +923,7 @@ class RenderCast(private val map: Map) : JPanel() {
             }
         }
 
+
         for (i in 0 until totalSlots) {
             val slotX = startX + i * (slotSize + spacing)
             if (mouseX in slotX until (slotX + slotSize) && mouseY in startY until (startY + slotSize)) {
@@ -1018,6 +1019,21 @@ class RenderCast(private val map: Map) : JPanel() {
             val chestY = 500
             g2.color = Color(50, 50, 50, 220)
             g2.fillRect(startX - 10, chestY-(slotSize + 20)*3, (slotSize + spacing) * totalSlots + 20, (slotSize + 20)*4)
+            g2.font = font?.deriveFont(Font.TYPE1_FONT, 16.toFloat()) ?: Font("Arial", Font.BOLD, 1)
+
+            trade.offer.forEachIndexed { index, item ->
+                g2.color = Color.YELLOW
+                val yPos = (chestY - 3 * (slotSize + spacing)) + index * (slotSize + spacing)
+                val itemText = "${item.type} (x${item.quantity}) - ${trade.prices[index]} COINs"
+                g2.drawString(itemText, startX+100, yPos+20)
+            }
+
+            // Optional: Highlight selected item (assuming a selection variable)
+            if (selectedOfferIndex in 0 until trade.offer.size) {
+                g2.color = Color.YELLOW
+                val yPos = (chestY - 3 * (slotSize + spacing))+ selectedOfferIndex * (slotSize + spacing)
+                g2.drawRect((startX - 10)+100, (yPos - 20)+20, 225, 30)
+            }
 
             for (i in trade.offer.indices) {
                 val x = startX //+ i * (slotSize + spacing)
@@ -1091,6 +1107,73 @@ class RenderCast(private val map: Map) : JPanel() {
             val dy = chest.y - positionY
             sqrt(dx * dx + dy * dy) < tileSize * chest.pickupDistance
         }
+    }
+
+    fun purchaseItem(trader: Trader, offerIndex: Int): Boolean {
+        if (offerIndex !in 0 until trader.offer.size) return false
+
+        val itemToBuy = trader.offer[offerIndex]
+        val price = trader.prices[offerIndex]
+        val totalCoins = getTotalCoins()
+
+        if (totalCoins >= price) {
+            if (removeCoins(price)) {
+                if (addItemToInventory(Item(itemToBuy.type, itemToBuy.quantity))) {
+                    return true
+                } else {
+                    addItemToInventory(Item(ItemType.COIN, price))
+                    return false
+                }
+            }
+        }
+        return false // Not enough COINs or invalid purchase
+    }
+
+    fun addItemToInventory(item: Item): Boolean {
+        for (i in playerInventory.indices) {
+            val slot = playerInventory[i]
+            if (slot != null && slot.type == item.type && slot.quantity < Item.getMaxQuantity(slot.type)) {
+                val spaceAvailable = Item.getMaxQuantity(slot.type) - slot.quantity
+                if (spaceAvailable >= item.quantity) {
+                    slot.quantity += item.quantity
+                    return true
+                }
+            }
+        }
+        for (i in playerInventory.indices) {
+            if (playerInventory[i] == null) {
+                playerInventory[i] = Item(item.type, item.quantity)
+                return true
+            }
+        }
+        return false
+    }
+
+    fun removeCoins(quantity: Int): Boolean {
+        var remaining = quantity
+        for (slot in playerInventory) {
+            if (slot != null && slot.type == ItemType.COIN && slot.quantity > 0) {
+                if (slot.quantity >= remaining) {
+                    slot.quantity -= remaining
+                    if (slot.quantity == 0) {
+                        val index = playerInventory.indexOf(slot)
+                        playerInventory[index] = null
+                    }
+                    return true
+                } else {
+                    remaining -= slot.quantity
+                    val index = playerInventory.indexOf(slot)
+                    playerInventory[index] = null
+                }
+            }
+        }
+        return false
+    }
+
+    fun getTotalCoins(): Int {
+        return playerInventory.filterNotNull()
+            .filter { it.type == ItemType.COIN }
+            .sumOf { it.quantity }
     }
 
     fun updateOpenTrader() {
