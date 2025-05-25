@@ -834,52 +834,50 @@ class RenderCast(private val map: Map) : JPanel() {
 
     fun renderPerkGUI(g2: Graphics2D) {
         if (!perkGUI) return
+
         val scaleUI = 150
         val spacing = scaleUI/10
         val heightUI = 400
         val arcSize = 50
 
-
-        if (perkGUI) {
-            when {
-                perkSlots[0] == Perk.SpeedMovement -> g2.color = Color(150, 250, 250, 180)
-                perkSlots[0] == Perk.AmmoBoost -> g2.color = Color(255, 127, 0, 180)
-                perkSlots[0] == Perk.FastReload -> g2.color = Color(100, 200, 200, 180)
-                perkSlots[0] == Perk.MoreHitShot -> g2.color = Color(250, 70, 70, 180)
-                perkSlots[0] == Perk.HealBoost -> g2.color = Color(110, 250, 110, 180)
-                else -> g2.color = Color(150, 150, 150, 180)
-            }
-            g2.fillRoundRect((1366/2)-(scaleUI*3+10), 768/2-heightUI/2, scaleUI*2, heightUI, arcSize, arcSize)
-            g2.color = Color.WHITE
-            g2.font = font?.deriveFont(Font.TYPE1_FONT, 20.toFloat()) ?: Font("Arial", Font.BOLD, 1)
-            g2.drawString("${perkSlots[0]}", (1366/2)-(scaleUI*3+10)+80, 768/2+8)
-
-            when {
-                perkSlots[1] == Perk.SpeedMovement -> g2.color = Color(150, 250, 250, 180)
-                perkSlots[1] == Perk.AmmoBoost -> g2.color = Color(255, 127, 0, 180)
-                perkSlots[1] == Perk.FastReload -> g2.color = Color(100, 200, 200, 180)
-                perkSlots[1] == Perk.MoreHitShot -> g2.color = Color(250, 70, 70, 180)
-                perkSlots[1] == Perk.HealBoost -> g2.color = Color(110, 250, 110, 180)
-                else -> g2.color = Color(150, 150, 150, 180)
-            }
-            g2.fillRoundRect((1366/2)-scaleUI, 768/2-heightUI/2, scaleUI*2, heightUI, arcSize, arcSize)
-            g2.color = Color.WHITE
-            g2.font = font?.deriveFont(Font.TYPE1_FONT, 20.toFloat()) ?: Font("Arial", Font.BOLD, 1)
-            g2.drawString("${perkSlots[1]}", (1366/2)-scaleUI+80, 768/2+8)
-
-            when {
-                perkSlots[2] == Perk.SpeedMovement -> g2.color = Color(150, 250, 250, 180)
-                perkSlots[2] == Perk.AmmoBoost -> g2.color = Color(255, 127, 0, 180)
-                perkSlots[2] == Perk.FastReload -> g2.color = Color(100, 200, 200, 180)
-                perkSlots[2] == Perk.MoreHitShot -> g2.color = Color(250, 70, 70, 180)
-                perkSlots[2] == Perk.HealBoost -> g2.color = Color(110, 250, 110, 180)
-                else -> g2.color = Color(150, 150, 150, 180)
-            }
-            g2.fillRoundRect((1366/2)+scaleUI+spacing, 768/2-heightUI/2, scaleUI*2, heightUI, arcSize, arcSize)
-            g2.color = Color.WHITE
-            g2.font = font?.deriveFont(Font.TYPE1_FONT, 20.toFloat()) ?: Font("Arial", Font.BOLD, 1)
-            g2.drawString("${perkSlots[2]}", (1366/2)+scaleUI+spacing+80, 768/2+8)
+        when {
+            perkSlots[0] == Perk.SpeedMovement -> g2.color = Color(150, 250, 250, 180)
+            perkSlots[0] == Perk.AmmoBoost -> g2.color = Color(255, 127, 0, 180)
+            perkSlots[0] == Perk.FastReload -> g2.color = Color(100, 200, 200, 180)
+            perkSlots[0] == Perk.MoreHitShot -> g2.color = Color(250, 70, 70, 180)
+            perkSlots[0] == Perk.HealBoost -> g2.color = Color(110, 250, 110, 180)
+            else -> g2.color = Color(150, 150, 150, 180)
         }
+        g2.fillRoundRect((1366/2)-(scaleUI*3+10), 768/2-heightUI/2, scaleUI*2, heightUI, arcSize, arcSize)
+        g2.color = Color.WHITE
+        g2.font = font?.deriveFont(Font.TYPE1_FONT, 20.toFloat()) ?: Font("Arial", Font.BOLD, 1)
+        g2.drawString("${perkSlots[0]}", (1366/2)-(scaleUI*3+10)+80, 768/2+8)
+
+        when {
+            perkSlots[1] == Perk.SpeedMovement -> g2.color = Color(150, 250, 250, 180)
+            perkSlots[1] == Perk.AmmoBoost -> g2.color = Color(255, 127, 0, 180)
+            perkSlots[1] == Perk.FastReload -> g2.color = Color(100, 200, 200, 180)
+            perkSlots[1] == Perk.MoreHitShot -> g2.color = Color(250, 70, 70, 180)
+            perkSlots[1] == Perk.HealBoost -> g2.color = Color(110, 250, 110, 180)
+            else -> g2.color = Color(150, 150, 150, 180)
+        }
+        g2.fillRoundRect((1366/2)-scaleUI, 768/2-heightUI/2, scaleUI*2, heightUI, arcSize, arcSize)
+        g2.color = Color.WHITE
+        g2.font = font?.deriveFont(Font.TYPE1_FONT, 20.toFloat()) ?: Font("Arial", Font.BOLD, 1)
+        g2.drawString("${perkSlots[1]}", (1366/2)-scaleUI+80, 768/2+8)
+
+        when {
+            perkSlots[2] == Perk.SpeedMovement -> g2.color = Color(150, 250, 250, 180)
+            perkSlots[2] == Perk.AmmoBoost -> g2.color = Color(255, 127, 0, 180)
+            perkSlots[2] == Perk.FastReload -> g2.color = Color(100, 200, 200, 180)
+            perkSlots[2] == Perk.MoreHitShot -> g2.color = Color(250, 70, 70, 180)
+            perkSlots[2] == Perk.HealBoost -> g2.color = Color(110, 250, 110, 180)
+            else -> g2.color = Color(150, 150, 150, 180)
+        }
+        g2.fillRoundRect((1366/2)+scaleUI+spacing, 768/2-heightUI/2, scaleUI*2, heightUI, arcSize, arcSize)
+        g2.color = Color.WHITE
+        g2.font = font?.deriveFont(Font.TYPE1_FONT, 20.toFloat()) ?: Font("Arial", Font.BOLD, 1)
+        g2.drawString("${perkSlots[2]}", (1366/2)+scaleUI+spacing+80, 768/2+8)
     }
 
     fun clickInventoryGUI(mouseX: Int, mouseY: Int) {
@@ -1002,6 +1000,10 @@ class RenderCast(private val map: Map) : JPanel() {
             20,
             20
         )
+
+        if (!lookchest and !looktrader) {
+            inventoryVisible = false
+        }
 
         for (i in 0 until totalSlots) {
             val x = startX + i * (slotSize + spacing)
@@ -1364,8 +1366,6 @@ class RenderCast(private val map: Map) : JPanel() {
                     if (((!hitWall) or (rayLength < wallDistance)) and (angleDiff < Math.toRadians(30.0))) {
                         lookchest = true
 
-                    } else {
-                        lookchest = false
                     }
                 }
             }
@@ -1806,7 +1806,7 @@ class RenderCast(private val map: Map) : JPanel() {
                 var angleDiff = abs(angleToChest - shotAngleRad)
                 angleDiff = min(angleDiff, 2 * Math.PI - angleDiff)
 
-                if (angleDiff < Math.toRadians(15.0)) {
+                if (angleDiff < Math.toRadians(30.0)) {
                     var mapX = playerPosX.toInt()
                     var mapY = playerPosY.toInt()
                     val deltaDistX = if (rayDirX == 0.0) 1e30 else abs(1 / rayDirX)
@@ -1866,9 +1866,6 @@ class RenderCast(private val map: Map) : JPanel() {
 
                     if (((!hitWall) or (rayLength < wallDistance)) and (angleDiff < Math.toRadians(30.0))) {
                         looktrader = true
-
-                    } else {
-                        looktrader = false
                     }
                 }
             }

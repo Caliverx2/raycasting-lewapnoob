@@ -272,9 +272,7 @@ fun main() = runBlocking {
                                 println("Purchase failed: Not enough COINs or inventory full")
                                 renderCast.playSound("denied.wav")
                             }
-                        }/* else {
-                            inventoryVisible = !inventoryVisible
-                        }*/
+                        }
                     } ?: run {
                         inventoryVisible = !inventoryVisible
                     }
