@@ -586,9 +586,9 @@ class Map(var renderCast: RenderCast? = null) {
                             else -> ItemType.MEDKIT
                         }
                         val quantity = when (itemType) {
-                            ItemType.KEY -> Random.nextInt(1, Item.MAX_KEYS_PER_SLOT / 4)
+                            ItemType.KEY -> Random.nextInt(2, Item.MAX_KEYS_PER_SLOT / 4)
                             ItemType.AMMO -> Random.nextInt(7, Item.MAX_AMMO_PER_SLOT / 3)
-                            ItemType.COIN -> Random.nextInt(1, 15)
+                            ItemType.COIN -> Random.nextInt(4, 15)
                             ItemType.MEDKIT -> 1
                         }
                         items.add(Item(itemType, quantity))
@@ -761,10 +761,10 @@ class Mappingmap(private val map: Map, private val renderCast: RenderCast) : JPa
             if (enemyX >= offsetX && enemyX < miniMapSize + offsetX && enemyY >= offsetY && enemyY < miniMapSize + offsetY) {
                 if (enemy.health > 0) {
                     g2.color = Color.RED
-                    g2.fillRect(enemyX - 3, enemyY - 3, 9, 9)
+                    g2.fillOval(enemyX - 3, enemyY - 3, 9, 9)
                 } else {
                     g2.color = Color(0, 197, 197, 200)
-                    g2.fillRect(enemyX - 3, enemyY - 3, 7, 7)
+                    g2.fillOval(enemyX - 3, enemyY - 3, 7, 7)
                 }
             }
         }
@@ -846,7 +846,7 @@ class Mappingmap(private val map: Map, private val renderCast: RenderCast) : JPa
         g2.stroke = BasicStroke(2f)
         g2.drawLine(playerMapX, playerMapY, playerX2, playerY2)
         g2.color = Color.darkGray
-        g2.fillRect(playerMapX - 2, playerMapY - 2, 5, 5)
+        g2.fillRoundRect(playerMapX - 2, playerMapY - 2, 5, 5, 5, 5)
 
         g2.color = Color.white
         g2.fillRect(683, 384, 3, 3)

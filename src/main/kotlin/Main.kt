@@ -216,11 +216,11 @@ fun main() = runBlocking {
         override fun mousePressed(event: MouseEvent) {
             if (event.button == MouseEvent.BUTTON1) {
                 if (inventoryVisible) {
-                    renderCast.handleInventoryClick(event.x, event.y)
+                    renderCast.clickInventoryGUI(event.x, event.y)
                     return
                 }
                 if (perkGUI) {
-                    renderCast.ClickPerkGUI(event.x, event.y)
+                    renderCast.clickPerkGUI(event.x, event.y)
                     return
                 }
                 renderCast.shotgun()
@@ -267,8 +267,10 @@ fun main() = runBlocking {
                         if (looktrader) {
                             if (renderCast.purchaseItem(trader, selectedOfferIndex)) {
                                 println("Purchased ${trader.offer[selectedOfferIndex].type} for ${trader.prices[selectedOfferIndex]} COINs")
+                                renderCast.playSound("purchase.wav")
                             } else {
                                 println("Purchase failed: Not enough COINs or inventory full")
+                                renderCast.playSound("denied.wav")
                             }
                         } else {
                             inventoryVisible = !inventoryVisible
@@ -278,27 +280,29 @@ fun main() = runBlocking {
                     }
                 }
                 in KeyEvent.VK_1..KeyEvent.VK_9 -> {
-                    selectSlot = event.keyCode - KeyEvent.VK_0-1
-                    activateSlot = true
-                    selectedOfferIndex = selectSlot
-                    println(selectSlot)
-                    println(playerInventory[selectSlot])
-                    if (playerInventory[selectSlot] != null) {
-                        if (playerInventory[selectSlot]?.type == ItemType.MEDKIT && playerInventory[selectSlot]?.quantity in 1..2) {
-                            if (playerInventory[selectSlot]!!.quantity <= 0) {
-                                playerInventory[selectSlot] = null
+                    selectedOfferIndex = event.keyCode - KeyEvent.VK_0-1
+                    if ((!looktrader) or (selectedOfferIndex >= 4)) {
+                        selectSlot = event.keyCode - KeyEvent.VK_0-1
+                        activateSlot = true
+                        println(selectSlot)
+                        println(playerInventory[selectSlot])
+                        if (playerInventory[selectSlot] != null) {
+                            if (playerInventory[selectSlot]?.type == ItemType.MEDKIT && playerInventory[selectSlot]?.quantity in 1..2) {
+                                if (playerInventory[selectSlot]!!.quantity <= 0) {
+                                    playerInventory[selectSlot] = null
+                                }
+                                val random = Random.nextFloat()
+                                val healRNG = when {
+                                    random < 0.33f -> 25
+                                    random < 0.66f -> 35
+                                    else -> 45
+                                }
+                                playerInventory[selectSlot]!!.quantity -= 1
+                                if (playerInventory[selectSlot]!!.quantity <= 0) {
+                                    playerInventory[selectSlot] = null
+                                }
+                                playerHealth += healRNG
                             }
-                            val random = Random.nextFloat()
-                            val healRNG = when {
-                                random < 0.33f -> 25
-                                random < 0.66f -> 35
-                                else -> 45
-                            }
-                            playerInventory[selectSlot]!!.quantity -= 1
-                            if (playerInventory[selectSlot]!!.quantity <= 0) {
-                                playerInventory[selectSlot] = null
-                            }
-                            playerHealth += healRNG
                         }
                     }
                 }

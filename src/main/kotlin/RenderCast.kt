@@ -164,12 +164,14 @@ class RenderCast(private val map: Map) : JPanel() {
 
     override fun paintComponent(g: Graphics) {
         super.paintComponent(g)
+        val g2d = g as Graphics2D
+        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
+        g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
         update()
         try {
             renderWallsToBuffer()
         } catch (e: Exception) {
         }
-        val g2d = g as Graphics2D
         val scaleX = width.toDouble() / screenWidth
         val scaleY = height.toDouble() / screenHeight
         g2d.scale(scaleX, scaleY)
@@ -749,7 +751,7 @@ class RenderCast(private val map: Map) : JPanel() {
         renderTrader()
     }
 
-    fun ClickPerkGUI(mouseX: Int, mouseY: Int) {
+    fun clickPerkGUI(mouseX: Int, mouseY: Int) {
         if (!perkGUI) return
         val scaleUI = 150
         val spacing = scaleUI/10
@@ -758,7 +760,7 @@ class RenderCast(private val map: Map) : JPanel() {
         if (mouseX in (1366/2)-(scaleUI*3+10) until (1366/2)-scaleUI-10 && mouseY in ((768/2)-(heightUI/2)) until ((768/2)-(heightUI/2))+heightUI) {
             playSound("click.wav")
             println("${perkSlots[0]}")
-            SelectedPerk(perkSlots[0])
+            selectedPerk(perkSlots[0])
             perkGUI = false
             resetPerkSlot = true
         }
@@ -766,7 +768,7 @@ class RenderCast(private val map: Map) : JPanel() {
         if (mouseX in (1366/2)-scaleUI until (1366/2)+scaleUI && mouseY in ((768/2)-(heightUI/2)) until ((768/2)-(heightUI/2))+heightUI) {
             playSound("click.wav")
             println("${perkSlots[1]}")
-            SelectedPerk(perkSlots[1])
+            selectedPerk(perkSlots[1])
             perkGUI = false
             resetPerkSlot = true
         }
@@ -774,13 +776,13 @@ class RenderCast(private val map: Map) : JPanel() {
         if (mouseX in (1366/2)+scaleUI+spacing until (1366/2)+(scaleUI*3+10) && mouseY in ((768/2)-(heightUI/2)) until ((768/2)-(heightUI/2))+heightUI) {
             playSound("click.wav")
             println("${perkSlots[2]}")
-            SelectedPerk(perkSlots[2])
+            selectedPerk(perkSlots[2])
             perkGUI = false
             resetPerkSlot = true
         }
     }
 
-    fun SelectedPerk(perk: Perk?) {
+    fun selectedPerk(perk: Perk?) {
         if (perk == Perk.HealBoost) {
             println("$HealBoost HB")
             HealBoost += HealBoost * (0.5/4)
@@ -880,7 +882,7 @@ class RenderCast(private val map: Map) : JPanel() {
         }
     }
 
-    fun handleInventoryClick(mouseX: Int, mouseY: Int) {
+    fun clickInventoryGUI(mouseX: Int, mouseY: Int) {
         if (!inventoryVisible) return
 
         val scaleUI = 7
@@ -952,6 +954,25 @@ class RenderCast(private val map: Map) : JPanel() {
                 }
                 return
             }
+        }
+    }
+
+    fun clickTrader(mouseX: Int, mouseY: Int) {
+        if (!looktrader) return
+        val scaleUI = 150
+        val spacing = scaleUI/10
+        val heightUI = 400
+
+        if (mouseX in (1366/2)-(scaleUI*3+10) until (1366/2)-scaleUI-10 && mouseY in ((768/2)-(heightUI/2)) until ((768/2)-(heightUI/2))+heightUI) {
+            playSound("click.wav")
+        }
+
+        if (mouseX in (1366/2)-scaleUI until (1366/2)+scaleUI && mouseY in ((768/2)-(heightUI/2)) until ((768/2)-(heightUI/2))+heightUI) {
+            playSound("click.wav")
+        }
+
+        if (mouseX in (1366/2)+scaleUI+spacing until (1366/2)+(scaleUI*3+10) && mouseY in ((768/2)-(heightUI/2)) until ((768/2)-(heightUI/2))+heightUI) {
+            playSound("click.wav")
         }
     }
 
@@ -1123,7 +1144,7 @@ class RenderCast(private val map: Map) : JPanel() {
                 }
             }
         }
-        return false // Not enough COINs or invalid purchase
+        return false
     }
 
     fun addItemToInventory(item: Item): Boolean {
