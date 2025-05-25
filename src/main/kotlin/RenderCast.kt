@@ -977,18 +977,31 @@ class RenderCast(private val map: Map) : JPanel() {
     }
 
     fun renderInventoryUI(g2: Graphics2D) {
-        if (!inventoryVisible) return
         val scaleUI = 7
-        val spacing = scaleUI*2
+        val spacing = scaleUI * 2
         val startX = 1366 - (slotSize + spacing) * 9 - 20
         val startY = 600
         val totalSlots = playerInventory.size
 
         g2.color = Color(50, 50, 50, 180)
-        g2.fillRoundRect(startX-scaleUI, startY - scaleUI, (slotSize + spacing) * totalSlots, slotSize + (scaleUI*2), 20, 20)
+        g2.fillRoundRect(
+            startX - scaleUI,
+            startY - scaleUI,
+            (slotSize + spacing) * totalSlots,
+            slotSize + (scaleUI * 2),
+            20,
+            20
+        )
 
         g2.color = Color(150, 150, 150, 180)
-        g2.fillRoundRect((startX-scaleUI)+((slotSize + spacing) * selectSlot), startY - scaleUI, (slotSize + spacing), slotSize + (scaleUI*2), 20, 20)
+        g2.fillRoundRect(
+            (startX - scaleUI) + ((slotSize + spacing) * selectSlot),
+            startY - scaleUI,
+            (slotSize + spacing),
+            slotSize + (scaleUI * 2),
+            20,
+            20
+        )
 
         for (i in 0 until totalSlots) {
             val x = startX + i * (slotSize + spacing)
@@ -996,79 +1009,103 @@ class RenderCast(private val map: Map) : JPanel() {
             g2.color = Color(100, 100, 100)
             g2.fillRoundRect(x, y, slotSize, slotSize, 17, 17)
             playerInventory[i]?.let { item ->
-                if ((item.type != ItemType.AMMO) and (item.type != ItemType.COIN) and (item.type != ItemType.MEDKIT)){
-                g2.drawImage(getItemTexture(item.type), x, y, (slotSize), (slotSize), null)} else {
-                    g2.drawImage(getItemTexture(item.type), x + (slotSize/5), y + (slotSize/5), (slotSize/4)*3, (slotSize/4)*3, null)
+                if ((item.type != ItemType.AMMO) and (item.type != ItemType.COIN) and (item.type != ItemType.MEDKIT)) {
+                    g2.drawImage(getItemTexture(item.type), x, y, (slotSize), (slotSize), null)
+                } else {
+                    g2.drawImage(
+                        getItemTexture(item.type),
+                        x + (slotSize / 5),
+                        y + (slotSize / 5),
+                        (slotSize / 4) * 3,
+                        (slotSize / 4) * 3,
+                        null
+                    )
                 }
                 g2.color = Color(230, 230, 230)
                 g2.font = font?.deriveFont(Font.TYPE1_FONT, 16.toFloat()) ?: Font("Arial", Font.BOLD, 1)
                 if (item.quantity > 9) {
-                g2.drawString("${item.quantity}", x + slotSize - 20, y + slotSize - 5)} else {
+                    g2.drawString("${item.quantity}", x + slotSize - 20, y + slotSize - 5)
+                } else {
                     g2.drawString("  ${item.quantity}", x + slotSize - 20, y + slotSize - 5)
                 }
             }
         }
 
-        // GUI skrzynki
-        openChest?.let { chest ->
-            val chestY = 500
-            g2.color = Color(50, 50, 50, 220)
-            g2.fillRoundRect(startX - 10, chestY - 10, (slotSize + spacing) * totalSlots + 20, slotSize + 20, 20, 20)
+        if (!inventoryVisible) return
 
-            for (i in chest.loot.indices) {
-                val x = startX + i * (slotSize + spacing)
-                val y = chestY
-                g2.color = Color(100, 100, 100)
-                g2.fillRoundRect(x, y, slotSize, slotSize, 17, 17)
-                if ((chest.loot[i].type!= ItemType.AMMO) and (chest.loot[i].type!= ItemType.COIN) and (chest.loot[i].type!= ItemType.MEDKIT)){
-                    g2.drawImage(getItemTexture(chest.loot[i].type), x, y, (slotSize), (slotSize), null)}
-                else {
-                    g2.drawImage(getItemTexture(chest.loot[i].type), x + (slotSize/5), y + (slotSize/5), (slotSize/4)*3, (slotSize/4)*3, null)
-                }
-                // Wyświetl ilość
-                g2.color = Color(230, 230, 230)
-                g2.font = font?.deriveFont(Font.TYPE1_FONT, 16.toFloat()) ?: Font("Arial", Font.BOLD, 1)
-                if (chest.loot[i].quantity > 9) {
-                g2.drawString("${chest.loot[i].quantity}", x + slotSize - 20, y + slotSize - 5)} else {
-                    g2.drawString("  ${chest.loot[i].quantity}", x + slotSize - 20, y + slotSize - 5)
+        // GUI chest
+        if (lookchest){
+            openChest?.let { chest ->
+                val chestY = 500
+                g2.color = Color(50, 50, 50, 220)
+                g2.fillRoundRect(startX - 10, chestY - 10, (slotSize + spacing) * totalSlots + 20, slotSize + 20, 20, 20)
+
+                for (i in chest.loot.indices) {
+                    val x = startX + i * (slotSize + spacing)
+                    val y = chestY
+                    g2.color = Color(100, 100, 100)
+                    g2.fillRoundRect(x, y, slotSize, slotSize, 17, 17)
+                    if ((chest.loot[i].type != ItemType.AMMO) and (chest.loot[i].type != ItemType.COIN) and (chest.loot[i].type != ItemType.MEDKIT)) {
+                        g2.drawImage(getItemTexture(chest.loot[i].type), x, y, (slotSize), (slotSize), null)
+                    } else {
+                        g2.drawImage(
+                            getItemTexture(chest.loot[i].type),
+                            x + (slotSize / 5),
+                            y + (slotSize / 5),
+                            (slotSize / 4) * 3,
+                            (slotSize / 4) * 3,
+                            null
+                        )
+                    }
+                    // Wyświetl ilość
+                    g2.color = Color(230, 230, 230)
+                    g2.font = font?.deriveFont(Font.TYPE1_FONT, 16.toFloat()) ?: Font("Arial", Font.BOLD, 1)
+                    if (chest.loot[i].quantity > 9) {
+                        g2.drawString("${chest.loot[i].quantity}", x + slotSize - 20, y + slotSize - 5)
+                    } else {
+                        g2.drawString("  ${chest.loot[i].quantity}", x + slotSize - 20, y + slotSize - 5)
+                    }
                 }
             }
         }
 
-        openTrader?.let { trade ->
-            val chestY = 500
-            g2.color = Color(50, 50, 50, 220)
-            g2.fillRoundRect(startX - 10, chestY-(slotSize + 20)*3, (slotSize + spacing) * totalSlots + 20, (slotSize + 20)*4, 20 ,20)
-            g2.font = font?.deriveFont(Font.TYPE1_FONT, 16.toFloat()) ?: Font("Arial", Font.BOLD, 1)
-
-            trade.offer.forEachIndexed { index, item ->
-                g2.color = Color.YELLOW
-                val yPos = (chestY - 3 * (slotSize + spacing)) + index * (slotSize + spacing)
-                val itemText = "${item.type} (x${item.quantity}) - ${trade.prices[index]} COINs"
-                g2.drawString(itemText, startX+100, yPos+20)
-            }
-
-            if (selectedOfferIndex in 0 until trade.offer.size) {
-                g2.color = Color.YELLOW
-                val yPos = (chestY - 3 * (slotSize + spacing))+ selectedOfferIndex * (slotSize + spacing)
-                g2.drawRect((startX - 10)+100, (yPos - 20)+20, 225, 30)
-            }
-
-            for (i in trade.offer.indices) {
-                val x = startX //+ i * (slotSize + spacing)
-                val y = (chestY - 3 * (slotSize + spacing))+ i * (slotSize + spacing)
-                g2.color = Color(100, 100, 100)
-                g2.fillRoundRect(x, y, slotSize, slotSize, 17, 17)
-                if ((trade.offer[i].type!= ItemType.AMMO) and (trade.offer[i].type!= ItemType.COIN) and (trade.offer[i].type!= ItemType.MEDKIT)){
-                    g2.drawImage(getItemTexture(trade.offer[i].type), x, y, (slotSize), (slotSize), null)}
-                else {
-                    g2.drawImage(getItemTexture(trade.offer[i].type), x + (slotSize/5), y + (slotSize/5), (slotSize/4)*3, (slotSize/4)*3, null)
-                }
-                g2.color = Color(230, 230, 230)
+        // GUI trader
+        if (looktrader) {
+            openTrader?.let { trade ->
+                val chestY = 500
+                g2.color = Color(50, 50, 50, 220)
+                g2.fillRoundRect(startX - 10, chestY-(slotSize + 20)*3, (slotSize + spacing) * totalSlots + 20, (slotSize + 20)*4, 20 ,20)
                 g2.font = font?.deriveFont(Font.TYPE1_FONT, 16.toFloat()) ?: Font("Arial", Font.BOLD, 1)
-                if (trade.offer[i].quantity > 9) {
-                    g2.drawString("${trade.offer[i].quantity}", x + slotSize - 20, y + slotSize - 5)} else {
-                    g2.drawString("  ${trade.offer[i].quantity}", x + slotSize - 20, y + slotSize - 5)
+
+                trade.offer.forEachIndexed { index, item ->
+                    g2.color = Color.YELLOW
+                    val yPos = (chestY - 3 * (slotSize + spacing)) + index * (slotSize + spacing)
+                    val itemText = "${item.type} (x${item.quantity}) - ${trade.prices[index]} COINs"
+                    g2.drawString(itemText, startX+100, yPos+20)
+                }
+
+                if (selectedOfferIndex in 0 until trade.offer.size) {
+                    g2.color = Color.YELLOW
+                    val yPos = (chestY - 3 * (slotSize + spacing))+ selectedOfferIndex * (slotSize + spacing)
+                    g2.drawRect((startX - 10)+100, (yPos - 20)+20, 225, 30)
+                }
+
+                for (i in trade.offer.indices) {
+                    val x = startX //+ i * (slotSize + spacing)
+                    val y = (chestY - 3 * (slotSize + spacing))+ i * (slotSize + spacing)
+                    g2.color = Color(100, 100, 100)
+                    g2.fillRoundRect(x, y, slotSize, slotSize, 17, 17)
+                    if ((trade.offer[i].type!= ItemType.AMMO) and (trade.offer[i].type!= ItemType.COIN) and (trade.offer[i].type!= ItemType.MEDKIT)){
+                        g2.drawImage(getItemTexture(trade.offer[i].type), x, y, (slotSize), (slotSize), null)}
+                    else {
+                        g2.drawImage(getItemTexture(trade.offer[i].type), x + (slotSize/5), y + (slotSize/5), (slotSize/4)*3, (slotSize/4)*3, null)
+                    }
+                    g2.color = Color(230, 230, 230)
+                    g2.font = font?.deriveFont(Font.TYPE1_FONT, 16.toFloat()) ?: Font("Arial", Font.BOLD, 1)
+                    if (trade.offer[i].quantity > 9) {
+                        g2.drawString("${trade.offer[i].quantity}", x + slotSize - 20, y + slotSize - 5)} else {
+                        g2.drawString("  ${trade.offer[i].quantity}", x + slotSize - 20, y + slotSize - 5)
+                    }
                 }
             }
         }
@@ -1319,8 +1356,16 @@ class RenderCast(private val map: Map) : JPanel() {
                         }
                     }
 
-                    if (!hitWall || rayLength < wallDistance) {
+                    val shotAngleRad = Math.toRadians(currentangle.toDouble())
+                    val angleToChest = atan2(dy, dx)
+                    var angleDiff = abs(angleToChest - shotAngleRad)
+                    angleDiff = min(angleDiff, 2 * Math.PI - angleDiff)
+
+                    if (((!hitWall) or (rayLength < wallDistance)) and (angleDiff < Math.toRadians(30.0))) {
                         lookchest = true
+
+                    } else {
+                        lookchest = false
                     }
                 }
             }
@@ -1814,8 +1859,16 @@ class RenderCast(private val map: Map) : JPanel() {
                         }
                     }
 
-                    if (!hitWall || rayLength < wallDistance) {
+                    val shotAngleRad = Math.toRadians(currentangle.toDouble())
+                    val angleToTrader = atan2(dy, dx)
+                    var angleDiff = abs(angleToTrader - shotAngleRad)
+                    angleDiff = min(angleDiff, 2 * Math.PI - angleDiff)
+
+                    if (((!hitWall) or (rayLength < wallDistance)) and (angleDiff < Math.toRadians(30.0))) {
                         looktrader = true
+
+                    } else {
+                        looktrader = false
                     }
                 }
             }
@@ -1884,7 +1937,6 @@ class RenderCast(private val map: Map) : JPanel() {
             }
         }
     }
-
 
     fun playSound(soundFile: String, volume: Float = 0.5f) {
         try {
