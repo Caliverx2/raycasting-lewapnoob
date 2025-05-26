@@ -292,7 +292,7 @@ fun main() = runBlocking {
                             inventoryVisible = false
                             if (coins >= 3) {
                                 val coinSlot = playerInventory.indexOfFirst { it?.type == ItemType.COIN && it.quantity > 0 }
-                                var currentslot = coinSlot.toInt()
+                                var currentslot = coinSlot
                                 playerInventory[coinSlot]!!.quantity -= 3
                                 if (playerInventory[coinSlot]!!.quantity <= 0) {
                                     playerInventory[coinSlot] = null

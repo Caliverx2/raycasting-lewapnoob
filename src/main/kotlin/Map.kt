@@ -1,6 +1,5 @@
 package org.example.MainKt
 
-import org.example.MainKt.Map.Direction
 import org.example.MainKt.Map.RoomTemplate
 import java.awt.BasicStroke
 import java.awt.Color
@@ -56,10 +55,22 @@ val rooms = listOf(
         grid = arrayOf(
             intArrayOf(2, 2, 2, 5, 2, 2, 2),
             intArrayOf(2, 0, 0, 0, 0, 0, 2),
-            intArrayOf(2, 0, 7, 11, 4, 0, 2),
+            intArrayOf(2, 0, 7, 0, 4, 0, 2),
             intArrayOf(5, 0, 0, 6, 0, 0, 5),
             intArrayOf(2, 0, 4, 0, 7, 0, 2),
             intArrayOf(2, 0, 0, 0, 0, 0, 2),
+            intArrayOf(2, 2, 2, 5, 2, 2, 2)
+        ),
+        scale = 7
+    ),
+    RoomTemplate(
+        grid = arrayOf(
+            intArrayOf(2, 2, 2, 5, 2, 2, 2),
+            intArrayOf(2, 2, 11, 0, 11, 2, 2),
+            intArrayOf(2, 11, 0, 0, 0, 11, 2),
+            intArrayOf(5, 0, 0, 6, 0, 0, 5),
+            intArrayOf(2, 11, 0, 0, 0, 11, 2),
+            intArrayOf(2, 2, 11, 0, 11, 2, 2),
             intArrayOf(2, 2, 2, 5, 2, 2, 2)
         ),
         scale = 7
@@ -912,9 +923,9 @@ class Mappingmap(private val map: Map, private val renderCast: RenderCast) : JPa
 
         if (lookslotMachine and !inventoryVisible) {
             g2.color = Color(50, 50, 50, 180)
-            g2.fillRoundRect(((1366+g2.font.size)/2)-10, ((768+g2.font.size)/2)-25, 255, 40, arcSize, arcSize)
+            g2.fillRoundRect(((1366+g2.font.size)/2)-10, ((768+g2.font.size)/2)-25, 225, 40, arcSize, arcSize)
             g2.color = Color.YELLOW
-            g2.drawString("LETS GOO GAMBLING[E]", (1366+g2.font.size)/2, (768+g2.font.size)/2)
+            g2.drawString("LETS GOO GAMBLING [E]", (1366+g2.font.size)/2, (768+g2.font.size)/2)
         }
         g2.font = font?.deriveFont(Font.BOLD, 50f) ?: Font("Arial", Font.BOLD, 50)
         g2.drawString("${totalKeys}", 85, 290)
