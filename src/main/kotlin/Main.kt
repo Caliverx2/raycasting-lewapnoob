@@ -54,10 +54,12 @@ var medications = mutableListOf<Medication>()
 var chests = mutableListOf<Chest>()
 var ammo = mutableListOf<Ammo>()
 var traders = mutableListOf<Trader>()
+var slotMachines = mutableListOf<SlotMachine>()
 var inventoryVisible = false
 var openChest: Chest? = null
 var openTrader: Trader? = null
 var lookchest = false
+var lookslotMachine = false
 var looktrader = false
 var playerInventory = MutableList<Item?>(9) { null }
 var isShooting = false
@@ -112,6 +114,17 @@ class Chest(
     var loot: MutableList<Item>,
     var active: Boolean = true,
 ) {
+    val size = 1.5 * tileSize
+    val pickupDistance = 1.3*2
+}
+
+class SlotMachine(
+    var x: Double,
+    var y: Double,
+    var texture: BufferedImage,
+    var active: Boolean = true,
+) {
+    val costSlot = 3
     val size = 1.5 * tileSize
     val pickupDistance = 1.3*2
 }

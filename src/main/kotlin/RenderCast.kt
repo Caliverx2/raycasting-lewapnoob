@@ -45,6 +45,7 @@ class RenderCast(private val map: Map) : JPanel() {
     var chestTextureID: BufferedImage? = null
     var ammoTextureID: BufferedImage? = null
     var traderTextureID: BufferedImage? = null
+    var slotMachineTextureID: BufferedImage? = null
     private val accessibleTiles: Set<Int> = setOf(0, 3, 6)
     private var floorTexture: BufferedImage? = null
     private var ceilingTexture: BufferedImage? = null
@@ -70,6 +71,7 @@ class RenderCast(private val map: Map) : JPanel() {
     private var visibleChests = mutableListOf<Triple<Chest, Int, Double>>()
     private var visibleAmmo = mutableListOf<Triple<Ammo, Int, Double>>()
     private var visibleTrader = mutableListOf<Triple<Trader, Int, Double>>()
+    private var visibleSlotMachines = mutableListOf<Triple<SlotMachine, Int, Double>>()
     private val zBuffer = DoubleArray(rayCount) { Double.MAX_VALUE }
     private var lastShotTime = 0L
     private val SHOT_COOLDOWN = 500_000_000L * FastReload
@@ -98,6 +100,7 @@ class RenderCast(private val map: Map) : JPanel() {
             chestTextureID = ImageIO.read(this::class.java.classLoader.getResource("textures/chest.png"))
             ammoTextureID = ImageIO.read(this::class.java.classLoader.getResource("textures/ammo.png"))
             traderTextureID = ImageIO.read(this::class.java.classLoader.getResource("textures/villager.png"))
+            slotMachineTextureID = ImageIO.read(this::class.java.classLoader.getResource("textures/slotMachine.png"))
 
             loadTexture(1, "textures/bricks.jpg")
             loadTexture(2, "textures/black_bricks.png")
@@ -115,6 +118,7 @@ class RenderCast(private val map: Map) : JPanel() {
             chestTextureID = createTexture(Color(150,75,0))
             ammoTextureID = createTexture(Color(90,90,90))
             traderTextureID = createTexture(Color(255, 68, 68))
+            slotMachineTextureID = createTexture(Color(255,140,0))
         }
 
         lightSources.add(LightSource(0.0, 0.0, color = Color(200, 200, 100), intensity = 0.75, range = 0.15, owner = "player"))
@@ -320,8 +324,10 @@ class RenderCast(private val map: Map) : JPanel() {
         visibleMedications.clear()
         visibleChests.clear()
         visibleTrader.clear()
+        visibleSlotMachines.clear()
         lookchest = false
         looktrader = false
+        lookslotMachine = false
 
         for (ray in 0 until rayCount) {
             val rayAngle = currentangle + rayAngles[ray]
@@ -540,6 +546,38 @@ class RenderCast(private val map: Map) : JPanel() {
                 }
             }
 
+            slotMachines.forEach { slotMachine ->
+                if (!slotMachine.active) return@forEach
+                val halfSize = (slotMachine.size) / tileSize / 2
+                val slotMachineLeft = slotMachine.x/ tileSize - halfSize
+                val slotMachineRight = slotMachine.x / tileSize + halfSize
+                val slotMachineTop = slotMachine.y / tileSize - halfSize
+                val slotMachineBottom = slotMachine.y / tileSize + halfSize
+
+                val closestX = clamp(slotMachine.x / tileSize, slotMachineLeft, slotMachineRight)
+                val closestY = clamp(slotMachine.y / tileSize, slotMachineTop, slotMachineBottom)
+                val dx = closestX - playerPosX
+                val dy = closestY - playerPosY
+
+                val rayLength = dx * rayDirX + dy * rayDirY
+                if (rayLength > 0 && rayLength <= maxRayDistance) {
+                    val perpendicularDistance = abs(dx * rayDirY - dy * rayDirX)
+                    if (perpendicularDistance < halfSize + 0.05) {
+                        val centerDx = slotMachine.x / tileSize - playerPosX
+                        val centerDy = slotMachine.y / tileSize - playerPosY
+                        val angleToEnemy = atan2(centerDy, centerDx)
+                        val relativeAngle = normalizeAngle(Math.toDegrees(angleToEnemy) - currentangle)
+                        if (abs(relativeAngle) <= fov / 2 + 10) {
+                            val angleRatio = relativeAngle / (fov / 2)
+                            val screenX = (screenWidth / 2 + angleRatio * screenWidth / 2).toInt()
+                            if (visibleSlotMachines.none { it.first === slotMachine }) {
+                                visibleSlotMachines.add(Triple(slotMachine, screenX, rayLength))
+                            }
+                        }
+                    }
+                }
+            }
+
             medications.forEach { medication ->
                 if (!medication.active) return@forEach
                 val halfSize = medication.size / tileSize / 2
@@ -749,6 +787,7 @@ class RenderCast(private val map: Map) : JPanel() {
         renderAmmo()
         renderChest()
         renderTrader()
+        renderSlotMachines()
     }
 
     fun clickPerkGUI(mouseX: Int, mouseY: Int) {
@@ -1001,7 +1040,7 @@ class RenderCast(private val map: Map) : JPanel() {
             20
         )
 
-        if (!lookchest and !looktrader) {
+        if (!lookchest and !looktrader and !lookslotMachine) {
             inventoryVisible = false
         }
 
@@ -1394,7 +1433,7 @@ class RenderCast(private val map: Map) : JPanel() {
                 }
             }
 
-            // Render key sprite
+            // Render chest sprite
             val drawStartY = (floorY - spriteSize).coerceIn(0, screenHeight - 1)
             val drawEndY = floorY.coerceIn(0, screenHeight - 1)
             val chestLeftX = screenX - spriteSize / 2.0
@@ -1424,7 +1463,7 @@ class RenderCast(private val map: Map) : JPanel() {
                             buffer.setRGB(x, y, finalColor.rgb)
                         }
                     }
-                    // Update z-buffer for key sprite
+                    // Update z-buffer for chest sprite
                     zBuffer[x] = distance
                 }
             }
@@ -1929,6 +1968,168 @@ class RenderCast(private val map: Map) : JPanel() {
                         }
                     }
                     // Update z-buffer for medication sprite
+                    zBuffer[x] = distance
+                }
+            }
+        }
+    }
+
+    private fun renderSlotMachines() {
+        visibleSlotMachines.sortByDescending { it.third }
+
+        visibleSlotMachines.forEach { (slotMachine, screenX, distance) ->
+            val slotMachineHeight = wallHeight / 4
+            val minSize = 0.001
+            val maxSize = 64.0
+            val spriteSize = (((slotMachineHeight * screenHeight) / (distance * tileSize)).coerceIn(minSize, maxSize)*2.2).toInt()
+
+            // Calculate floor position for shadow (same as enemy)
+            val floorY = (screenHeight / 2 + (wallHeight * screenHeight) / (2 * distance * tileSize)).toInt()
+            val shadowSize = (spriteSize * 1.2).toInt()
+            val shadowStartY = floorY.coerceIn(0, screenHeight - 1)
+            val shadowEndY = (floorY + shadowSize / 4).coerceIn(0, screenHeight - 1)
+
+            val shadowLeftX = screenX - shadowSize / 2.0
+            val shadowRightX = screenX + shadowSize / 2.0
+            val shadowDrawStartX = shadowLeftX.coerceAtLeast(0.0).toInt()
+            val shadowDrawEndX = shadowRightX.coerceAtMost(screenWidth - 1.0).toInt()
+
+            //chest interact
+            val playerPosX = positionX / tileSize
+            val playerPosY = positionY / tileSize
+            val slotMachinePosX = slotMachine.x / tileSize
+            val slotMachinePosY = slotMachine.y / tileSize
+            val dx = slotMachinePosX - playerPosX
+            val dy = slotMachinePosY - playerPosY
+            val rayLength = sqrt(dx * dx + dy * dy)
+
+            if (rayLength <= slotMachine.pickupDistance) {
+                val rayDirX = dx / rayLength
+                val rayDirY = dy / rayLength
+                val shotAngleRad = Math.toRadians(currentangle.toDouble())
+                val angleToChest = atan2(dy, dx)
+                var angleDiff = abs(angleToChest - shotAngleRad)
+                angleDiff = min(angleDiff, 2 * Math.PI - angleDiff)
+
+                if (angleDiff < Math.toRadians(15.0)) {
+                    var mapX = playerPosX.toInt()
+                    var mapY = playerPosY.toInt()
+                    val deltaDistX = if (rayDirX == 0.0) 1e30 else abs(1 / rayDirX)
+                    val deltaDistY = if (rayDirY == 0.0) 1e30 else abs(1 / rayDirY)
+                    var stepX: Int
+                    var stepY: Int
+                    var sideDistX: Double
+                    var sideDistY: Double
+                    var side: Int
+
+                    if (rayDirX < 0) {
+                        stepX = -1
+                        sideDistX = (playerPosX - mapX) * deltaDistX
+                    } else {
+                        stepX = 1
+                        sideDistX = (mapX + 1.0 - playerPosX) * deltaDistX
+                    }
+                    if (rayDirY < 0) {
+                        stepY = -1
+                        sideDistY = (playerPosY - mapY) * deltaDistY
+                    } else {
+                        stepY = 1
+                        sideDistY = (mapY + 1.0 - playerPosY) * deltaDistY
+                    }
+
+                    var hitWall = false
+                    var wallDistance = Double.MAX_VALUE
+
+                    while (!hitWall) {
+                        if (sideDistX < sideDistY) {
+                            sideDistX += deltaDistX
+                            mapX += stepX
+                            side = 0
+                        } else {
+                            sideDistY += deltaDistY
+                            mapY += stepY
+                            side = 1
+                        }
+                        if (mapY !in map.grid.indices || mapX !in map.grid[0].indices) {
+                            break
+                        }
+                        if (wallIndices.contains(map.grid[mapY][mapX])) {
+                            hitWall = true
+                            wallDistance = if (side == 0) {
+                                (mapX - playerPosX + (1 - stepX) / 2.0) / rayDirX
+                            } else {
+                                (mapY - playerPosY + (1 - stepY) / 2.0) / rayDirY
+                            }
+                            if (wallDistance < 0.01) wallDistance = 0.01
+                        }
+                    }
+
+                    val shotAngleRad = Math.toRadians(currentangle.toDouble())
+                    val angleToChest = atan2(dy, dx)
+                    var angleDiff = abs(angleToChest - shotAngleRad)
+                    angleDiff = min(angleDiff, 2 * Math.PI - angleDiff)
+
+                    if (((!hitWall) or (rayLength < wallDistance)) and (angleDiff < Math.toRadians(30.0))) {
+                        lookslotMachine = true
+                    }
+                }
+            }
+
+            // Render shadow
+            for (x in shadowDrawStartX until shadowDrawEndX) {
+                if (x < 0 || x >= zBuffer.size) continue
+                if (distance < zBuffer[x]) { // Only render shadow if closer than z-buffer
+                    val textureFraction = (x - shadowLeftX) / (shadowRightX - shadowLeftX)
+                    val textureX = (textureFraction * shadowTexture.width).coerceIn(0.0, shadowTexture.width - 1.0)
+                    for (y in shadowStartY until shadowEndY) {
+                        val textureY = ((y - shadowStartY).toDouble() * shadowTexture.height / (shadowEndY - shadowStartY)).coerceIn(0.0, shadowTexture.height - 1.0)
+                        val color = shadowTexture.getRGB(textureX.toInt(), textureY.toInt())
+                        if ((color and 0xFF000000.toInt()) != 0) {
+                            val originalColor = Color(color)
+                            // Apply fog but skip full lighting for shadow (as likely for enemies)
+                            val fogFactor = 1.0 - exp(-fogDensity * distance)
+                            val finalColor = Color(
+                                ((1.0 - fogFactor) * originalColor.red + fogFactor * fogColor.red).toInt().coerceIn(0, 255),
+                                ((1.0 - fogFactor) * originalColor.green + fogFactor * fogColor.green).toInt().coerceIn(0, 255),
+                                ((1.0 - fogFactor) * originalColor.blue + fogFactor * fogColor.blue).toInt().coerceIn(0, 255)
+                            )
+                            buffer.setRGB(x, y, finalColor.rgb)
+                        }
+                    }
+                }
+            }
+
+            // Render slotMachine sprite
+            val drawStartY = (floorY - spriteSize).coerceIn(0, screenHeight - 1)
+            val drawEndY = floorY.coerceIn(0, screenHeight - 1)
+            val slotMachineLeftX = screenX - spriteSize / 2.0
+            val slotMachineRightX = screenX + spriteSize / 2.0
+            val slotMachineDrawStartX = slotMachineLeftX.coerceAtLeast(0.0).toInt()
+            val slotMachineDrawEndX = slotMachineRightX.coerceAtMost(screenWidth - 1.0).toInt()
+
+            for (x in slotMachineDrawStartX until slotMachineDrawEndX) {
+                if (x < 0 || x >= zBuffer.size) continue
+                if (distance < zBuffer[x]) {
+                    val textureFraction = (x - slotMachineLeftX) / (slotMachineRightX - slotMachineLeftX)
+                    val textureX = (textureFraction * slotMachineTextureID!!.width).coerceIn(0.0, slotMachineTextureID!!.width - 1.0)
+                    for (y in drawStartY until drawEndY) {
+                        val textureY = ((y - drawStartY).toDouble() * slotMachineTextureID!!.height / spriteSize).coerceIn(0.0, slotMachineTextureID!!.height - 1.0)
+                        val color = slotMachineTextureID!!.getRGB(textureX.toInt(), textureY.toInt())
+                        if ((color and 0xFF000000.toInt()) != 0) {
+                            val originalColor = Color(color)
+                            val worldX = slotMachine.x / tileSize
+                            val worldY = slotMachine.y / tileSize
+                            val litColor = calculateLightContribution(worldX, worldY, originalColor)
+                            val fogFactor = 1.0 - exp(-fogDensity * distance)
+                            val finalColor = Color(
+                                ((1.0 - fogFactor) * litColor.red + fogFactor * fogColor.red).toInt().coerceIn(0, 255),
+                                ((1.0 - fogFactor) * litColor.green + fogFactor * fogColor.green).toInt().coerceIn(0, 255),
+                                ((1.0 - fogFactor) * litColor.blue + fogFactor * fogColor.blue).toInt().coerceIn(0, 255)
+                            )
+                            buffer.setRGB(x, y, finalColor.rgb)
+                        }
+                    }
+                    // Update z-buffer for slotMachine sprite
                     zBuffer[x] = distance
                 }
             }

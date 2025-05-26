@@ -20,7 +20,7 @@ import kotlin.random.Random
 
 var directionForRoom = "UP"
 
-//0-air 1-wall 2-black_wall 3-enemy 4-ammo 5-door 6-lightSource 7-medication 8-key 10-chest
+//0-air 1-wall 2-black_wall 3-enemy 4-ammo 5-door 6-lightSource 7-medication 8-key 10-chest 11-slotMachine
 val rooms = listOf(
     RoomTemplate(
         grid = arrayOf(
@@ -56,7 +56,7 @@ val rooms = listOf(
         grid = arrayOf(
             intArrayOf(2, 2, 2, 5, 2, 2, 2),
             intArrayOf(2, 0, 0, 0, 0, 0, 2),
-            intArrayOf(2, 0, 7, 0, 4, 0, 2),
+            intArrayOf(2, 0, 7, 11, 4, 0, 2),
             intArrayOf(5, 0, 0, 6, 0, 0, 5),
             intArrayOf(2, 0, 4, 0, 7, 0, 2),
             intArrayOf(2, 0, 0, 0, 0, 0, 2),
@@ -270,6 +270,10 @@ class Map(var renderCast: RenderCast? = null) {
                         chest.x += offsetX*tileSize
                         chest.y += offsetY*tileSize
                     }
+                    slotMachines.forEach { slotMachine ->
+                        slotMachine.x += offsetX*tileSize
+                        slotMachine.y += offsetY*tileSize
+                    }
                 }
                 currentRooms += 1
                 val keysSlot = playerInventory.indexOfFirst { it?.type == ItemType.KEY && it.quantity > 0 }
@@ -355,6 +359,10 @@ class Map(var renderCast: RenderCast? = null) {
                     traders.forEach { trader ->
                         trader.x += offsetX*tileSize
                         trader.y += offsetY*tileSize
+                    }
+                    slotMachines.forEach { slotMachine ->
+                        slotMachine.x += offsetX*tileSize
+                        slotMachine.y += offsetY*tileSize
                     }
                 }
             }
@@ -524,8 +532,8 @@ class Map(var renderCast: RenderCast? = null) {
                         )
                     )
                     if (gridmod && (offsetX != 0 || offsetY != 0)) {
-                        lightSources.get(lightSources.size-1).x -= offsetX//*tileSize
-                        lightSources.get(lightSources.size-1).y -= offsetY//*tileSize
+                        lightSources.get(lightSources.size-1).x -= offsetX
+                        lightSources.get(lightSources.size-1).y -= offsetY
                     }
                 }
                 if (roomTemplate.grid[XX][YY] == 7) {
@@ -612,6 +620,20 @@ class Map(var renderCast: RenderCast? = null) {
                             ammo.get(ammo.size-1).x -= offsetX*tileSize
                             ammo.get(ammo.size-1).y -= offsetY*tileSize
                         }
+                    }
+                }
+                if (roomTemplate.grid[XX][YY] == 11) {
+                    slotMachines.add(
+                        SlotMachine(
+                            x = (tileSize * (distItemX+1)) - (tileSize / 2),
+                            y = (tileSize * (distItemY+1)) - (tileSize / 2),
+                            texture = renderCast?.slotMachineTextureID!!,
+                            active = true
+                        )
+                    )
+                    if (gridmod && (offsetX != 0 || offsetY != 0)) {
+                        slotMachines.get(slotMachines.size-1).x -= offsetX*tileSize
+                        slotMachines.get(slotMachines.size-1).y -= offsetY*tileSize
                     }
                 }
             }
@@ -786,11 +808,24 @@ class Mappingmap(private val map: Map, private val renderCast: RenderCast) : JPa
             if (trader.active) {
                 val relativeX = (trader.x / tileSize) - playerGridX
                 val relativeY = (trader.y / tileSize) - playerGridY
-                val keyX = (playerMapX + relativeX * tileScale).toInt()
-                val keyY = (playerMapY + relativeY * tileScale).toInt()
-                if (keyX >= offsetX && keyX < miniMapSize + offsetX && keyY >= offsetY && keyY < miniMapSize + offsetY) {
+                val traderX = (playerMapX + relativeX * tileScale).toInt()
+                val traderY = (playerMapY + relativeY * tileScale).toInt()
+                if (traderX >= offsetX && traderX < miniMapSize + offsetX && traderY >= offsetY && traderY < miniMapSize + offsetY) {
                     g2.color = Color.MAGENTA
-                    g2.fillOval(keyX - 3, keyY - 3, 6, 6)
+                    g2.fillOval(traderX - 3, traderY - 3, 6, 6)
+                }
+            }
+        }
+        // draw trader
+        slotMachines.forEach { slotMachine ->
+            if (slotMachine.active) {
+                val relativeX = (slotMachine.x / tileSize) - playerGridX
+                val relativeY = (slotMachine.y / tileSize) - playerGridY
+                val slotMachineX = (playerMapX + relativeX * tileScale).toInt()
+                val slotMachineY = (playerMapY + relativeY * tileScale).toInt()
+                if (slotMachineX >= offsetX && slotMachineX < miniMapSize + offsetX && slotMachineY >= offsetY && slotMachineY < miniMapSize + offsetY) {
+                    g2.color = Color.orange
+                    g2.fillOval(slotMachineX - 3, slotMachineY - 3, 6, 6)
                 }
             }
         }
@@ -873,6 +908,13 @@ class Mappingmap(private val map: Map, private val renderCast: RenderCast) : JPa
             g2.fillRoundRect(((1366+g2.font.size)/2)-10, ((768+g2.font.size)/2)-25, 105, 40, arcSize, arcSize)
             g2.color = Color.YELLOW
             g2.drawString("Trade[E]", (1366+g2.font.size)/2, (768+g2.font.size)/2)
+        }
+
+        if (lookslotMachine and !inventoryVisible) {
+            g2.color = Color(50, 50, 50, 180)
+            g2.fillRoundRect(((1366+g2.font.size)/2)-10, ((768+g2.font.size)/2)-25, 255, 40, arcSize, arcSize)
+            g2.color = Color.YELLOW
+            g2.drawString("LETS GOO GAMBLING[E]", (1366+g2.font.size)/2, (768+g2.font.size)/2)
         }
         g2.font = font?.deriveFont(Font.BOLD, 50f) ?: Font("Arial", Font.BOLD, 50)
         g2.drawString("${totalKeys}", 85, 290)
