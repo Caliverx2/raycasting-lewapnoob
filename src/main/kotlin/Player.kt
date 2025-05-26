@@ -118,7 +118,6 @@ class Player(private val renderCast: RenderCast, private val map: Map) {
 
     private fun checkKeyPickup() {
         val keysToDeactivate = mutableListOf<Key>()
-        val ammoToDeactivate = mutableListOf<Ammo>()
         val medicationsToDeactivate = mutableListOf<Medication>()
 
         // Apply changes after iteration
@@ -222,6 +221,8 @@ class Player(private val renderCast: RenderCast, private val map: Map) {
             lightSources = mutableListOf<LightSource>()
             keysList = mutableListOf<Key>()
             medications = mutableListOf<Medication>()
+            coinsList = mutableListOf<Coin>()
+            slotMachines = mutableListOf<SlotMachine>()
             chests = mutableListOf<Chest>()
             ammo = mutableListOf<Ammo>()
             traders = mutableListOf<Trader>()

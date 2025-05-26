@@ -359,6 +359,10 @@ class Map(var renderCast: RenderCast? = null) {
                         ammo.x += offsetX*tileSize
                         ammo.y += offsetY*tileSize
                     }
+                    projectiles.forEach { projectile ->
+                        projectile.x += offsetX*tileSize
+                        projectile.y += offsetY*tileSize
+                    }
                     lightSources.forEach { lightSource ->
                         lightSource.x += offsetX
                         lightSource.y += offsetY
@@ -878,6 +882,19 @@ class Mappingmap(private val map: Map, private val renderCast: RenderCast) : JPa
                 if (ammoX >= offsetX && ammoX < miniMapSize + offsetX && ammoY >= offsetY && ammoY < miniMapSize + offsetY) {
                     g2.color = Color.DARK_GRAY
                     g2.fillOval(ammoX - 3, ammoY - 3, 6, 6)
+                }
+            }
+        }
+
+        coinsList.forEach { coin ->
+            if (coin.active) {
+                val relativeX = (coin.x / tileSize) - playerGridX
+                val relativeY = (coin.y / tileSize) - playerGridY
+                val coinX = (playerMapX + relativeX * tileScale).toInt()
+                val coinY = (playerMapY + relativeY * tileScale).toInt()
+                if (coinX >= offsetX && coinX < miniMapSize + offsetX && coinY >= offsetY && coinY < miniMapSize + offsetY) {
+                    g2.color = Color.YELLOW
+                    g2.fillOval(coinX - 3, coinY - 3, 6, 6)
                 }
             }
         }

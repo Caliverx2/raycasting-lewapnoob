@@ -17,6 +17,9 @@ import java.awt.event.ComponentAdapter
 import java.awt.event.ComponentEvent
 import java.awt.image.BufferedImage
 import javax.swing.JLayeredPane
+import kotlin.math.PI
+import kotlin.math.cos
+import kotlin.math.sin
 import kotlin.random.Random
 
 var playerHealth: Int = 100
@@ -50,6 +53,8 @@ var positionY = (tileSize*11)-(tileSize/2)  //tile*positon - (half tile)
 var enemies = mutableListOf<Enemy>()
 var lightSources = mutableListOf<LightSource>()
 var keysList = mutableListOf<Key>()
+var coinsList = mutableListOf<Coin>()
+var projectiles = mutableListOf<Enemy.Projectile>()
 var medications = mutableListOf<Medication>()
 var chests = mutableListOf<Chest>()
 var ammo = mutableListOf<Ammo>()
@@ -70,11 +75,11 @@ class Medication(
     var y: Double,
     var texture: BufferedImage,
     var active: Boolean = true,
-    var heal: Int = 100
+    var heal: Int = 100,
+    var amount: Int = 1
 ) {
     val size = 0.5 * tileSize // Medication size (radius)
     val pickupDistance = 0.7 * 2 * size // radius for pickup
-    val amount: Int = 1
 }
 
 class Key(
@@ -82,10 +87,21 @@ class Key(
     var y: Double,
     var texture: BufferedImage,
     var active: Boolean = true,
+    var amount: Int = 1
 ) {
     val size = 0.5 * tileSize // Key size (radius)
     val pickupDistance = 0.7 * 2 * size // radius for pickup
-    val amount: Int = 1
+}
+
+class Coin(
+    var x: Double,
+    var y: Double,
+    var texture: BufferedImage,
+    var active: Boolean = true,
+    var amount: Int = 1
+) {
+    val size = 0.5 * tileSize // Key size (radius)
+    val pickupDistance = 0.7 * 2 * size // radius for pickup
 }
 
 class Ammo(
@@ -228,7 +244,7 @@ fun main() = runBlocking {
     frame.addMouseListener(object : MouseAdapter() {
         override fun mousePressed(event: MouseEvent) {
             if (event.button == MouseEvent.BUTTON1) {
-                if (inventoryVisible) {
+                if (inventoryVisible and lookchest) {
                     renderCast.clickInventoryGUI(event.x, event.y)
                     return
                 }
@@ -236,7 +252,11 @@ fun main() = runBlocking {
                     renderCast.clickPerkGUI(event.x, event.y)
                     return
                 }
-                renderCast.shotgun()
+                if (inventoryVisible and looktrader) {
+                    renderCast.clickTrader(event.x, event.y)
+                    return
+                }
+                if (!inventoryVisible or !perkGUI) renderCast.shotgun()
             }
         }
 
@@ -348,6 +368,51 @@ fun main() = runBlocking {
                             }
                         }
                     }
+                }
+                KeyEvent.VK_Q -> {
+                    val randomAngle = Random.nextDouble(0.0, 2 * PI)
+                    val randomDistance = Random.nextDouble(1.2 * tileSize, 1.6*tileSize)
+                    val itemX = positionX + randomDistance * cos(randomAngle)
+                    val itemY = positionY + randomDistance * sin(randomAngle)
+                    when {
+                        playerInventory[selectSlot]?.type!! == ItemType.KEY -> keysList.add(
+                            Key(
+                                x = (itemX) - (tileSize / 2),
+                                y = (itemY) - (tileSize / 2),
+                                texture = renderCast?.keyTextureId!!,
+                                active = true,
+                                amount = playerInventory[selectSlot]?.quantity!!
+                            )
+                        )
+                        playerInventory[selectSlot]?.type!! == ItemType.AMMO -> ammo.add(
+                            Ammo(
+                                x = (itemX) - (tileSize / 2),
+                                y = (itemY) - (tileSize / 2),
+                                texture = renderCast?.ammoTextureID!!,
+                                active = true,
+                                amount = playerInventory[selectSlot]?.quantity!!
+                            )
+                        )
+                        playerInventory[selectSlot]?.type!! == ItemType.MEDKIT -> medications.add(
+                            Medication(
+                                x = (itemX) - (tileSize / 2),
+                                y = (itemY) - (tileSize / 2),
+                                texture = renderCast?.medicationTextureID!!,
+                                active = true,
+                                amount = playerInventory[selectSlot]?.quantity!!
+                            )
+                        )
+                        playerInventory[selectSlot]?.type!! == ItemType.COIN -> coinsList.add(
+                            Coin(
+                                x = (itemX) - (tileSize / 2),
+                                y = (itemY) - (tileSize / 2),
+                                texture = renderCast?.coinTextureID!!,
+                                active = true,
+                                amount = playerInventory[selectSlot]?.quantity!!
+                            )
+                        )
+                    }
+                    playerInventory[selectSlot] = null
                 }
             }
         }

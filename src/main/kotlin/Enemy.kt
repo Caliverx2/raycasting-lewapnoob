@@ -67,7 +67,7 @@ class Enemy(
 
     data class Node(val x: Int, val y: Int)
 
-    private inner class Projectile(
+    inner class Projectile(
         var x: Double,
         var y: Double,
         val dx: Double,
@@ -78,11 +78,23 @@ class Enemy(
         var active: Boolean = true,
         val lightSource: LightSource? = null
     ) {
+        private var elapsedTime: Double = 0.0 // Timer to track elapsed time
+        private val lifetime: Double = 1.3 // Lifetime in seconds
+
         fun update() {
             if (!active) {
                 lightSource?.let { lightSources.remove(it) }
                 return
             }
+
+            elapsedTime += deltaTime
+            if (elapsedTime >= lifetime) {
+                println("sigma")
+                active = false
+                lightSource?.let { lightSources.remove(it) }
+                return
+            }
+
             x += dx * speed * deltaTime * TARGET_FPS
             y += dy * speed * deltaTime * TARGET_FPS
 

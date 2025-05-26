@@ -46,6 +46,7 @@ class RenderCast(private val map: Map) : JPanel() {
     var ammoTextureID: BufferedImage? = null
     var traderTextureID: BufferedImage? = null
     var slotMachineTextureID: BufferedImage? = null
+    var coinTextureID: BufferedImage? = null
     private val accessibleTiles: Set<Int> = setOf(0, 3, 6)
     private var floorTexture: BufferedImage? = null
     private var ceilingTexture: BufferedImage? = null
@@ -72,6 +73,7 @@ class RenderCast(private val map: Map) : JPanel() {
     private var visibleAmmo = mutableListOf<Triple<Ammo, Int, Double>>()
     private var visibleTrader = mutableListOf<Triple<Trader, Int, Double>>()
     private var visibleSlotMachines = mutableListOf<Triple<SlotMachine, Int, Double>>()
+    private var visibleCoins = mutableListOf<Triple<Coin, Int, Double>>()
     private val zBuffer = DoubleArray(rayCount) { Double.MAX_VALUE }
     private var lastShotTime = 0L
     private val SHOT_COOLDOWN = 500_000_000L * FastReload
@@ -101,6 +103,7 @@ class RenderCast(private val map: Map) : JPanel() {
             ammoTextureID = ImageIO.read(this::class.java.classLoader.getResource("textures/ammo.png"))
             traderTextureID = ImageIO.read(this::class.java.classLoader.getResource("textures/villager.png"))
             slotMachineTextureID = ImageIO.read(this::class.java.classLoader.getResource("textures/slotMachine.png"))
+            coinTextureID = ImageIO.read(this::class.java.classLoader.getResource("textures/coin.png"))
 
             loadTexture(1, "textures/bricks.jpg")
             loadTexture(2, "textures/black_bricks.png")
@@ -114,6 +117,7 @@ class RenderCast(private val map: Map) : JPanel() {
             textureMap[5] = createTexture(Color(255, 215, 0))
             enemyTextureId = createTexture(Color(255, 68, 68))
             keyTextureId = createTexture(Color(255, 255, 0))
+            coinTextureID = createTexture(Color(255, 255, 0))
             medicationTextureID = createTexture(Color(20, 255, 20))
             chestTextureID = createTexture(Color(150,75,0))
             ammoTextureID = createTexture(Color(90,90,90))
@@ -325,6 +329,7 @@ class RenderCast(private val map: Map) : JPanel() {
         visibleChests.clear()
         visibleTrader.clear()
         visibleSlotMachines.clear()
+        visibleCoins.clear()
         lookchest = false
         looktrader = false
         lookslotMachine = false
@@ -444,6 +449,38 @@ class RenderCast(private val map: Map) : JPanel() {
                             val screenX = (screenWidth / 2 + angleRatio * screenWidth / 2).toInt()
                             if (visibleEnemies.none { it.first === enemy }) {
                                 visibleEnemies.add(Triple(enemy, screenX, rayLength))
+                            }
+                        }
+                    }
+                }
+            }
+
+            coinsList.forEach { coin ->
+                if (!coin.active) return@forEach
+                val halfSize = coin.size / tileSize / 2
+                val coinLeft = coin.x / tileSize - halfSize
+                val coinRight = coin.x / tileSize + halfSize
+                val coinTop = coin.y / tileSize - halfSize
+                val coinBottom = coin.y / tileSize + halfSize
+
+                val closestX = clamp(coin.x / tileSize, coinLeft, coinRight)
+                val closestY = clamp(coin.y / tileSize, coinTop, coinBottom)
+                val dx = closestX - playerPosX
+                val dy = closestY - playerPosY
+
+                val rayLength = dx * rayDirX + dy * rayDirY
+                if (rayLength > 0 && rayLength <= maxRayDistance) {
+                    val perpendicularDistance = abs(dx * rayDirY - dy * rayDirX)
+                    if (perpendicularDistance < halfSize + 0.05) {
+                        val centerDx = coin.x / tileSize - playerPosX
+                        val centerDy = coin.y / tileSize - playerPosY
+                        val angleToEnemy = atan2(centerDy, centerDx)
+                        val relativeAngle = normalizeAngle(Math.toDegrees(angleToEnemy) - currentangle)
+                        if (abs(relativeAngle) <= fov / 2 + 10) {
+                            val angleRatio = relativeAngle / (fov / 2)
+                            val screenX = (screenWidth / 2 + angleRatio * screenWidth / 2).toInt()
+                            if (visibleCoins.none { it.first === coin }) {
+                                visibleCoins.add(Triple(coin, screenX, rayLength))
                             }
                         }
                     }
@@ -788,6 +825,7 @@ class RenderCast(private val map: Map) : JPanel() {
         renderChest()
         renderTrader()
         renderSlotMachines()
+        renderCoins()
     }
 
     fun clickPerkGUI(mouseX: Int, mouseY: Int) {
@@ -996,19 +1034,20 @@ class RenderCast(private val map: Map) : JPanel() {
 
     fun clickTrader(mouseX: Int, mouseY: Int) {
         if (!looktrader) return
-        val scaleUI = 150
-        val spacing = scaleUI/10
-        val heightUI = 400
-
-        if (mouseX in (1366/2)-(scaleUI*3+10) until (1366/2)-scaleUI-10 && mouseY in ((768/2)-(heightUI/2)) until ((768/2)-(heightUI/2))+heightUI) {
+        if (mouseX in 870 until 1180 && mouseY in 380 until 420) {
+            selectedOfferIndex = 0
             playSound("click.wav")
         }
-
-        if (mouseX in (1366/2)-scaleUI until (1366/2)+scaleUI && mouseY in ((768/2)-(heightUI/2)) until ((768/2)-(heightUI/2))+heightUI) {
+        if (mouseX in 870 until 1180 && mouseY in 430 until 463) {
+            selectedOfferIndex = 1
             playSound("click.wav")
         }
-
-        if (mouseX in (1366/2)+scaleUI+spacing until (1366/2)+(scaleUI*3+10) && mouseY in ((768/2)-(heightUI/2)) until ((768/2)-(heightUI/2))+heightUI) {
+        if (mouseX in 870 until 1180 && mouseY in 486 until 520) {
+            selectedOfferIndex = 2
+            playSound("click.wav")
+        }
+        if (mouseX in 870 until 1180 && mouseY in 537 until 574) {
+            selectedOfferIndex = 3
             playSound("click.wav")
         }
     }
@@ -1646,6 +1685,86 @@ class RenderCast(private val map: Map) : JPanel() {
                         }
                     }
                     // Update z-buffer for key sprite
+                    zBuffer[x] = distance
+                }
+            }
+        }
+    }
+
+    private fun renderCoins() {
+        visibleCoins.sortByDescending { it.third }
+
+        visibleCoins.forEach { (coin, screenX, distance) ->
+            val coinHeight = wallHeight / 4
+            val minSize = 0.001
+            val maxSize = 64.0
+            val spriteSize = ((coinHeight * screenHeight) / (distance * tileSize)).coerceIn(minSize, maxSize).toInt()
+
+            // Calculate floor position for shadow (same as enemy)
+            val floorY = (screenHeight / 2 + (wallHeight * screenHeight) / (2 * distance * tileSize)).toInt()
+            val shadowSize = (spriteSize * 1.2).toInt() // Slightly larger than key, matching enemy shadow scaling
+            val shadowStartY = floorY.coerceIn(0, screenHeight - 1)
+            val shadowEndY = (floorY + shadowSize / 4).coerceIn(0, screenHeight - 1) // Minimal vertical extent for floor shadow
+
+            val shadowLeftX = screenX - shadowSize / 2.0
+            val shadowRightX = screenX + shadowSize / 2.0
+            val shadowDrawStartX = shadowLeftX.coerceAtLeast(0.0).toInt()
+            val shadowDrawEndX = shadowRightX.coerceAtMost(screenWidth - 1.0).toInt()
+
+            // Render shadow
+            for (x in shadowDrawStartX until shadowDrawEndX) {
+                if (x < 0 || x >= zBuffer.size) continue
+                if (distance < zBuffer[x]) { // Only render shadow if closer than z-buffer
+                    val textureFraction = (x - shadowLeftX) / (shadowRightX - shadowLeftX)
+                    val textureX = (textureFraction * shadowTexture.width).coerceIn(0.0, shadowTexture.width - 1.0)
+                    for (y in shadowStartY until shadowEndY) {
+                        val textureY = ((y - shadowStartY).toDouble() * shadowTexture.height / (shadowEndY - shadowStartY)).coerceIn(0.0, shadowTexture.height - 1.0)
+                        val color = shadowTexture.getRGB(textureX.toInt(), textureY.toInt())
+                        if ((color and 0xFF000000.toInt()) != 0) {
+                            val originalColor = Color(color)
+                            // Apply fog but skip full lighting for shadow (as likely for enemies)
+                            val fogFactor = 1.0 - exp(-fogDensity * distance)
+                            val finalColor = Color(
+                                ((1.0 - fogFactor) * originalColor.red + fogFactor * fogColor.red).toInt().coerceIn(0, 255),
+                                ((1.0 - fogFactor) * originalColor.green + fogFactor * fogColor.green).toInt().coerceIn(0, 255),
+                                ((1.0 - fogFactor) * originalColor.blue + fogFactor * fogColor.blue).toInt().coerceIn(0, 255)
+                            )
+                            buffer.setRGB(x, y, finalColor.rgb)
+                        }
+                    }
+                }
+            }
+
+            // Render coin sprite
+            val drawStartY = (floorY - spriteSize).coerceIn(0, screenHeight - 1)
+            val drawEndY = floorY.coerceIn(0, screenHeight - 1)
+            val coinLeftX = screenX - spriteSize / 2.0
+            val coinRightX = screenX + spriteSize / 2.0
+            val coinDrawStartX = coinLeftX.coerceAtLeast(0.0).toInt()
+            val coinDrawEndX = coinRightX.coerceAtMost(screenWidth - 1.0).toInt()
+
+            for (x in coinDrawStartX until coinDrawEndX) {
+                if (x < 0 || x >= zBuffer.size) continue
+                if (distance < zBuffer[x]) {
+                    val textureFraction = (x - coinLeftX) / (coinRightX - coinLeftX)
+                    val textureX = (textureFraction * coin.texture.width).coerceIn(0.0, coin.texture.width - 1.0)
+                    for (y in drawStartY until drawEndY) {
+                        val textureY = ((y - drawStartY).toDouble() * coin.texture.height / spriteSize).coerceIn(0.0, coin.texture.height - 1.0)
+                        val color = coin.texture.getRGB(textureX.toInt(), textureY.toInt())
+                        if ((color and 0xFF000000.toInt()) != 0) {
+                            val originalColor = Color(color)
+                            val worldX = coin.x / tileSize
+                            val worldY = coin.y / tileSize
+                            val litColor = calculateLightContribution(worldX, worldY, originalColor)
+                            val fogFactor = 1.0 - exp(-fogDensity * distance)
+                            val finalColor = Color(
+                                ((1.0 - fogFactor) * litColor.red + fogFactor * fogColor.red).toInt().coerceIn(0, 255),
+                                ((1.0 - fogFactor) * litColor.green + fogFactor * fogColor.green).toInt().coerceIn(0, 255),
+                                ((1.0 - fogFactor) * litColor.blue + fogFactor * fogColor.blue).toInt().coerceIn(0, 255)
+                            )
+                            buffer.setRGB(x, y, finalColor.rgb)
+                        }
+                    }
                     zBuffer[x] = distance
                 }
             }
@@ -2402,18 +2521,67 @@ class RenderCast(private val map: Map) : JPanel() {
                 val dy = positionY - key.y
                 val distance = sqrt(dx * dx + dy * dy)
                 if (distance < key.pickupDistance) {
-                    key.active = false
-                    // Szukaj slotu z kluczami
-                    val keySlot = playerInventory.indexOfFirst { it?.type == ItemType.KEY && it.quantity < Item.MAX_KEYS_PER_SLOT }
-                    if (keySlot != -1) {
-                        playerInventory[keySlot]!!.quantity += key.amount
-                    } else {
-                        val emptySlot = playerInventory.indexOfFirst { it == null }
-                        if (emptySlot != -1) {
-                            playerInventory[emptySlot] = Item(ItemType.KEY, key.amount)
-                        }
+                    var remainingKeys = key.amount
+
+                    val keysSlots = playerInventory.indices.filter {
+                        playerInventory[it]?.type == ItemType.KEY && playerInventory[it]!!.quantity < Item.MAX_KEYS_PER_SLOT
                     }
-                    playSound("8exp.wav", 0.65f)
+
+                    for (slot in keysSlots) {
+                        if (remainingKeys <= 0) break
+                        val currentSlot = playerInventory[slot]!!
+                        val spaceInSlot = Item.MAX_KEYS_PER_SLOT - currentSlot.quantity
+                        val keyToAdd = minOf(remainingKeys, spaceInSlot)
+                        currentSlot.quantity += keyToAdd
+                        remainingKeys -= keyToAdd
+                        key.active = false
+                        playSound("8exp.wav", 0.65f)
+                    }
+
+                    while (remainingKeys > 0) {
+                        val emptySlot = playerInventory.indexOfFirst { it == null }
+                        if (emptySlot == -1) break
+                        val keyToAdd = minOf(remainingKeys, Item.MAX_KEYS_PER_SLOT)
+                        playerInventory[emptySlot] = Item(ItemType.KEY, keyToAdd)
+                        remainingKeys -= keyToAdd
+                        key.active = false
+                        playSound("8exp.wav", 0.65f)
+                    }
+                }
+            }
+        }
+        coinsList.forEach { coin ->
+            if (coin.active) {
+                val dx = positionX - coin.x
+                val dy = positionY - coin.y
+                val distance = sqrt(dx * dx + dy * dy)
+                if (distance < coin.pickupDistance) {
+                    var remainingCoins = coin.amount
+
+                    val coinsSlots = playerInventory.indices.filter {
+                        playerInventory[it]?.type == ItemType.COIN && playerInventory[it]!!.quantity < Item.MAX_COINS_PER_SLOT
+                    }
+
+                    for (slot in coinsSlots) {
+                        if (remainingCoins <= 0) break
+                        val currentSlot = playerInventory[slot]!!
+                        val spaceInSlot = Item.MAX_KEYS_PER_SLOT - currentSlot.quantity
+                        val coinToAdd = minOf(remainingCoins, spaceInSlot)
+                        currentSlot.quantity += coinToAdd
+                        remainingCoins -= coinToAdd
+                        coin.active = false
+                        playSound("8exp.wav", 0.65f)
+                    }
+
+                    while (remainingCoins > 0) {
+                        val emptySlot = playerInventory.indexOfFirst { it == null }
+                        if (emptySlot == -1) break
+                        val coinToAdd = minOf(remainingCoins, Item.MAX_COINS_PER_SLOT)
+                        playerInventory[emptySlot] = Item(ItemType.COIN, coinToAdd)
+                        remainingCoins -= coinToAdd
+                        coin.active = false
+                        playSound("8exp.wav", 0.65f)
+                    }
                 }
             }
         }
@@ -2435,7 +2603,6 @@ class RenderCast(private val map: Map) : JPanel() {
                 val dy = positionY - ammo.y
                 val distance = sqrt(dx * dx + dy * dy)
                 if (distance < ammo.pickupDistance) {
-                    ammo.active = false
                     var remainingAmmo = (ammo.amount * AmmoBoost).toInt()
 
                     val ammoSlots = playerInventory.indices.filter {
@@ -2449,6 +2616,8 @@ class RenderCast(private val map: Map) : JPanel() {
                         val ammoToAdd = minOf(remainingAmmo, spaceInSlot)
                         currentSlot.quantity += ammoToAdd
                         remainingAmmo -= ammoToAdd
+                        ammo.active = false
+                        playSound("8exp.wav", 0.65f)
                     }
 
                     while (remainingAmmo > 0) {
@@ -2457,12 +2626,13 @@ class RenderCast(private val map: Map) : JPanel() {
                         val ammoToAdd = minOf(remainingAmmo, Item.MAX_AMMO_PER_SLOT)
                         playerInventory[emptySlot] = Item(ItemType.AMMO, ammoToAdd)
                         remainingAmmo -= ammoToAdd
+                        ammo.active = false
+                        playSound("8exp.wav", 0.65f)
                     }
-
-                    playSound("8exp.wav", 0.65f)
                 }
             }
         }
+        coinsList.removeIf { !it.active }
         keysList.removeIf { !it.active }
         medications.removeIf { !it.active }
         ammo.removeIf { !it.active }
