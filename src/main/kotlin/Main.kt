@@ -288,6 +288,38 @@ fun main() = runBlocking {
                         }
                     } ?: run {
                         inventoryVisible = !inventoryVisible
+                        if (lookslotMachine) {
+                            inventoryVisible = false
+                            if (coins >= 3) {
+                                val coinSlot = playerInventory.indexOfFirst { it?.type == ItemType.COIN && it.quantity > 0 }
+                                var currentslot = coinSlot.toInt()
+                                playerInventory[coinSlot]!!.quantity -= 3
+                                if (playerInventory[coinSlot]!!.quantity <= 0) {
+                                    playerInventory[coinSlot] = null
+                                }
+
+                                val random = Random.nextFloat()
+                                val multiplier = when {
+                                    random < 0.001f -> 50.0
+                                    random < 0.008f -> 10.0
+                                    random < 0.02f -> 5.0
+                                    random < 0.07f -> 2.5
+                                    random < 0.20f -> 1.0
+                                    random < 0.30f -> 0.5
+                                    random < 0.40f -> 0.0
+                                    else -> 0.0
+                                }
+
+                                var remainingCOINS = ((coins-3) + (3*multiplier)).toInt()
+                                while (remainingCOINS > 0 && currentslot < playerInventory.size) {
+                                    val quantity = minOf(remainingCOINS, Item.MAX_COINS_PER_SLOT)
+                                    playerInventory[currentslot] = Item(ItemType.COIN, quantity)
+                                    remainingCOINS -= quantity
+                                    currentslot++
+                                }
+                                inventoryVisible = false
+                            }
+                        }
                     }
                 }
                 in KeyEvent.VK_1..KeyEvent.VK_9 -> {
