@@ -370,10 +370,9 @@ fun main() = runBlocking {
                     }
                 }
                 KeyEvent.VK_Q -> {
-                    val randomAngle = Random.nextDouble(0.0, 2 * PI)
                     val randomDistance = Random.nextDouble(1.2 * tileSize, 1.6*tileSize)
-                    val itemX = positionX + randomDistance * cos(randomAngle)
-                    val itemY = positionY + randomDistance * sin(randomAngle)
+                    val itemX = positionX + randomDistance * cos(Math.toRadians(currentangle.toDouble()))
+                    val itemY = positionY + randomDistance * sin(Math.toRadians(currentangle.toDouble()))
                     when {
                         playerInventory[selectSlot]?.type!! == ItemType.KEY -> keysList.add(
                             Key(
