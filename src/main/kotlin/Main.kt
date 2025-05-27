@@ -45,8 +45,8 @@ var FastReload = 1.0
 var AmmoBoost = 1.0
 
 val TARGET_FPS = 90
-val FRAME_TIME_NS = 1_000_000_000 / TARGET_FPS
-var deltaTime = 1.0 / TARGET_FPS
+val FRAME_TIME_NS = 1_000_000_000L / TARGET_FPS
+var deltaTime = 1.0 / 60.0
 
 var positionX = (tileSize*11)-(tileSize/2)  //tile*positon - (half tile)
 var positionY = (tileSize*11)-(tileSize/2)  //tile*positon - (half tile)
@@ -425,37 +425,42 @@ fun main() = runBlocking {
         }
     })
 
-    //fps counter
     var lastFrameTime = System.nanoTime()
     var lastFpsUpdate = System.nanoTime()
+    var accumulatedTime = 0.0
 
     while (true) {
-        if (inventoryVisible) {
-            renderCast.updateOpenChest()
-            renderCast.updateOpenTrader()
-        } else {
-            openTrader = null
-            openChest = null
-        }
-
         val currentTime = System.nanoTime()
-        val elapsedTime = currentTime - lastFrameTime
+        val elapsedTimeNs = currentTime - lastFrameTime
+        val elapsedTimeSec = elapsedTimeNs / 1_000_000_000.0
+        lastFrameTime = currentTime
+        accumulatedTime += elapsedTimeSec
 
-        if (elapsedTime >= (1_000_000_000 / 120)) {
-            player.update(keysPressed)
-            renderCast.repaint()
-            mapa.repaint()
-
-            lastFrameTime = currentTime
-
-            if (currentTime - lastFpsUpdate >= 1_000_000_000L) {
-                lastFpsUpdate = currentTime
+        while (accumulatedTime >= deltaTime) {
+            if (inventoryVisible) {
+                renderCast.updateOpenChest()
+                renderCast.updateOpenTrader()
+            } else {
+                openTrader = null
+                openChest = null
             }
+            player.update(keysPressed)
+            accumulatedTime -= deltaTime
         }
 
+        // Render
+        renderCast.repaint()
+        mapa.repaint()
+
+        // FPS counter
+        if (currentTime - lastFpsUpdate >= 1_000_000_000L) {
+            lastFpsUpdate = currentTime
+        }
+
+        // Sleep to prevent busy-waiting
         val timeToNextFrame = FRAME_TIME_NS - (System.nanoTime() - lastFrameTime)
         if (timeToNextFrame > 0) {
-            delay((timeToNextFrame / 1_000_000))
+            Thread.sleep(timeToNextFrame / 1_000_000)
         }
     }
 }

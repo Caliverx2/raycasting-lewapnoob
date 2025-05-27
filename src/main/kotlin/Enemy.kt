@@ -89,7 +89,6 @@ class Enemy(
 
             elapsedTime += deltaTime
             if (elapsedTime >= lifetime) {
-                println("sigma")
                 active = false
                 lightSource?.let { lightSources.remove(it) }
                 return

@@ -917,7 +917,7 @@ class Mappingmap(private val map: Map, private val renderCast: RenderCast) : JPa
         g2.color = Color.YELLOW
         g2.font = font?.deriveFont(Font.BOLD, 17f) ?: Font("Arial", Font.BOLD, 17)
 
-        g2.drawString("${renderCast.getRenderFps()*2}", 1366 - 50, 20)
+        g2.drawString("${renderCast.getRenderFps()}", 1366 - 50, 20)
 
         g2.drawString("HEAL: ${playerHealth}", 10, 340)
         g2.drawString("LEVEL: ${level}", 10, 360)
