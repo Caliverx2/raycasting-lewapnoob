@@ -17,6 +17,7 @@ import java.awt.event.ComponentAdapter
 import java.awt.event.ComponentEvent
 import java.awt.image.BufferedImage
 import javax.swing.JLayeredPane
+import javax.swing.SwingUtilities
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
@@ -140,7 +141,6 @@ class SlotMachine(
     var texture: BufferedImage,
     var active: Boolean = true,
 ) {
-    val costSlot = 3
     val size = 1.5 * tileSize
     val pickupDistance = 1.3*2
 }
@@ -266,7 +266,7 @@ fun main() = runBlocking {
             }
         }
     })
-
+/*
     frame.addMouseMotionListener(object : MouseMotionAdapter() {
         override fun mouseMoved(e: MouseEvent) {
             player.updateAngleFromMouse()
@@ -277,7 +277,7 @@ fun main() = runBlocking {
             player.updateAngleFromMouse()
             renderCast.repaint()
         }
-    })
+    })*/
 
     frame.addKeyListener(object : KeyAdapter() {
         override fun keyPressed(event: KeyEvent) {
@@ -320,7 +320,7 @@ fun main() = runBlocking {
 
                                 val random = Random.nextFloat()
                                 val multiplier = when {
-                                    random < 0.001f -> 50.0
+                                    random < 0.001f -> 128.0
                                     random < 0.008f -> 10.0
                                     random < 0.02f -> 5.0
                                     random < 0.07f -> 2.5
@@ -447,9 +447,10 @@ fun main() = runBlocking {
             accumulatedTime -= deltaTime
         }
 
-        // Render
-        renderCast.repaint()
-        mapa.repaint()
+        SwingUtilities.invokeLater {
+            renderCast.repaint()
+            mapa.repaint()
+        }
 
         // FPS counter
         if (currentTime - lastFpsUpdate >= 1_000_000_000L) {
