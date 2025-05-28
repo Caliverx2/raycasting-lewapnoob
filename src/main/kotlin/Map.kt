@@ -690,7 +690,6 @@ class Mappingmap(private val map: Map, private val renderCast: RenderCast) : JPa
         val playerMapX = miniMapSize / 2 + offsetX
         val playerMapY = miniMapSize / 2 + offsetY
 
-        // pos player -> titesize
         val playerGridX = positionX / tileSize
         val playerGridY = positionY / tileSize
 
@@ -800,7 +799,7 @@ class Mappingmap(private val map: Map, private val renderCast: RenderCast) : JPa
                     g2.color = Color.RED
                     g2.fillOval(enemyX - 3, enemyY - 3, 9, 9)
                 } else {
-                    g2.color = Color(0, 197, 197, 200)
+                    g2.color = Color(0, 80, 130, 255)
                     g2.fillOval(enemyX - 3, enemyY - 3, 7, 7)
                 }
             }

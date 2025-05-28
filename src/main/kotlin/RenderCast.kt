@@ -25,13 +25,12 @@ import kotlin.math.min
 import kotlin.math.pow
 
 class RenderCast(private val map: Map) : JPanel() {
-    private val screenWidth = 320
-    private val screenHeight = 200
+    private val screenWidth = 320//100
+    private val screenHeight = 200//100
     private val fov = 90.0
     private val textureSize = 64
-    private val rayCount = 90//screenWidth
+    private val rayCount = screenWidth//100
     private val wallHeight = 32.0
-    private val maxRayDistance = 22.0
     private var levelUp = false
     val slotSize = 39
     val perkSlots = arrayOfNulls<Perk>(3)
@@ -277,47 +276,59 @@ class RenderCast(private val map: Map) : JPanel() {
         return true
     }
     //
-
     fun renderWallsToBuffer() {
-        var currentTime = System.nanoTime()
+        val currentTime = System.nanoTime()
 
-        lightSources.forEach { light ->
+        // Player position in tile coordinates
+        val playerPosX = positionX / tileSize
+        val playerPosY = positionY / tileSize
+        val mapWidth = map.grid[0].size
+        val mapHeight = map.grid.size
+        val radius = maxRayDistance // Maximum radius of 22 tiles
+
+        // Calculate bounding box for the 22-tile radius, ensuring bounds are respected
+        val minX = (playerPosX - radius).toInt().coerceAtLeast(0)
+        val maxX = (playerPosX + radius).toInt().coerceAtMost(mapWidth - 1)
+        val minY = (playerPosY - radius).toInt().coerceAtLeast(0)
+        val maxY = (playerPosY + radius).toInt().coerceAtMost(mapHeight - 1)
+
+        // Update light sources
+        lightSources.removeIf { light ->
             if (light.owner != "player" && !light.owner.startsWith("projectile_")) {
                 enemies.find { enemy -> light.owner == enemy.toString() }?.let { matchedEnemy ->
                     if (matchedEnemy.health > 0) {
                         light.x = matchedEnemy.x / tileSize
                         light.y = matchedEnemy.y / tileSize
+                        false // Keep the light
                     } else {
-                        lightSources.remove(light)
+                        true // Remove the light
                     }
-                }
+                } ?: true
+            } else {
+                false
             }
         }
 
+        // Handle player light movement
         if (isLightMoving && currentTime - lastLightMoveTime >= LIGHT_MOVE_INTERVAL) {
             lastLightMoveTime = currentTime
             val angleRad = Math.toRadians(lightMoveDirection)
-            val moveDistance = (tileSize / 2.5 / tileSize)
-            val playerLight = lightSources.find { it.owner == "player" }
-            playerLight?.let {
-                val newX = it.x + moveDistance * cos(angleRad)
-                val newY = it.y + moveDistance * sin(angleRad)
-
+            val moveDistance = tileSize / 2.5 / tileSize
+            lightSources.find { it.owner == "player" }?.let { playerLight ->
+                val newX = playerLight.x + moveDistance * cos(angleRad)
+                val newY = playerLight.y + moveDistance * sin(angleRad)
                 val mapX = newX.toInt()
                 val mapY = newY.toInt()
-                if (mapY in map.grid.indices && mapX in map.grid[0].indices && !wallIndices.contains(map.grid[mapY][mapX])) {
-                    it.x = newX
-                    it.y = newY
+                if (mapY in minY..maxY && mapX in minX..maxX && !wallIndices.contains(map.grid[mapY][mapX])) {
+                    playerLight.x = newX
+                    playerLight.y = newY
                 } else {
                     val random = Random.nextFloat()
-                    playSound(when {
-                        random < 0.50f -> "8exp.wav"
-                        else -> "impact.wav"
-                    }, volume = 0.65f)
+                    playSound(if (random < 0.50f) "8exp.wav" else "impact.wav", volume = 0.65f)
                     isLightMoving = false
-                    it.x = 0.0
-                    it.y = 0.0
-                    it.intensity = 0.0
+                    playerLight.x = 0.0
+                    playerLight.y = 0.0
+                    playerLight.intensity = 0.0
                 }
             }
         }
@@ -325,12 +336,10 @@ class RenderCast(private val map: Map) : JPanel() {
         val playerAngleRad = Math.toRadians(currentangle.toDouble())
         val playerHeight = wallHeight / 4.0
         val horizonOffset = 0.0
-        val playerPosX = positionX / tileSize
-        val playerPosY = positionY / tileSize
 
+        // Clear buffers
         bufferGraphics.color = fogColor
         bufferGraphics.fillRect(0, 0, screenWidth, screenHeight)
-
         zBuffer.fill(Double.MAX_VALUE)
         visibleEnemies.clear()
         visibleKeys.clear()
@@ -344,7 +353,7 @@ class RenderCast(private val map: Map) : JPanel() {
         looktrader = false
         lookslotMachine = false
 
-        // Arrays to store raycasting results for interpolation
+        // Precompute raycasting arrays
         val rayDistances = DoubleArray(rayCount) { Double.MAX_VALUE }
         val rayWallTypes = IntArray(rayCount) { 0 }
         val rayHitXs = DoubleArray(rayCount) { 0.0 }
@@ -352,6 +361,26 @@ class RenderCast(private val map: Map) : JPanel() {
         val raySides = IntArray(rayCount) { 0 }
         val rayHitWalls = BooleanArray(rayCount) { false }
 
+        val entitiesInRadius = mutableListOf<Triple<Any, Double, Double>>()
+        fun addEntityIfInRadius(entity: Any, x: Double, y: Double, active: Boolean = true) {
+            if (entity !is Enemy && !active) return
+            val tileX = x / tileSize
+            val tileY = y / tileSize
+            if (tileX >= minX && tileX <= maxX && tileY >= minY && tileY <= maxY) {
+                entitiesInRadius.add(Triple(entity, tileX, tileY))
+            }
+        }
+
+        enemies.forEach { addEntityIfInRadius(it, it.x, it.y, it.health > 0) }
+        coinsList.forEach { addEntityIfInRadius(it, it.x, it.y, it.active) }
+        keysList.forEach { addEntityIfInRadius(it, it.x, it.y, it.active) }
+        chests.forEach { addEntityIfInRadius(it, it.x, it.y, it.active) }
+        ammo.forEach { addEntityIfInRadius(it, it.x, it.y, it.active) }
+        slotMachines.forEach { addEntityIfInRadius(it, it.x, it.y, it.active) }
+        medications.forEach { addEntityIfInRadius(it, it.x, it.y, it.active) }
+        traders.forEach { addEntityIfInRadius(it, it.x, it.y, it.active) }
+
+        // Raycasting loop
         for (ray in 0 until rayCount) {
             val rayAngle = currentangle + rayAngles[ray]
             val rayAngleRad = Math.toRadians(rayAngle)
@@ -405,7 +434,7 @@ class RenderCast(private val map: Map) : JPanel() {
                     side = 1
                     distance = (mapY - playerPosY + (1 - stepY) / 2.0) / rayDirY
                 }
-                if (distance > maxRayDistance || mapY !in map.grid.indices || mapX !in map.grid[0].indices) {
+                if (distance > maxRayDistance || mapY !in minY..maxY || mapX !in minX..maxX) {
                     distance = maxRayDistance
                     break
                 }
@@ -449,26 +478,20 @@ class RenderCast(private val map: Map) : JPanel() {
             raySides[ray] = side
             rayHitWalls[ray] = hitWall
 
-            // Entity raycasting remains unchanged
-
-            // Precompute constants
+            // Process entities within radius
             val halfScreenWidth = screenWidth / 2
             val halfFov = fov / 2
             val tileSizeInv = 1.0 / tileSize
             val fovCheck = halfFov + 10
 
-            // Helper function to process entity visibility
             fun processEntityVisibility(
                 entity: Any,
-                x: Double, y: Double, size: Double,
-                visibleList: MutableList<Triple<Any, Int, Double>>,
-                rayDirX: Double, rayDirY: Double,
-                playerPosX: Double, playerPosY: Double,
-                currentangle: Double
+                posX: Double,
+                posY: Double,
+                size: Double,
+                visibleList: MutableList<Triple<Any, Int, Double>>
             ) {
                 val halfSize = size * tileSizeInv * 0.5
-                val posX = x * tileSizeInv
-                val posY = y * tileSizeInv
                 val left = posX - halfSize
                 val right = posX + halfSize
                 val top = posY - halfSize
@@ -498,106 +521,35 @@ class RenderCast(private val map: Map) : JPanel() {
                 }
             }
 
-            // Process entities
-            enemies.forEach { enemy ->
-                processEntityVisibility(
-                    entity = enemy,
-                    x = enemy.x, y = enemy.y, size = enemy.size,
-                    visibleList = visibleEnemies as MutableList<Triple<Any, Int, Double>>,
-                    rayDirX = rayDirX, rayDirY = rayDirY,
-                    playerPosX = playerPosX, playerPosY = playerPosY,
-                    currentangle = currentangle.toDouble()
-                )
-            }
-
-            coinsList.forEach { coin ->
-                if (!coin.active) return@forEach
-                processEntityVisibility(
-                    entity = coin,
-                    x = coin.x, y = coin.y, size = coin.size,
-                    visibleList = visibleCoins as MutableList<Triple<Any, Int, Double>>,
-                    rayDirX = rayDirX, rayDirY = rayDirY,
-                    playerPosX = playerPosX, playerPosY = playerPosY,
-                    currentangle = currentangle.toDouble()
-                )
-            }
-
-            keysList.forEach { key ->
-                if (!key.active) return@forEach
-                processEntityVisibility(
-                    entity = key,
-                    x = key.x, y = key.y, size = key.size,
-                    visibleList = visibleKeys as MutableList<Triple<Any, Int, Double>>,
-                    rayDirX = rayDirX, rayDirY = rayDirY,
-                    playerPosX = playerPosX, playerPosY = playerPosY,
-                    currentangle = currentangle.toDouble()
-                )
-            }
-
-            chests.forEach { chest ->
-                if (!chest.active) return@forEach
-                processEntityVisibility(
-                    entity = chest,
-                    x = chest.x, y = chest.y, size = chest.size,
-                    visibleList = visibleChests as MutableList<Triple<Any, Int, Double>>,
-                    rayDirX = rayDirX, rayDirY = rayDirY,
-                    playerPosX = playerPosX, playerPosY = playerPosY,
-                    currentangle = currentangle.toDouble()
-                )
-            }
-
-            ammo.forEach { ammo ->
-                if (!ammo.active) return@forEach
-                processEntityVisibility(
-                    entity = ammo,
-                    x = ammo.x, y = ammo.y, size = ammo.size,
-                    visibleList = visibleAmmo as MutableList<Triple<Any, Int, Double>>,
-                    rayDirX = rayDirX, rayDirY = rayDirY,
-                    playerPosX = playerPosX, playerPosY = playerPosY,
-                    currentangle = currentangle.toDouble()
-                )
-            }
-
-            slotMachines.forEach { slotMachine ->
-                if (!slotMachine.active) return@forEach
-                processEntityVisibility(
-                    entity = slotMachine,
-                    x = slotMachine.x, y = slotMachine.y, size = slotMachine.size,
-                    visibleList = visibleSlotMachines as MutableList<Triple<Any, Int, Double>>,
-                    rayDirX = rayDirX, rayDirY = rayDirY,
-                    playerPosX = playerPosX, playerPosY = playerPosY,
-                    currentangle = currentangle.toDouble()
-                )
-            }
-
-            medications.forEach { medication ->
-                if (!medication.active) return@forEach
-                processEntityVisibility(
-                    entity = medication,
-                    x = medication.x, y = medication.y, size = medication.size,
-                    visibleList = visibleMedications as MutableList<Triple<Any, Int, Double>>,
-                    rayDirX = rayDirX, rayDirY = rayDirY,
-                    playerPosX = playerPosX, playerPosY = playerPosY,
-                    currentangle = currentangle.toDouble()
-                )
-            }
-
-            traders.forEach { trader ->
-                if (!trader.active) return@forEach
-                processEntityVisibility(
-                    entity = trader,
-                    x = trader.x, y = trader.y, size = trader.size,
-                    visibleList = visibleTrader as MutableList<Triple<Any, Int, Double>>,
-                    rayDirX = rayDirX, rayDirY = rayDirY,
-                    playerPosX = playerPosX, playerPosY = playerPosY,
-                    currentangle = currentangle.toDouble()
-                )
+            entitiesInRadius.forEach { (entity, posX, posY) ->
+                val size = when (entity) {
+                    is Enemy -> entity.size
+                    is Coin -> entity.size
+                    is Key -> entity.size
+                    is Chest -> entity.size
+                    is Ammo -> entity.size
+                    is SlotMachine -> entity.size
+                    is Medication -> entity.size
+                    is Trader -> entity.size
+                    else -> 0.0
+                }
+                val visibleList = when (entity) {
+                    is Enemy -> visibleEnemies
+                    is Coin -> visibleCoins
+                    is Key -> visibleKeys
+                    is Chest -> visibleChests
+                    is Ammo -> visibleAmmo
+                    is SlotMachine -> visibleSlotMachines
+                    is Medication -> visibleMedications
+                    is Trader -> visibleTrader
+                    else -> mutableListOf()
+                }
+                processEntityVisibility(entity, posX, posY, size, visibleList as MutableList<Triple<Any, Int, Double>>)
             }
         }
 
         // Render to screen columns
         for (x in 0 until screenWidth) {
-            // Map screen column to ray index
             val rayFraction = x.toDouble() / screenWidth * (rayCount - 1)
             val rayIndex = rayFraction.toInt()
             val nextRayIndex = (rayIndex + 1).coerceAtMost(rayCount - 1)
@@ -623,17 +575,28 @@ class RenderCast(private val map: Map) : JPanel() {
             val drawEnd = (lineHeight / 2 + screenHeight / 2 + horizonOffset).coerceAtMost(screenHeight.toDouble()).toInt()
 
             if (hitWall && distance <= maxRayDistance) {
-                var textureX = if (side == 0) {
-                    val blockY = hitY.toInt().toDouble()
-                    val relativeY = hitY - blockY
-                    relativeY.coerceIn(0.0, 1.0) * textureSize
+                // Recompute rayDirX and rayDirY for the current ray (interpolated)
+                val rayDirX = if (rayIndex == nextRayIndex) {
+                    rayCosines[rayIndex] * cos(playerAngleRad) - raySines[rayIndex] * sin(playerAngleRad)
                 } else {
-                    val blockX = hitX.toInt().toDouble()
-                    val relativeX = hitX - blockX
-                    relativeX.coerceIn(0.0, 1.0) * textureSize
+                    val dirX1 = rayCosines[rayIndex] * cos(playerAngleRad) - raySines[rayIndex] * sin(playerAngleRad)
+                    val dirX2 = rayCosines[nextRayIndex] * cos(playerAngleRad) - raySines[nextRayIndex] * sin(playerAngleRad)
+                    dirX1 + (dirX2 - dirX1) * interp
                 }
-                if (side == 0 && (rayCosines[rayIndex] * cos(playerAngleRad) - raySines[rayIndex] * sin(playerAngleRad)) > 0 ||
-                    side == 1 && (rayCosines[rayIndex] * sin(playerAngleRad) + raySines[rayIndex] * cos(playerAngleRad)) < 0) {
+                val rayDirY = if (rayIndex == nextRayIndex) {
+                    rayCosines[rayIndex] * sin(playerAngleRad) + raySines[rayIndex] * cos(playerAngleRad)
+                } else {
+                    val dirY1 = rayCosines[rayIndex] * sin(playerAngleRad) + raySines[rayIndex] * cos(playerAngleRad)
+                    val dirY2 = rayCosines[nextRayIndex] * sin(playerAngleRad) + raySines[nextRayIndex] * cos(playerAngleRad)
+                    dirY1 + (dirY2 - dirY1) * interp
+                }
+
+                var textureX = if (side == 0) {
+                    (hitY - hitY.toInt().toDouble()).coerceIn(0.0, 1.0) * textureSize
+                } else {
+                    (hitX - hitX.toInt().toDouble()).coerceIn(0.0, 1.0) * textureSize
+                }
+                if (side == 0 && rayDirX > 0 || side == 1 && rayDirY < 0) {
                     textureX = textureSize - textureX - 1
                 }
 
@@ -650,9 +613,7 @@ class RenderCast(private val map: Map) : JPanel() {
                         (originalColor.green * shadeFactor).toInt().coerceIn(0, 255),
                         (originalColor.blue * shadeFactor).toInt().coerceIn(0, 255)
                     )
-                    val worldX = hitX
-                    val worldY = hitY
-                    val litColor = calculateLightContribution(worldX, worldY, shadedColor)
+                    val litColor = calculateLightContribution(hitX, hitY, shadedColor)
                     val fogFactor = 1.0 - exp(-fogDensity * distance)
                     val finalColor = Color(
                         ((1.0 - fogFactor) * litColor.red + fogFactor * fogColor.red).toInt().coerceIn(0, 255),
@@ -704,135 +665,14 @@ class RenderCast(private val map: Map) : JPanel() {
                 var isShadow = false
                 var shadowColor = Color(50, 50, 50)
                 if (!isCeiling) {
-                    enemies.forEach { enemy ->
-                        val shadowRadius = 0.25
-                        val enemyX = enemy.x / tileSize
-                        val enemyY = enemy.y / tileSize
-                        val dx = floorX - enemyX - 100
-                        val dy = floorY - enemyY - 100
-                        val distanceToEnemy = sqrt(dx * dx + dy * dy)
-                        if (distanceToEnemy <= shadowRadius) {
+                    entitiesInRadius.forEach { (entity, entityX, entityY) ->
+                        val shadowRadius = if (entity is Coin || entity is SlotMachine) 0.1 else 0.25
+                        val dx = floorX - entityX - 100
+                        val dy = floorY - entityY - 100
+                        val distanceToEntity = sqrt(dx * dx + dy * dy)
+                        if (distanceToEntity <= shadowRadius) {
                             isShadow = true
-                            val shadowFactor = 1.0 - (distanceToEnemy / shadowRadius)
-                            shadowColor = Color(
-                                (50 * shadowFactor).toInt().coerceIn(0, 255),
-                                (50 * shadowFactor).toInt().coerceIn(0, 255),
-                                (50 * shadowFactor).toInt().coerceIn(0, 255)
-                            )
-                        }
-                    }
-                    ammo.forEach { ammo ->
-                        val shadowRadius = 0.25
-                        val ammoX = ammo.x / tileSize
-                        val ammoY = ammo.y / tileSize
-                        val dx = floorX - ammoX - 100
-                        val dy = floorY - ammoY - 100
-                        val distanceToEnemy = sqrt(dx * dx + dy * dy)
-                        if (distanceToEnemy <= shadowRadius) {
-                            isShadow = true
-                            val shadowFactor = 1.0 - (distanceToEnemy / shadowRadius)
-                            shadowColor = Color(
-                                (50 * shadowFactor).toInt().coerceIn(0, 255),
-                                (50 * shadowFactor).toInt().coerceIn(0, 255),
-                                (50 * shadowFactor).toInt().coerceIn(0, 255)
-                            )
-                        }
-                    }
-                    chests.forEach { chest ->
-                        val shadowRadius = 0.25
-                        val chestX = chest.x / tileSize
-                        val chestY = chest.y / tileSize
-                        val dx = floorX - chestX - 100
-                        val dy = floorY - chestY - 100
-                        val distanceToEnemy = sqrt(dx * dx + dy * dy)
-                        if (distanceToEnemy <= shadowRadius) {
-                            isShadow = true
-                            val shadowFactor = 1.0 - (distanceToEnemy / shadowRadius)
-                            shadowColor = Color(
-                                (50 * shadowFactor).toInt().coerceIn(0, 255),
-                                (50 * shadowFactor).toInt().coerceIn(0, 255),
-                                (50 * shadowFactor).toInt().coerceIn(0, 255)
-                            )
-                        }
-                    }
-                    keysList.forEach { key ->
-                        val shadowRadius = 0.25
-                        val keyX = key.x / tileSize
-                        val keyY = key.y / tileSize
-                        val dx = floorX - keyX - 100
-                        val dy = floorY - keyY - 100
-                        val distanceToEnemy = sqrt(dx * dx + dy * dy)
-                        if (distanceToEnemy <= shadowRadius) {
-                            isShadow = true
-                            val shadowFactor = 1.0 - (distanceToEnemy / shadowRadius)
-                            shadowColor = Color(
-                                (50 * shadowFactor).toInt().coerceIn(0, 255),
-                                (50 * shadowFactor).toInt().coerceIn(0, 255),
-                                (50 * shadowFactor).toInt().coerceIn(0, 255)
-                            )
-                        }
-                    }
-                    medications.forEach { medication ->
-                        val shadowRadius = 0.25
-                        val medicationX = medication.x / tileSize
-                        val medicationY = medication.y / tileSize
-                        val dx = floorX - medicationX - 100
-                        val dy = floorY - medicationY - 100
-                        val distanceToEnemy = sqrt(dx * dx + dy * dy)
-                        if (distanceToEnemy <= shadowRadius) {
-                            isShadow = true
-                            val shadowFactor = 1.0 - (distanceToEnemy / shadowRadius)
-                            shadowColor = Color(
-                                (50 * shadowFactor).toInt().coerceIn(0, 255),
-                                (50 * shadowFactor).toInt().coerceIn(0, 255),
-                                (50 * shadowFactor).toInt().coerceIn(0, 255)
-                            )
-                        }
-                    }
-                    traders.forEach { trader ->
-                        val shadowRadius = 0.25
-                        val traderX = trader.x / tileSize
-                        val traderY = trader.y / tileSize
-                        val dx = floorX - traderX - 100
-                        val dy = floorY - traderY - 100
-                        val distanceToEnemy = sqrt(dx * dx + dy * dy)
-                        if (distanceToEnemy <= shadowRadius) {
-                            isShadow = true
-                            val shadowFactor = 1.0 - (distanceToEnemy / shadowRadius)
-                            shadowColor = Color(
-                                (50 * shadowFactor).toInt().coerceIn(0, 255),
-                                (50 * shadowFactor).toInt().coerceIn(0, 255),
-                                (50 * shadowFactor).toInt().coerceIn(0, 255)
-                            )
-                        }
-                    }
-                    slotMachines.forEach { slotmachine ->
-                        val shadowRadius = 0.1
-                        val slotmachineX = slotmachine.x / tileSize
-                        val slotmachineY = slotmachine.y / tileSize
-                        val dx = floorX - slotmachineX - 100
-                        val dy = floorY - slotmachineY - 100
-                        val distanceToEnemy = sqrt(dx * dx + dy * dy)
-                        if (distanceToEnemy <= shadowRadius) {
-                            isShadow = true
-                            val shadowFactor = 1.0 - (distanceToEnemy / shadowRadius)
-                            shadowColor = Color(
-                                (50 * shadowFactor).toInt().coerceIn(0, 255),
-                                (50 * shadowFactor).toInt().coerceIn(0, 255),
-                                (50 * shadowFactor).toInt().coerceIn(0, 255)
-                            )
-                        }
-                    }
-                    coinsList.forEach { coin ->
-                        val shadowRadius = 0.1
-                        val coinX = coin.x / tileSize
-                        val coinY = coin.y / tileSize
-                        val dx = floorX - coinX - 100
-                        val dy = floorY - coinY - 100
-                        val distanceToEnemy = sqrt(dx * dx + dy * dy)
-                        if (distanceToEnemy <= shadowRadius) {
-                            isShadow = true
-                            val shadowFactor = 1.0 - (distanceToEnemy / shadowRadius)
+                            val shadowFactor = 1.0 - (distanceToEntity / shadowRadius)
                             shadowColor = Color(
                                 (50 * shadowFactor).toInt().coerceIn(0, 255),
                                 (50 * shadowFactor).toInt().coerceIn(0, 255),
@@ -841,46 +681,33 @@ class RenderCast(private val map: Map) : JPanel() {
                         }
                     }
                 }
-                if (isShadow) {
-                    val worldX = playerPosX + rowDistance * rayDirX
-                    val worldY = playerPosY + rowDistance * rayDirY
-                    val litColor = calculateLightContribution(worldX, worldY, shadowColor)
-                    val fogFactor = 1.0 - exp(-fogDensity * rowDistance)
-                    val finalColor = Color(
-                        ((1.0 - fogFactor) * litColor.red + fogFactor * fogColor.red).toInt().coerceIn(0, 255),
-                        ((1.0 - fogFactor) * litColor.green + fogFactor * fogColor.green).toInt().coerceIn(0, 255),
-                        ((1.0 - fogFactor) * litColor.blue + fogFactor * fogColor.blue).toInt().coerceIn(0, 255)
-                    )
-                    buffer.setRGB(x, y, finalColor.rgb)
-                } else {
-                    val textureScale = 2.0
-                    val textureX = ((floorY / textureScale * textureSize) % textureSize).toInt().coerceIn(0, textureSize - 1)
-                    val textureY = ((floorX / textureScale * textureSize) % textureSize).toInt().coerceIn(0, textureSize - 1)
 
-                    val color = texture.getRGB(textureX, textureY)
-                    val shadeFactor = (1.0 - (distance / shadeDistanceScale)).coerceIn(minBrightness, maxBrightness)
-                    val originalColor = Color(color)
-                    val shadedColor = Color(
-                        (originalColor.red * shadeFactor).toInt().coerceIn(0, 255),
-                        (originalColor.green * shadeFactor).toInt().coerceIn(0, 255),
-                        (originalColor.blue * shadeFactor).toInt().coerceIn(0, 255)
-                    )
-                    val worldX = playerPosX + rowDistance * rayDirX
-                    val worldY = playerPosY + rowDistance * rayDirY
-                    val litColor = calculateLightContribution(worldX, worldY, originalColor)
-                    val fogFactor = 1.0 - exp(-fogDensity * rowDistance)
-                    val finalColor = Color(
-                        ((1.0 - fogFactor) * litColor.red + fogFactor * fogColor.red).toInt().coerceIn(0, 255),
-                        ((1.0 - fogFactor) * litColor.green + fogFactor * fogColor.green).toInt().coerceIn(0, 255),
-                        ((1.0 - fogFactor) * litColor.blue + fogFactor * fogColor.blue).toInt().coerceIn(0, 255)
-                    )
-                    buffer.setRGB(x, y, finalColor.rgb)
-                }
+                val textureScale = 2.0
+                val textureX = ((floorY / textureScale * textureSize) % textureSize).toInt().coerceIn(0, textureSize - 1)
+                val textureY = ((floorX / textureScale * textureSize) % textureSize).toInt().coerceIn(0, textureSize - 1)
+
+                val color = if (isShadow) shadowColor.rgb else texture.getRGB(textureX, textureY)
+                val shadeFactor = (1.0 - (rowDistance / shadeDistanceScale)).coerceIn(minBrightness, maxBrightness)
+                val originalColor = Color(color)
+                val shadedColor = if (isShadow) originalColor else Color(
+                    (originalColor.red * shadeFactor).toInt().coerceIn(0, 255),
+                    (originalColor.green * shadeFactor).toInt().coerceIn(0, 255),
+                    (originalColor.blue * shadeFactor).toInt().coerceIn(0, 255)
+                )
+                val worldX = playerPosX + rowDistance * rayDirX
+                val worldY = playerPosY + rowDistance * rayDirY
+                val litColor = calculateLightContribution(worldX, worldY, shadedColor)
+                val fogFactor = 1.0 - exp(-fogDensity * rowDistance)
+                val finalColor = Color(
+                    ((1.0 - fogFactor) * litColor.red + fogFactor * fogColor.red).toInt().coerceIn(0, 255),
+                    ((1.0 - fogFactor) * litColor.green + fogFactor * fogColor.green).toInt().coerceIn(0, 255),
+                    ((1.0 - fogFactor) * litColor.blue + fogFactor * fogColor.blue).toInt().coerceIn(0, 255)
+                )
+                buffer.setRGB(x, y, finalColor.rgb)
             }
         }
         renderAllEntities()
     }
-
     //
     fun clickPerkGUI(mouseX: Int, mouseY: Int) {
         if (!perkGUI) return
@@ -1415,7 +1242,7 @@ class RenderCast(private val map: Map) : JPanel() {
         val spriteSize = ((config.height * screenHeight) / (distance * tileSize) * config.sizeMultiplier)
             .coerceIn(minSize, config.maxSize).toInt()
 
-        // Calculate floor position for shadow and sprite
+        // Calculate floor position for sprite
         val floorY = (screenHeight / 2 + (wallHeight * screenHeight) / (2 * distance * tileSize)).toInt()
         val drawStartY = (floorY - spriteSize).coerceIn(0, screenHeight - 1)
         val drawEndY = floorY.coerceIn(0, screenHeight - 1)
@@ -1545,44 +1372,102 @@ class RenderCast(private val map: Map) : JPanel() {
             }
         }
 
-        // Render sprite (from renderKeys, with per-column depth)
+        // Render sprite with wall occlusion check
         for (x in drawStartX until drawEndX) {
             if (x < 0 || x >= zBuffer.size) continue
-            // Calculate per-column depth
+            // Calculate per-column ray direction
             val angleRatio = (x - screenWidth / 2.0) / (screenWidth / 2.0) * (fov / 2)
             val rayAngleRad = Math.toRadians(currentangle + angleRatio)
             val rayDirX = cos(rayAngleRad)
             val rayDirY = sin(rayAngleRad)
+
+            // Raycasting to check for wall occlusion
+            val playerPosX = positionX / tileSize
+            val playerPosY = positionY / tileSize
+            var mapX = playerPosX.toInt()
+            var mapY = playerPosY.toInt()
+            val deltaDistX = if (rayDirX == 0.0) 1e30 else abs(1 / rayDirX)
+            val deltaDistY = if (rayDirY == 0.0) 1e30 else abs(1 / rayDirY)
+            var stepX: Int
+            var stepY: Int
+            var sideDistX: Double
+            var sideDistY: Double
+            var side: Int
+            var hitWall = false
+            var wallDistance = Double.MAX_VALUE
+
+            if (rayDirX < 0) {
+                stepX = -1
+                sideDistX = (playerPosX - mapX) * deltaDistX
+            } else {
+                stepX = 1
+                sideDistX = (mapX + 1.0 - playerPosX) * deltaDistX
+            }
+            if (rayDirY < 0) {
+                stepY = -1
+                sideDistY = (playerPosY - mapY) * deltaDistY
+            } else {
+                stepY = 1
+                sideDistY = (mapY + 1.0 - playerPosY) * deltaDistY
+            }
+
+            while (!hitWall) {
+                if (sideDistX < sideDistY) {
+                    sideDistX += deltaDistX
+                    mapX += stepX
+                    side = 0
+                    wallDistance = (mapX - playerPosX + (1 - stepX) / 2.0) / rayDirX
+                } else {
+                    sideDistY += deltaDistY
+                    mapY += stepY
+                    side = 1
+                    wallDistance = (mapY - playerPosY + (1 - stepY) / 2.0) / rayDirY
+                }
+                if (wallDistance > maxRayDistance || mapY !in map.grid.indices || mapX !in map.grid[0].indices) {
+                    wallDistance = maxRayDistance
+                    break
+                }
+                if (wallIndices.contains(map.grid[mapY][mapX])) {
+                    hitWall = true
+                }
+            }
+
+            if (hitWall && wallDistance < 0.01) wallDistance = 0.01
+
+            // Calculate per-column distance to entity
             val entityLeft = entityX - halfSize
             val entityRight = entityX + halfSize
             val entityTop = entityY - halfSize
             val entityBottom = entityY + halfSize
             val closestX = clamp(entityX, entityLeft, entityRight)
             val closestY = clamp(entityY, entityTop, entityBottom)
-            val dx = closestX - positionX/tileSize
-            val dy = closestY - positionY/tileSize
+            val dx = closestX - playerPosX
+            val dy = closestY - playerPosY
             val pixelDistance = sqrt(dx * dx + dy * dy)
 
-            if (pixelDistance < zBuffer[x]) {
-                val textureFraction = (x - leftX) / (rightX - leftX)
-                val textureX = (textureFraction * texture.width).coerceIn(0.0, texture.width - 1.0)
-                for (y in drawStartY until drawEndY) {
-                    val textureY = ((y - drawStartY).toDouble() * texture.height / spriteSize)
-                        .coerceIn(0.0, texture.height - 1.0)
-                    val color = texture.getRGB(textureX.toInt(), textureY.toInt())
-                    if ((color and 0xFF000000.toInt()) != 0) {
-                        val originalColor = Color(color)
-                        val litColor = calculateLightContribution(entityX, entityY, originalColor)
-                        val fogFactor = 1.0 - exp(-fogDensity * pixelDistance)
-                        val finalColor = Color(
-                            ((1.0 - fogFactor) * litColor.red + fogFactor * fogColor.red).toInt().coerceIn(0, 255),
-                            ((1.0 - fogFactor) * litColor.green + fogFactor * fogColor.green).toInt().coerceIn(0, 255),
-                            ((1.0 - fogFactor) * litColor.blue + fogFactor * fogColor.blue).toInt().coerceIn(0, 255)
-                        )
-                        buffer.setRGB(x, y, finalColor.rgb)
+            // Only render if entity is closer than the wall or no wall was hit
+            if (!hitWall || pixelDistance < wallDistance) {
+                if (pixelDistance < zBuffer[x]) {
+                    val textureFraction = (x - leftX) / (rightX - leftX)
+                    val textureX = (textureFraction * texture.width).coerceIn(0.0, texture.width - 1.0)
+                    for (y in drawStartY until drawEndY) {
+                        val textureY = ((y - drawStartY).toDouble() * texture.height / spriteSize)
+                            .coerceIn(0.0, texture.height - 1.0)
+                        val color = texture.getRGB(textureX.toInt(), textureY.toInt())
+                        if ((color and 0xFF000000.toInt()) != 0) {
+                            val originalColor = Color(color)
+                            val litColor = calculateLightContribution(entityX, entityY, originalColor)
+                            val fogFactor = 1.0 - exp(-fogDensity * pixelDistance)
+                            val finalColor = Color(
+                                ((1.0 - fogFactor) * litColor.red + fogFactor * fogColor.red).toInt().coerceIn(0, 255),
+                                ((1.0 - fogFactor) * litColor.green + fogFactor * fogColor.green).toInt().coerceIn(0, 255),
+                                ((1.0 - fogFactor) * litColor.blue + fogFactor * fogColor.blue).toInt().coerceIn(0, 255)
+                            )
+                            buffer.setRGB(x, y, finalColor.rgb)
+                        }
                     }
+                    zBuffer[x] = pixelDistance // Update z-buffer with per-column depth
                 }
-                zBuffer[x] = pixelDistance // Update z-buffer with per-column depth
             }
         }
 
@@ -1609,32 +1494,131 @@ class RenderCast(private val map: Map) : JPanel() {
             } else {
                 1
             }
-            val textDrawStartY = (drawStartY - textSpriteHeight - 2).coerceIn(0, screenHeight - 1)
-            val textDrawEndY = (textDrawStartY + textSpriteHeight).coerceIn(0, screenHeight - 1)
-            val textLeftX = screenX - textSpriteWidth / 2.0
-            val textRightX = screenX + textSpriteWidth / 2.0
-            val textDrawStartX = textLeftX.coerceAtLeast(0.0).toInt()
-            val textDrawEndX = textRightX.coerceAtMost(screenWidth - 1.0).toInt()
 
-            for (x in textDrawStartX until textDrawEndX) {
-                if (x < 0 || x >= zBuffer.size) continue
-                if (distance <= zBuffer[x]) {
-                    val textTextureFraction = (x - textLeftX) / (textRightX - textLeftX)
-                    val textTextureX = (textTextureFraction * textImage.width).coerceIn(0.0, textImage.width - 1.0)
-                    for (y in textDrawStartY until textDrawEndY) {
-                        val textTextureY = ((y - textDrawStartY).toDouble() * textImage.height / textSpriteHeight)
-                            .coerceIn(0.0, textImage.height - 1.0)
-                        val color = textImage.getRGB(textTextureX.toInt(), textTextureY.toInt())
-                        if ((color and 0xFF000000.toInt()) != 0) {
-                            val originalColor = Color(color)
-                            val litColor = calculateLightContribution(entityX, entityY, originalColor)
-                            val fogFactor = 1.0 - exp(-fogDensity * distance)
-                            val finalColor = Color(
-                                ((1.0 - fogFactor) * litColor.red + fogFactor * fogColor.red).toInt().coerceIn(0, 255),
-                                ((1.0 - fogFactor) * litColor.green + fogFactor * fogColor.green).toInt().coerceIn(0, 255),
-                                ((1.0 - fogFactor) * litColor.blue + fogFactor * fogColor.blue).toInt().coerceIn(0, 255)
-                            )
-                            buffer.setRGB(x, y, finalColor.rgb)
+            if (config.hasHealthBar && entity is Enemy && entity.health > 0 && entity.maxHeal > entity.health) {
+                val healthText = "${entity.health}"
+                val textSize = (spriteSize / 3.0).coerceIn(16.0, 26.0).toInt()
+                val textFont = font?.deriveFont(Font.BOLD, textSize.toFloat()) ?: Font("Arial", Font.BOLD, textSize)
+                val metrics = bufferGraphics.getFontMetrics(textFont)
+                val textWidth = metrics.stringWidth(healthText)
+                val textHeight = metrics.height
+
+                val textImage = BufferedImage(textWidth, textHeight, BufferedImage.TYPE_INT_ARGB)
+                val textGraphics = textImage.createGraphics()
+                textGraphics.font = textFont
+                textGraphics.color = Color.LIGHT_GRAY
+                textGraphics.setBackground(Color(0, 0, 0, 0))
+                textGraphics.drawString(healthText, 0, metrics.ascent)
+                textGraphics.dispose()
+
+                // Calculate health bar position and size
+                val textSpriteWidth = (spriteSize / 2.0).coerceIn(4.0, maxOf(spriteSize.toDouble(), 4.0)).toInt()
+                val textSpriteHeight = if (textWidth > 0) {
+                    (textSpriteWidth * (textHeight.toDouble() / textWidth)).toInt().coerceAtLeast(1)
+                } else {
+                    1
+                }
+                val textDrawStartY = (drawStartY - textSpriteHeight - 2).coerceIn(0, screenHeight - 1)
+                val textDrawEndY = (textDrawStartY + textSpriteHeight).coerceIn(0, screenHeight - 1)
+                val textLeftX = screenX - textSpriteWidth / 2.0
+                val textRightX = screenX + textSpriteWidth / 2.0
+                val textDrawStartX = textLeftX.coerceAtLeast(0.0).toInt()
+                val textDrawEndX = textRightX.coerceAtMost(screenWidth - 1.0).toInt()
+
+                // Render health bar with per-column raycasting
+                for (x in textDrawStartX until textDrawEndX) {
+                    if (x < 0 || x >= zBuffer.size) continue
+                    val angleRatio = (x - screenWidth / 2.0) / (screenWidth / 2.0) * (fov / 2)
+                    val rayAngleRad = Math.toRadians(currentangle + angleRatio)
+                    val rayDirX = cos(rayAngleRad)
+                    val rayDirY = sin(rayAngleRad)
+
+                    // Raycasting to check for wall occlusion
+                    val playerPosX = positionX / tileSize
+                    val playerPosY = positionY / tileSize
+                    var mapX = playerPosX.toInt()
+                    var mapY = playerPosY.toInt()
+                    val deltaDistX = if (rayDirX == 0.0) 1e30 else abs(1 / rayDirX)
+                    val deltaDistY = if (rayDirY == 0.0) 1e30 else abs(1 / rayDirY)
+                    var stepX: Int
+                    var stepY: Int
+                    var sideDistX: Double
+                    var sideDistY: Double
+                    var side: Int
+                    var hitWall = false
+                    var wallDistance = Double.MAX_VALUE
+
+                    if (rayDirX < 0) {
+                        stepX = -1
+                        sideDistX = (playerPosX - mapX) * deltaDistX
+                    } else {
+                        stepX = 1
+                        sideDistX = (mapX + 1.0 - playerPosX) * deltaDistX
+                    }
+                    if (rayDirY < 0) {
+                        stepY = -1
+                        sideDistY = (playerPosY - mapY) * deltaDistY
+                    } else {
+                        stepY = 1
+                        sideDistY = (mapY + 1.0 - playerPosY) * deltaDistY
+                    }
+
+                    while (!hitWall) {
+                        if (sideDistX < sideDistY) {
+                            sideDistX += deltaDistX
+                            mapX += stepX
+                            side = 0
+                            wallDistance = (mapX - playerPosX + (1 - stepX) / 2.0) / rayDirX
+                        } else {
+                            sideDistY += deltaDistY
+                            mapY += stepY
+                            side = 1
+                            wallDistance = (mapY - playerPosY + (1 - stepY) / 2.0) / rayDirY
+                        }
+                        if (wallDistance > maxRayDistance || mapY !in map.grid.indices || mapX !in map.grid[0].indices) {
+                            wallDistance = maxRayDistance
+                            break
+                        }
+                        if (wallIndices.contains(map.grid[mapY][mapX])) {
+                            hitWall = true
+                        }
+                    }
+
+                    if (hitWall && wallDistance < 0.01) wallDistance = 0.01
+
+                    // Calculate per-column distance to entity
+                    val entityLeft = entityX - halfSize
+                    val entityRight = entityX + halfSize
+                    val entityTop = entityY - halfSize
+                    val entityBottom = entityY + halfSize
+                    val closestX = clamp(entityX, entityLeft, entityRight)
+                    val closestY = clamp(entityY, entityTop, entityBottom)
+                    val dx = closestX - playerPosX
+                    val dy = closestY - playerPosY
+                    val pixelDistance = sqrt(dx * dx + dy * dy)
+
+                    // Render health bar if entity is closer than the wall or no wall was hit
+                    if (!hitWall || pixelDistance < wallDistance) {
+                        if (pixelDistance*tileSize > zBuffer[x]) {
+                            val textTextureFraction = (x - textLeftX) / (textRightX - textLeftX)
+                            val textTextureX = (textTextureFraction * textImage.width).coerceIn(0.0, textImage.width - 1.0)
+                            for (y in textDrawStartY until textDrawEndY) {
+                                val textTextureY = ((y - textDrawStartY).toDouble() * textImage.height / textSpriteHeight)
+                                    .coerceIn(0.0, textImage.height - 1.0)
+                                val color = textImage.getRGB(textTextureX.toInt(), textTextureY.toInt())
+                                if ((color and 0xFF000000.toInt()) != 0) {
+                                    val originalColor = Color(color)
+                                    val litColor = calculateLightContribution(entityX, entityY, originalColor)
+                                    val fogFactor = 1.0 - exp(-fogDensity * pixelDistance)
+                                    val finalColor = Color(
+                                        ((1.0 - fogFactor) * litColor.red + fogFactor * fogColor.red).toInt().coerceIn(0, 255),
+                                        ((1.0 - fogFactor) * litColor.green + fogFactor * fogColor.green).toInt().coerceIn(0, 255),
+                                        ((1.0 - fogFactor) * litColor.blue + fogFactor * fogColor.blue).toInt().coerceIn(0, 255)
+                                    )
+                                    buffer.setRGB(x, y, finalColor.rgb)
+                                }
+                            }
+                            zBuffer[x] = pixelDistance
                         }
                     }
                 }

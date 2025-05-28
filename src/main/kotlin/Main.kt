@@ -32,6 +32,7 @@ var selectSlot: Int = 1
 var selectedOfferIndex = 0
 var activateSlot: Boolean = false
 var perkGUI: Boolean = false
+val maxRayDistance = 22.0
 
 var map = true
 var currentangle = 45

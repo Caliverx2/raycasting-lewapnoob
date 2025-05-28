@@ -379,7 +379,7 @@ class Enemy(
         }
 
         shootTimer++
-        if (shootTimer >= nextShootTime && isChasing && distanceToPlayer < CHASE_STOP_DISTANCE) {
+        if (shootTimer >= nextShootTime && isChasing && distanceToPlayer < (maxRayDistance*tileSize-3)) {
             shootAtPlayer()
             shootTimer = 0
             nextShootTime = Random.nextInt(minShootInterval, maxShootInterval + 1)

@@ -45,7 +45,7 @@ tasks.jar {
         attributes(
             "Main-Class" to "org.example.MainKt.MainKt",
             "Class-Path" to "org.example.MainKt.MainKt",
-            "JVM-Options" to "-Xmx1024m -Xms512m"
+            "JVM-Options" to "-Xmx2048m -Xms1024m"
         )
     }
 }
