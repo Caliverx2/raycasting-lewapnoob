@@ -25,11 +25,11 @@ import kotlin.math.min
 import kotlin.math.pow
 
 class RenderCast(private val map: Map) : JPanel() {
-    private val screenWidth = 90
-    private val screenHeight = 90
+    private val screenWidth = 320
+    private val screenHeight = 200
     private val fov = 90.0
     private val textureSize = 64
-    private val rayCount = screenWidth
+    private val rayCount = screenWidth//screenWidth
     private val wallHeight = 32.0
     private val maxRayDistance = 22.0
     private var levelUp = false
@@ -173,6 +173,7 @@ class RenderCast(private val map: Map) : JPanel() {
     override fun paintComponent(g: Graphics) {
         super.paintComponent(g)
         val g2d = g as Graphics2D
+        var currentTime = System.nanoTime()
         g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
         g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
         update()
@@ -189,6 +190,14 @@ class RenderCast(private val map: Map) : JPanel() {
         renderPerkGUI(g2d)
         if (levelUp) {
             Mappingmap(map, this).levelUp(g2d)
+        }
+        renderFrameCount++
+        lastRenderFrameTime = currentTime
+
+        if (currentTime - lastRenderFpsUpdate >= 1_000_000_000L) {
+            renderFps = renderFrameCount
+            renderFrameCount = 0
+            lastRenderFpsUpdate = currentTime
         }
     }
 
@@ -267,7 +276,7 @@ class RenderCast(private val map: Map) : JPanel() {
 
         return true
     }
-
+    //
     fun renderWallsToBuffer() {
         var currentTime = System.nanoTime()
 
@@ -333,6 +342,14 @@ class RenderCast(private val map: Map) : JPanel() {
         lookchest = false
         looktrader = false
         lookslotMachine = false
+
+        // Arrays to store raycasting results for interpolation
+        val rayDistances = DoubleArray(rayCount) { Double.MAX_VALUE }
+        val rayWallTypes = IntArray(rayCount) { 0 }
+        val rayHitXs = DoubleArray(rayCount) { 0.0 }
+        val rayHitYs = DoubleArray(rayCount) { 0.0 }
+        val raySides = IntArray(rayCount) { 0 }
+        val rayHitWalls = BooleanArray(rayCount) { false }
 
         for (ray in 0 until rayCount) {
             val rayAngle = currentangle + rayAngles[ray]
@@ -423,16 +440,41 @@ class RenderCast(private val map: Map) : JPanel() {
                 distance = maxRayDistance
                 zBuffer[ray] = distance
             }
-            //ale to jest shit
-            enemies.forEach { enemy ->
-                val halfSize = enemy.size * tileSize / 2 / tileSize
-                val enemyLeft = enemy.x / tileSize - halfSize
-                val enemyRight = enemy.x / tileSize + halfSize
-                val enemyTop = enemy.y / tileSize - halfSize
-                val enemyBottom = enemy.y / tileSize + halfSize
 
-                val closestX = clamp(enemy.x / tileSize, enemyLeft, enemyRight)
-                val closestY = clamp(enemy.y / tileSize, enemyTop, enemyBottom)
+            rayDistances[ray] = distance
+            rayWallTypes[ray] = wallType
+            rayHitXs[ray] = hitX
+            rayHitYs[ray] = hitY
+            raySides[ray] = side
+            rayHitWalls[ray] = hitWall
+
+            // Entity raycasting remains unchanged
+
+            // Precompute constants
+            val halfScreenWidth = screenWidth / 2
+            val halfFov = fov / 2
+            val tileSizeInv = 1.0 / tileSize
+            val fovCheck = halfFov + 10
+
+            // Helper function to process entity visibility
+            fun processEntityVisibility(
+                entity: Any,
+                x: Double, y: Double, size: Double,
+                visibleList: MutableList<Triple<Any, Int, Double>>,
+                rayDirX: Double, rayDirY: Double,
+                playerPosX: Double, playerPosY: Double,
+                currentangle: Double
+            ) {
+                val halfSize = size * tileSizeInv * 0.5
+                val posX = x * tileSizeInv
+                val posY = y * tileSizeInv
+                val left = posX - halfSize
+                val right = posX + halfSize
+                val top = posY - halfSize
+                val bottom = posY + halfSize
+
+                val closestX = clamp(posX, left, right)
+                val closestY = clamp(posY, top, bottom)
                 val dx = closestX - playerPosX
                 val dy = closestY - playerPosY
 
@@ -440,244 +482,137 @@ class RenderCast(private val map: Map) : JPanel() {
                 if (rayLength > 0 && rayLength <= maxRayDistance) {
                     val perpendicularDistance = abs(dx * rayDirY - dy * rayDirX)
                     if (perpendicularDistance < halfSize + 0.05) {
-                        val centerDx = enemy.x / tileSize - playerPosX
-                        val centerDy = enemy.y / tileSize - playerPosY
-                        val angleToEnemy = atan2(centerDy, centerDx)
-                        val relativeAngle = normalizeAngle(Math.toDegrees(angleToEnemy) - currentangle)
-                        if (abs(relativeAngle) <= fov / 2 + 10) {
-                            val angleRatio = relativeAngle / (fov / 2)
-                            val screenX = (screenWidth / 2 + angleRatio * screenWidth / 2).toInt()
-                            if (visibleEnemies.none { it.first === enemy }) {
-                                visibleEnemies.add(Triple(enemy, screenX, rayLength))
+                        val centerDx = posX - playerPosX
+                        val centerDy = posY - playerPosY
+                        val angleToEntity = atan2(centerDy, centerDx)
+                        val relativeAngle = normalizeAngle(Math.toDegrees(angleToEntity) - currentangle)
+                        if (abs(relativeAngle) <= fovCheck) {
+                            val angleRatio = relativeAngle / halfFov
+                            val screenX = (halfScreenWidth + angleRatio * halfScreenWidth).toInt()
+                            if (visibleList.none { it.first === entity }) {
+                                visibleList.add(Triple(entity, screenX, rayLength))
                             }
                         }
                     }
                 }
+            }
+
+            // Process entities
+            enemies.forEach { enemy ->
+                processEntityVisibility(
+                    entity = enemy,
+                    x = enemy.x, y = enemy.y, size = enemy.size,
+                    visibleList = visibleEnemies as MutableList<Triple<Any, Int, Double>>,
+                    rayDirX = rayDirX, rayDirY = rayDirY,
+                    playerPosX = playerPosX, playerPosY = playerPosY,
+                    currentangle = currentangle.toDouble()
+                )
             }
 
             coinsList.forEach { coin ->
                 if (!coin.active) return@forEach
-                val halfSize = coin.size / tileSize / 2
-                val coinLeft = coin.x / tileSize - halfSize
-                val coinRight = coin.x / tileSize + halfSize
-                val coinTop = coin.y / tileSize - halfSize
-                val coinBottom = coin.y / tileSize + halfSize
-
-                val closestX = clamp(coin.x / tileSize, coinLeft, coinRight)
-                val closestY = clamp(coin.y / tileSize, coinTop, coinBottom)
-                val dx = closestX - playerPosX
-                val dy = closestY - playerPosY
-
-                val rayLength = dx * rayDirX + dy * rayDirY
-                if (rayLength > 0 && rayLength <= maxRayDistance) {
-                    val perpendicularDistance = abs(dx * rayDirY - dy * rayDirX)
-                    if (perpendicularDistance < halfSize + 0.05) {
-                        val centerDx = coin.x / tileSize - playerPosX
-                        val centerDy = coin.y / tileSize - playerPosY
-                        val angleToEnemy = atan2(centerDy, centerDx)
-                        val relativeAngle = normalizeAngle(Math.toDegrees(angleToEnemy) - currentangle)
-                        if (abs(relativeAngle) <= fov / 2 + 10) {
-                            val angleRatio = relativeAngle / (fov / 2)
-                            val screenX = (screenWidth / 2 + angleRatio * screenWidth / 2).toInt()
-                            if (visibleCoins.none { it.first === coin }) {
-                                visibleCoins.add(Triple(coin, screenX, rayLength))
-                            }
-                        }
-                    }
-                }
+                processEntityVisibility(
+                    entity = coin,
+                    x = coin.x, y = coin.y, size = coin.size,
+                    visibleList = visibleCoins as MutableList<Triple<Any, Int, Double>>,
+                    rayDirX = rayDirX, rayDirY = rayDirY,
+                    playerPosX = playerPosX, playerPosY = playerPosY,
+                    currentangle = currentangle.toDouble()
+                )
             }
 
             keysList.forEach { key ->
                 if (!key.active) return@forEach
-                val halfSize = key.size / tileSize / 2
-                val keyLeft = key.x / tileSize - halfSize
-                val keyRight = key.x / tileSize + halfSize
-                val keyTop = key.y / tileSize - halfSize
-                val keyBottom = key.y / tileSize + halfSize
-
-                val closestX = clamp(key.x / tileSize, keyLeft, keyRight)
-                val closestY = clamp(key.y / tileSize, keyTop, keyBottom)
-                val dx = closestX - playerPosX
-                val dy = closestY - playerPosY
-
-                val rayLength = dx * rayDirX + dy * rayDirY
-                if (rayLength > 0 && rayLength <= maxRayDistance) {
-                    val perpendicularDistance = abs(dx * rayDirY - dy * rayDirX)
-                    if (perpendicularDistance < halfSize + 0.05) {
-                        val centerDx = key.x / tileSize - playerPosX
-                        val centerDy = key.y / tileSize - playerPosY
-                        val angleToEnemy = atan2(centerDy, centerDx)
-                        val relativeAngle = normalizeAngle(Math.toDegrees(angleToEnemy) - currentangle)
-                        if (abs(relativeAngle) <= fov / 2 + 10) {
-                            val angleRatio = relativeAngle / (fov / 2)
-                            val screenX = (screenWidth / 2 + angleRatio * screenWidth / 2).toInt()
-                            if (visibleKeys.none { it.first === key }) {
-                                visibleKeys.add(Triple(key, screenX, rayLength))
-                            }
-                        }
-                    }
-                }
+                processEntityVisibility(
+                    entity = key,
+                    x = key.x, y = key.y, size = key.size,
+                    visibleList = visibleKeys as MutableList<Triple<Any, Int, Double>>,
+                    rayDirX = rayDirX, rayDirY = rayDirY,
+                    playerPosX = playerPosX, playerPosY = playerPosY,
+                    currentangle = currentangle.toDouble()
+                )
             }
 
             chests.forEach { chest ->
                 if (!chest.active) return@forEach
-                val halfSize = chest.size / tileSize / 2
-                val chestLeft = chest.x / tileSize - halfSize
-                val chestRight = chest.x / tileSize + halfSize
-                val chestTop = chest.y / tileSize - halfSize
-                val chestBottom = chest.y / tileSize + halfSize
-
-                val closestX = clamp(chest.x / tileSize, chestLeft, chestRight)
-                val closestY = clamp(chest.y / tileSize, chestTop, chestBottom)
-                val dx = closestX - playerPosX
-                val dy = closestY - playerPosY
-
-                val rayLength = dx * rayDirX + dy * rayDirY
-                if (rayLength > 0 && rayLength <= maxRayDistance) {
-                    val perpendicularDistance = abs(dx * rayDirY - dy * rayDirX)
-                    if (perpendicularDistance < halfSize + 0.05) {
-                        val centerDx = chest.x / tileSize - playerPosX
-                        val centerDy = chest.y / tileSize - playerPosY
-                        val angleToEnemy = atan2(centerDy, centerDx)
-                        val relativeAngle = normalizeAngle(Math.toDegrees(angleToEnemy) - currentangle)
-                        if (abs(relativeAngle) <= fov / 2 + 10) {
-                            val angleRatio = relativeAngle / (fov / 2)
-                            val screenX = (screenWidth / 2 + angleRatio * screenWidth / 2).toInt()
-                            if (visibleChests.none { it.first === chest }) {
-                                visibleChests.add(Triple(chest, screenX, rayLength))
-                            }
-                        }
-                    }
-                }
+                processEntityVisibility(
+                    entity = chest,
+                    x = chest.x, y = chest.y, size = chest.size,
+                    visibleList = visibleChests as MutableList<Triple<Any, Int, Double>>,
+                    rayDirX = rayDirX, rayDirY = rayDirY,
+                    playerPosX = playerPosX, playerPosY = playerPosY,
+                    currentangle = currentangle.toDouble()
+                )
             }
 
             ammo.forEach { ammo ->
                 if (!ammo.active) return@forEach
-                val halfSize = (ammo.size) / tileSize / 2
-                val ammoLeft = ammo.x/ tileSize - halfSize
-                val ammoRight = ammo.x / tileSize + halfSize
-                val ammoTop = ammo.y / tileSize - halfSize
-                val ammoBottom = ammo.y / tileSize + halfSize
-
-                val closestX = clamp(ammo.x / tileSize, ammoLeft, ammoRight)
-                val closestY = clamp(ammo.y / tileSize, ammoTop, ammoBottom)
-                val dx = closestX - playerPosX
-                val dy = closestY - playerPosY
-
-                val rayLength = dx * rayDirX + dy * rayDirY
-                if (rayLength > 0 && rayLength <= maxRayDistance) {
-                    val perpendicularDistance = abs(dx * rayDirY - dy * rayDirX)
-                    if (perpendicularDistance < halfSize + 0.05) {
-                        val centerDx = ammo.x / tileSize - playerPosX
-                        val centerDy = ammo.y / tileSize - playerPosY
-                        val angleToEnemy = atan2(centerDy, centerDx)
-                        val relativeAngle = normalizeAngle(Math.toDegrees(angleToEnemy) - currentangle)
-                        if (abs(relativeAngle) <= fov / 2 + 10) {
-                            val angleRatio = relativeAngle / (fov / 2)
-                            val screenX = (screenWidth / 2 + angleRatio * screenWidth / 2).toInt()
-                            if (visibleAmmo.none { it.first === ammo }) {
-                                visibleAmmo.add(Triple(ammo, screenX, rayLength))
-                            }
-                        }
-                    }
-                }
+                processEntityVisibility(
+                    entity = ammo,
+                    x = ammo.x, y = ammo.y, size = ammo.size,
+                    visibleList = visibleAmmo as MutableList<Triple<Any, Int, Double>>,
+                    rayDirX = rayDirX, rayDirY = rayDirY,
+                    playerPosX = playerPosX, playerPosY = playerPosY,
+                    currentangle = currentangle.toDouble()
+                )
             }
 
             slotMachines.forEach { slotMachine ->
                 if (!slotMachine.active) return@forEach
-                val halfSize = (slotMachine.size) / tileSize / 2
-                val slotMachineLeft = slotMachine.x/ tileSize - halfSize
-                val slotMachineRight = slotMachine.x / tileSize + halfSize
-                val slotMachineTop = slotMachine.y / tileSize - halfSize
-                val slotMachineBottom = slotMachine.y / tileSize + halfSize
-
-                val closestX = clamp(slotMachine.x / tileSize, slotMachineLeft, slotMachineRight)
-                val closestY = clamp(slotMachine.y / tileSize, slotMachineTop, slotMachineBottom)
-                val dx = closestX - playerPosX
-                val dy = closestY - playerPosY
-
-                val rayLength = dx * rayDirX + dy * rayDirY
-                if (rayLength > 0 && rayLength <= maxRayDistance) {
-                    val perpendicularDistance = abs(dx * rayDirY - dy * rayDirX)
-                    if (perpendicularDistance < halfSize + 0.05) {
-                        val centerDx = slotMachine.x / tileSize - playerPosX
-                        val centerDy = slotMachine.y / tileSize - playerPosY
-                        val angleToEnemy = atan2(centerDy, centerDx)
-                        val relativeAngle = normalizeAngle(Math.toDegrees(angleToEnemy) - currentangle)
-                        if (abs(relativeAngle) <= fov / 2 + 10) {
-                            val angleRatio = relativeAngle / (fov / 2)
-                            val screenX = (screenWidth / 2 + angleRatio * screenWidth / 2).toInt()
-                            if (visibleSlotMachines.none { it.first === slotMachine }) {
-                                visibleSlotMachines.add(Triple(slotMachine, screenX, rayLength))
-                            }
-                        }
-                    }
-                }
+                processEntityVisibility(
+                    entity = slotMachine,
+                    x = slotMachine.x, y = slotMachine.y, size = slotMachine.size,
+                    visibleList = visibleSlotMachines as MutableList<Triple<Any, Int, Double>>,
+                    rayDirX = rayDirX, rayDirY = rayDirY,
+                    playerPosX = playerPosX, playerPosY = playerPosY,
+                    currentangle = currentangle.toDouble()
+                )
             }
 
             medications.forEach { medication ->
                 if (!medication.active) return@forEach
-                val halfSize = medication.size / tileSize / 2
-                val medLeft = medication.x / tileSize - halfSize
-                val medRight = medication.x / tileSize + halfSize
-                val medTop = medication.y / tileSize - halfSize
-                val medBottom = medication.y / tileSize + halfSize
-
-                val closestX = clamp(medication.x / tileSize, medLeft, medRight)
-                val closestY = clamp(medication.y / tileSize, medTop, medBottom)
-                val dx = closestX - playerPosX
-                val dy = closestY - playerPosY
-
-                val rayLength = dx * rayDirX + dy * rayDirY
-                if (rayLength > 0 && rayLength <= maxRayDistance) {
-                    val perpendicularDistance = abs(dx * rayDirY - dy * rayDirX)
-                    if (perpendicularDistance < halfSize + 0.05) {
-                        val centerDx = medication.x / tileSize - playerPosX
-                        val centerDy = medication.y / tileSize - playerPosY
-                        val angleToMed = atan2(centerDy, centerDx)
-                        val relativeAngle = normalizeAngle(Math.toDegrees(angleToMed) - currentangle)
-                        if (abs(relativeAngle) <= fov / 2 + 10) {
-                            val angleRatio = relativeAngle / (fov / 2)
-                            val screenX = (screenWidth / 2 + angleRatio * screenWidth / 2).toInt()
-                            if (visibleMedications.none { it.first === medication }) {
-                                visibleMedications.add(Triple(medication, screenX, rayLength))
-                            }
-                        }
-                    }
-                }
+                processEntityVisibility(
+                    entity = medication,
+                    x = medication.x, y = medication.y, size = medication.size,
+                    visibleList = visibleMedications as MutableList<Triple<Any, Int, Double>>,
+                    rayDirX = rayDirX, rayDirY = rayDirY,
+                    playerPosX = playerPosX, playerPosY = playerPosY,
+                    currentangle = currentangle.toDouble()
+                )
             }
 
             traders.forEach { trader ->
                 if (!trader.active) return@forEach
-                val halfSize = trader.size / tileSize / 2
-                val medLeft = trader.x / tileSize - halfSize
-                val medRight = trader.x / tileSize + halfSize
-                val medTop = trader.y / tileSize - halfSize
-                val medBottom = trader.y / tileSize + halfSize
-
-                val closestX = clamp(trader.x / tileSize, medLeft, medRight)
-                val closestY = clamp(trader.y / tileSize, medTop, medBottom)
-                val dx = closestX - playerPosX
-                val dy = closestY - playerPosY
-
-                val rayLength = dx * rayDirX + dy * rayDirY
-                if (rayLength > 0 && rayLength <= maxRayDistance) {
-                    val perpendicularDistance = abs(dx * rayDirY - dy * rayDirX)
-                    if (perpendicularDistance < halfSize + 0.05) {
-                        val centerDx = trader.x / tileSize - playerPosX
-                        val centerDy = trader.y / tileSize - playerPosY
-                        val angleToMed = atan2(centerDy, centerDx)
-                        val relativeAngle = normalizeAngle(Math.toDegrees(angleToMed) - currentangle)
-                        if (abs(relativeAngle) <= fov / 2 + 10) {
-                            val angleRatio = relativeAngle / (fov / 2)
-                            val screenX = (screenWidth / 2 + angleRatio * screenWidth / 2).toInt()
-                            if (visibleTrader.none { it.first === trader }) {
-                                visibleTrader.add(Triple(trader, screenX, rayLength))
-                            }
-                        }
-                    }
-                }
+                processEntityVisibility(
+                    entity = trader,
+                    x = trader.x, y = trader.y, size = trader.size,
+                    visibleList = visibleTrader as MutableList<Triple<Any, Int, Double>>,
+                    rayDirX = rayDirX, rayDirY = rayDirY,
+                    playerPosX = playerPosX, playerPosY = playerPosY,
+                    currentangle = currentangle.toDouble()
+                )
             }
+        }
+
+        // Render to screen columns
+        for (x in 0 until screenWidth) {
+            // Map screen column to ray index
+            val rayFraction = x.toDouble() / screenWidth * (rayCount - 1)
+            val rayIndex = rayFraction.toInt()
+            val nextRayIndex = (rayIndex + 1).coerceAtMost(rayCount - 1)
+            val interp = rayFraction - rayIndex
+
+            val distance = if (rayIndex == nextRayIndex) {
+                rayDistances[rayIndex]
+            } else {
+                rayDistances[rayIndex] + (rayDistances[nextRayIndex] - rayDistances[rayIndex]) * interp
+            }
+            val wallType = rayWallTypes[rayIndex]
+            val hitX = rayHitXs[rayIndex] + (rayHitXs[nextRayIndex] - rayHitXs[rayIndex]) * interp
+            val hitY = rayHitYs[rayIndex] + (rayHitYs[nextRayIndex] - rayHitYs[rayIndex]) * interp
+            val side = raySides[rayIndex]
+            val hitWall = rayHitWalls[rayIndex]
+
             val lineHeight = if (hitWall && distance <= maxRayDistance) {
                 ((wallHeight * screenHeight) / (distance * tileSize)).toInt().coerceIn(0, screenHeight * 2)
             } else {
@@ -688,15 +623,16 @@ class RenderCast(private val map: Map) : JPanel() {
 
             if (hitWall && distance <= maxRayDistance) {
                 var textureX = if (side == 0) {
-                    val blockY = mapY.toDouble()
+                    val blockY = hitY.toInt().toDouble()
                     val relativeY = hitY - blockY
                     relativeY.coerceIn(0.0, 1.0) * textureSize
                 } else {
-                    val blockX = mapX.toDouble()
+                    val blockX = hitX.toInt().toDouble()
                     val relativeX = hitX - blockX
                     relativeX.coerceIn(0.0, 1.0) * textureSize
                 }
-                if (side == 0 && rayDirX > 0 || side == 1 && rayDirY < 0) {
+                if (side == 0 && (rayCosines[rayIndex] * cos(playerAngleRad) - raySines[rayIndex] * sin(playerAngleRad)) > 0 ||
+                    side == 1 && (rayCosines[rayIndex] * sin(playerAngleRad) + raySines[rayIndex] * cos(playerAngleRad)) < 0) {
                     textureX = textureSize - textureX - 1
                 }
 
@@ -722,7 +658,7 @@ class RenderCast(private val map: Map) : JPanel() {
                         ((1.0 - fogFactor) * litColor.green + fogFactor * fogColor.green).toInt().coerceIn(0, 255),
                         ((1.0 - fogFactor) * litColor.blue + fogFactor * fogColor.blue).toInt().coerceIn(0, 255)
                     )
-                    buffer.setRGB(ray, y, finalColor.rgb)
+                    buffer.setRGB(x, y, finalColor.rgb)
                 }
             }
 
@@ -732,7 +668,7 @@ class RenderCast(private val map: Map) : JPanel() {
                 val isCeiling = y < (screenHeight / 2 + horizonOffset)
                 val texture = if (isCeiling) ceilingTexture else floorTexture
                 if (texture == null) {
-                    buffer.setRGB(ray, y, fogColor.rgb)
+                    buffer.setRGB(x, y, fogColor.rgb)
                     continue
                 }
 
@@ -742,8 +678,23 @@ class RenderCast(private val map: Map) : JPanel() {
                     (playerHeight * screenHeight / 2) / (10.0 * (y - (screenHeight / 2.0 + horizonOffset) + 0.0))
                 }
                 if (rowDistance < 0.01 || rowDistance > maxRayDistance) {
-                    buffer.setRGB(ray, y, fogColor.rgb)
+                    buffer.setRGB(x, y, fogColor.rgb)
                     continue
+                }
+
+                val rayDirX = if (rayIndex == nextRayIndex) {
+                    rayCosines[rayIndex] * cos(playerAngleRad) - raySines[rayIndex] * sin(playerAngleRad)
+                } else {
+                    val dirX1 = rayCosines[rayIndex] * cos(playerAngleRad) - raySines[rayIndex] * sin(playerAngleRad)
+                    val dirX2 = rayCosines[nextRayIndex] * cos(playerAngleRad) - raySines[nextRayIndex] * sin(playerAngleRad)
+                    dirX1 + (dirX2 - dirX1) * interp
+                }
+                val rayDirY = if (rayIndex == nextRayIndex) {
+                    rayCosines[rayIndex] * sin(playerAngleRad) + raySines[rayIndex] * cos(playerAngleRad)
+                } else {
+                    val dirY1 = rayCosines[rayIndex] * sin(playerAngleRad) + raySines[rayIndex] * cos(playerAngleRad)
+                    val dirY2 = rayCosines[nextRayIndex] * sin(playerAngleRad) + raySines[nextRayIndex] * cos(playerAngleRad)
+                    dirY1 + (dirY2 - dirY1) * interp
                 }
 
                 val floorX = playerPosX + rowDistance * rayDirX + 100
@@ -751,7 +702,6 @@ class RenderCast(private val map: Map) : JPanel() {
 
                 var isShadow = false
                 var shadowColor = Color(50, 50, 50)
-                //total shit
                 if (!isCeiling) {
                     enemies.forEach { enemy ->
                         val shadowRadius = 0.25
@@ -900,7 +850,7 @@ class RenderCast(private val map: Map) : JPanel() {
                         ((1.0 - fogFactor) * litColor.green + fogFactor * fogColor.green).toInt().coerceIn(0, 255),
                         ((1.0 - fogFactor) * litColor.blue + fogFactor * fogColor.blue).toInt().coerceIn(0, 255)
                     )
-                    buffer.setRGB(ray, y, finalColor.rgb)
+                    buffer.setRGB(x, y, finalColor.rgb)
                 } else {
                     val textureScale = 2.0
                     val textureX = ((floorY / textureScale * textureSize) % textureSize).toInt().coerceIn(0, textureSize - 1)
@@ -923,22 +873,13 @@ class RenderCast(private val map: Map) : JPanel() {
                         ((1.0 - fogFactor) * litColor.green + fogFactor * fogColor.green).toInt().coerceIn(0, 255),
                         ((1.0 - fogFactor) * litColor.blue + fogFactor * fogColor.blue).toInt().coerceIn(0, 255)
                     )
-                    buffer.setRGB(ray, y, finalColor.rgb)
+                    buffer.setRGB(x, y, finalColor.rgb)
                 }
             }
         }
-        renderFrameCount++
-        lastRenderFrameTime = currentTime
-
-        if (currentTime - lastRenderFpsUpdate >= 1_000_000_000L) {
-            renderFps = renderFrameCount
-            renderFrameCount = 0
-            lastRenderFpsUpdate = currentTime
-        }
-
         renderAllEntities()
     }
-
+    //
     fun clickPerkGUI(mouseX: Int, mouseY: Int) {
         if (!perkGUI) return
         val scaleUI = 150
