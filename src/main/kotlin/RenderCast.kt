@@ -29,7 +29,7 @@ class RenderCast(private val map: Map) : JPanel() {
     private val screenHeight = 200
     private val fov = 90.0
     private val textureSize = 64
-    private val rayCount = screenWidth//screenWidth
+    private val rayCount = 90//screenWidth
     private val wallHeight = 32.0
     private val maxRayDistance = 22.0
     private var levelUp = false
@@ -277,6 +277,7 @@ class RenderCast(private val map: Map) : JPanel() {
         return true
     }
     //
+
     fun renderWallsToBuffer() {
         var currentTime = System.nanoTime()
 
@@ -879,6 +880,7 @@ class RenderCast(private val map: Map) : JPanel() {
         }
         renderAllEntities()
     }
+
     //
     fun clickPerkGUI(mouseX: Int, mouseY: Int) {
         if (!perkGUI) return
