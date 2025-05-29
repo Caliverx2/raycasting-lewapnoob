@@ -19,7 +19,7 @@ import kotlin.random.Random
 
 var directionForRoom = "UP"
 
-//0-air 1-wall 2-black_wall 3-enemy 4-ammo 5-door 6-lightSource 7-medication 8-key 10-chest 11-slotMachine
+//0-air 1-wall 2-black_wall 3-enemy 4-ammo 5-door 6-lightSource 7-medication 8-key 9-trader 10-chest 11-slotMachine
 val rooms = listOf(
     RoomTemplate(
         grid = arrayOf(
@@ -59,6 +59,18 @@ val rooms = listOf(
             intArrayOf(5, 0, 0, 6, 0, 0, 5),
             intArrayOf(2, 0, 4, 0, 7, 0, 2),
             intArrayOf(2, 0, 0, 0, 0, 0, 2),
+            intArrayOf(2, 2, 2, 5, 2, 2, 2)
+        ),
+        scale = 7
+    ),
+    RoomTemplate(
+        grid = arrayOf(
+            intArrayOf(2, 2, 2, 5, 2, 2, 2),
+            intArrayOf(2, 1, 1, 0, 1, 1, 2),
+            intArrayOf(2, 1, 9, 0, 9, 1, 2),
+            intArrayOf(5, 0, 0, 6, 0, 0, 5),
+            intArrayOf(2, 1, 9, 0, 9, 1, 2),
+            intArrayOf(2, 1, 1, 0, 1, 1, 2),
             intArrayOf(2, 2, 2, 5, 2, 2, 2)
         ),
         scale = 7
@@ -116,19 +128,19 @@ val rooms = listOf(
     RoomTemplate(
         grid = arrayOf(
             intArrayOf(2, 2, 2, 2, 2, 2, 2, 5, 2, 2, 2, 2, 2, 2, 2),
+            intArrayOf(2, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 2),
+            intArrayOf(2, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 2),
+            intArrayOf(2, 1, 0, 1, 1, 0, 1, 1, 1, 0, 1, 1, 0, 1, 2),
             intArrayOf(2, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 2),
             intArrayOf(2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2),
-            intArrayOf(2, 1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1, 2),
-            intArrayOf(2, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 2),
-            intArrayOf(2, 0, 0, 1, 0, 3, 0, 0, 0, 3, 0, 1, 0, 0, 2),
             intArrayOf(2, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 2),
-            intArrayOf(5, 0, 0, 0, 0, 0, 0, 10, 0, 0, 0, 0, 0, 0, 5),
+            intArrayOf(5, 0, 0, 1, 0, 0, 0, 10, 0, 0, 0, 1, 0, 0, 5),
             intArrayOf(2, 0, 0, 1, 0, 0, 1, 3, 1, 0, 0, 1, 0, 0, 2),
-            intArrayOf(2, 0, 0, 1, 0, 3, 0, 0, 0, 3, 0, 1, 0, 0, 2),
+            intArrayOf(2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2),
             intArrayOf(2, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 2),
-            intArrayOf(2, 1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1, 2),
-            intArrayOf(2, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 2),
-            intArrayOf(2, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 2),
+            intArrayOf(2, 1, 0, 1, 1, 0, 1, 1, 1, 0, 1, 1, 0, 1, 2),
+            intArrayOf(2, 0, 3, 0, 0, 0, 0, 0, 0, 3, 0, 0, 3, 0, 2),
+            intArrayOf(2, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 2),
             intArrayOf(2, 2, 2, 2, 2, 2, 2, 5, 2, 2, 2, 2, 2, 2, 2)
         ),
         scale = 15
@@ -496,43 +508,9 @@ class Map(var renderCast: RenderCast? = null) {
                         )
                     )
 
-                    val items = mutableListOf<Item>()
-                    val availableItemTypes = mutableListOf(
-                        ItemType.KEY,
-                        ItemType.AMMO,
-                        ItemType.COIN,
-                        ItemType.MEDKIT
-                    )
-
-                    for (i in 0 until 4) {
-                        if (availableItemTypes.isEmpty()) break
-                        val randomIndex = Random.nextInt(availableItemTypes.size)
-                        val itemType = availableItemTypes[randomIndex]
-                        availableItemTypes.removeAt(randomIndex)
-
-                        val quantity = when (itemType) {
-                            ItemType.KEY -> Random.nextInt(1, Item.MAX_KEYS_PER_SLOT / 2)
-                            ItemType.AMMO -> Random.nextInt(7, Item.MAX_AMMO_PER_SLOT / 2)
-                            ItemType.COIN -> Random.nextInt(1, 8)
-                            ItemType.MEDKIT -> Random.nextInt(1, 2)
-                        }
-                        items.add(Item(itemType, quantity))
-                    }
-
-                    traders.add(
-                        Trader(
-                            x = (tileSize * (distItemX + 1)),
-                            y = (tileSize * (distItemY + 1)),
-                            offer = items,
-                            texture = renderCast?.traderTextureID!!,
-                            active = true
-                        )
-                    )
                     if (gridmod && (offsetX != 0 || offsetY != 0)) {
                         ammo.get(ammo.size-1).x -= offsetX*tileSize
                         ammo.get(ammo.size-1).y -= offsetY*tileSize
-                        traders.get(traders.size-1).x -= offsetX*tileSize
-                        traders.get(traders.size-1).y -= offsetY*tileSize
                     }
                 }
                 if (roomTemplate.grid[XX][YY] == 6) {
@@ -587,6 +565,50 @@ class Map(var renderCast: RenderCast? = null) {
                     if (gridmod && (offsetX != 0 || offsetY != 0)) {
                         keysList.get(keysList.size-1).x -= offsetX*tileSize
                         keysList.get(keysList.size-1).y -= offsetY*tileSize
+                    }
+                }
+                if (roomTemplate.grid[XX][YY] == 9) {
+                    val random = Random.nextFloat()
+                    var spawn = false
+                    when {
+                        random < 0.25 -> spawn = true
+                        else -> spawn = false
+                    }
+                    if (spawn) {
+                        val items = mutableListOf<Item>()
+                        val availableItemTypes = mutableListOf(
+                            ItemType.KEY,
+                            ItemType.AMMO,
+                            ItemType.COIN,
+                            ItemType.MEDKIT
+                        )
+                        for (i in 0 until 4) {
+                            if (availableItemTypes.isEmpty()) break
+                            val randomIndex = Random.nextInt(availableItemTypes.size)
+                            val itemType = availableItemTypes[randomIndex]
+                            availableItemTypes.removeAt(randomIndex)
+
+                            val quantity = when (itemType) {
+                                ItemType.KEY -> Random.nextInt(1, Item.MAX_KEYS_PER_SLOT / 2)
+                                ItemType.AMMO -> Random.nextInt(7, Item.MAX_AMMO_PER_SLOT / 2)
+                                ItemType.COIN -> Random.nextInt(1, 8)
+                                ItemType.MEDKIT -> Random.nextInt(1, 2)
+                            }
+                            items.add(Item(itemType, quantity))
+                        }
+                        traders.add(
+                            Trader(
+                                x = (tileSize * (distItemX+1)) - (tileSize / 2),
+                                y = (tileSize * (distItemY+1)) - (tileSize / 2),
+                                offer = items,
+                                texture = renderCast?.traderTextureID!!,
+                                active = true
+                            )
+                        )
+                        if (gridmod && (offsetX != 0 || offsetY != 0)) {
+                            traders.get(traders.size-1).x -= offsetX*tileSize
+                            traders.get(traders.size-1).y -= offsetY*tileSize
+                        }
                     }
                 }
                 if (roomTemplate.grid[XX][YY] == 10) {

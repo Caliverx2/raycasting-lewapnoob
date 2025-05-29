@@ -29,7 +29,7 @@ class RenderCast(private val map: Map) : JPanel() {
     private val screenHeight = 200//100
     private val fov = 90.0
     private val textureSize = 64
-    private val rayCount = screenWidth//100
+    private val rayCount = (screenWidth*0.25).toInt()//100
     private val wallHeight = 32.0
     private var levelUp = false
     val slotSize = 39
