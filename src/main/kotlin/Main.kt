@@ -338,6 +338,7 @@ fun main() = runBlocking {
                                     remainingCOINS -= quantity
                                     currentslot++
                                 }
+                                renderCast.playSound("purchase.wav")
                                 inventoryVisible = false
                             }
                         }
