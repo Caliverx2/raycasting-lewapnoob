@@ -10,12 +10,14 @@ import java.awt.Graphics2D
 import java.awt.GraphicsEnvironment
 import java.awt.RenderingHints
 import java.awt.image.BufferedImage
-import javax.imageio.ImageIO
-import javax.swing.JPanel
+import java.awt.image.ImageObserver
+import java.io.InputStream
+import javax.imageio.ImageIO;
 import kotlin.math.cos
 import kotlin.math.sin
+import javax.swing.JPanel
+import javax.swing.Timer
 import kotlin.random.Random
-
 
 var directionForRoom = "UP"
 
@@ -707,6 +709,12 @@ class Mappingmap(private val map: Map, private val renderCast: RenderCast) : JPa
     var sliderpng: BufferedImage? = null
     private var font: Font? = null
 
+    private var gifFrames: List<BufferedImage> = listOf()
+    private var gifDelays: List<Int> = listOf()
+    private var currentFrameIndex = 0
+    private var lastFrameTime = 0L
+    private var gifObserver: ImageObserver? = null
+
     init {
         preferredSize = Dimension(miniMapSize + offsetX * 2, miniMapSize + offsetY * 2)
         isOpaque = false
@@ -716,7 +724,40 @@ class Mappingmap(private val map: Map, private val renderCast: RenderCast) : JPa
         GraphicsEnvironment.getLocalGraphicsEnvironment().registerFont(font)
 
         sliderpng = ImageIO.read(this::class.java.classLoader.getResource("textures/slide.png"))
-        keypng = ImageIO.read(this::class.java.classLoader.getResource("textures/key.png"))
+        //keypng = ImageIO.read(this::class.java.classLoader.getResource("textures/fire-flames.gif"))
+        val gifStream = this::class.java.classLoader.getResourceAsStream("textures/fire-flames.gif")
+            ?: throw IllegalArgumentException("GIF file not found: fire-flames.gif")
+        loadGifFrames(gifStream)
+        Timer(16) { repaint() }.start()
+    }
+
+    private fun loadGifFrames(inputStream: InputStream) {
+        val reader = ImageIO.getImageReadersByFormatName("gif").next()
+        val stream = ImageIO.createImageInputStream(inputStream)
+        reader.setInput(stream, true)
+        val frames = mutableListOf<BufferedImage>()
+        val delays = mutableListOf<Int>()
+        try {
+            var i = 0
+            while (true) {
+                frames.add(reader.read(i))
+                val meta = reader.getImageMetadata(i)
+                val delay = meta.getAsTree("javax_imageio_gif_image_1.0")
+                    //.childNodes.asSequence()
+                    //.filter { it.nodeName == "GraphicControlExtension" }
+                    //.firstOrNull()?.getAttribute("delayTime")?.toIntOrNull() ?: 100
+                //delays.add(delay * 10)
+                i++
+            }
+        } catch (e: IndexOutOfBoundsException) {
+            // End of frames
+        } finally {
+            reader.dispose()
+            stream.close()
+        }
+        gifFrames = frames
+        gifDelays = delays
+        if (gifFrames.isNotEmpty()) keypng = gifFrames[0]
     }
 
     override fun paintComponent(v: Graphics) {
