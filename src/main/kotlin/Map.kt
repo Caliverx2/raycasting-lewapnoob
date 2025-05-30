@@ -200,11 +200,28 @@ class Map(var renderCast: RenderCast? = null) {
     var currentRooms = 0
     enum class Direction { UP, DOWN, LEFT, RIGHT }
     var clear = true
+    private val roomTemplates = rooms
+    private val recentRooms = mutableListOf<RoomTemplate>()
 
     data class RoomTemplate(
         val grid: Array<IntArray>,
         val scale: Int
     )
+
+    fun randomRoom(): RoomTemplate {
+        var availableRooms = roomTemplates.filter { it !in recentRooms.take(3) }
+        if (availableRooms.isEmpty()) {
+            recentRooms.clear()
+            availableRooms = roomTemplates
+        }
+        val selectedRoom = availableRooms.random()
+        recentRooms.add(0, selectedRoom)
+        if (recentRooms.size > 3) {
+            recentRooms.removeAt(recentRooms.size - 1)
+        }
+
+        return selectedRoom
+    }
 
     fun ensureGridCapacity(x: Int, y: Int, roomTemplate: RoomTemplate, direct: Direction): Triple<Int, Int, Pair<Int, Int>> {
         var offsetX = 0
@@ -240,16 +257,7 @@ class Map(var renderCast: RenderCast? = null) {
         directionForRoom = enterdirection.toString()
         println(directionForRoom)
         //0-air 1-wall 2-black_wall 3-enemy 4-ammo 5-door 6-lightSource 7-medication 8-key 10-chest
-        val roomTemplates = rooms
-        var roomTemplate = roomTemplates.random()
-        val recentRooms = mutableListOf<RoomTemplate>()
-        val availableRooms = roomTemplates.filter { it !in recentRooms.take(2) }
-        val selectedRoom = availableRooms.random()
-        recentRooms.add(0, selectedRoom)
-        if (recentRooms.size > 2) {
-            recentRooms.removeAt(recentRooms.size - 1)
-        }
-        roomTemplate = selectedRoom
+        var roomTemplate = randomRoom()
 
         gridmod = false
         val (newX, newY, offsets) = ensureGridCapacity(x, y, roomTemplate, enterdirection)
