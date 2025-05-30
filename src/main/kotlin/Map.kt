@@ -242,6 +242,15 @@ class Map(var renderCast: RenderCast? = null) {
         //0-air 1-wall 2-black_wall 3-enemy 4-ammo 5-door 6-lightSource 7-medication 8-key 10-chest
         val roomTemplates = rooms
         var roomTemplate = roomTemplates.random()
+        val recentRooms = mutableListOf<RoomTemplate>()
+        val availableRooms = roomTemplates.filter { it !in recentRooms.take(2) }
+        val selectedRoom = availableRooms.random()
+        recentRooms.add(0, selectedRoom)
+        if (recentRooms.size > 2) {
+            recentRooms.removeAt(recentRooms.size - 1)
+        }
+        roomTemplate = selectedRoom
+
         gridmod = false
         val (newX, newY, offsets) = ensureGridCapacity(x, y, roomTemplate, enterdirection)
         val (offsetX, offsetY) = offsets
