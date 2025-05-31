@@ -995,7 +995,7 @@ class Mappingmap(private val map: Map, private val renderCast: RenderCast) : JPa
 
         ImageIO.read(this::class.java.classLoader.getResource("textures/FPS.png"))?.let {
             val sizex = 350
-            val offsetx = (1366/2)-350/2
+            val offsetx = ((1366/2)-350/2)+60
             val offsety = 768/2
             g2.drawImage(it, offsetx, offsety, (sizex)+offsetx, (sizex)+offsety, 0, 0, it.width, it.height, null)
         }
