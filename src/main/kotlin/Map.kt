@@ -18,6 +18,8 @@ import kotlin.math.sin
 import javax.swing.JPanel
 import javax.swing.Timer
 import kotlin.random.Random
+import org.w3c.dom.Node
+import org.w3c.dom.Element
 
 var directionForRoom = "UP"
 
@@ -724,40 +726,7 @@ class Mappingmap(private val map: Map, private val renderCast: RenderCast) : JPa
         GraphicsEnvironment.getLocalGraphicsEnvironment().registerFont(font)
 
         sliderpng = ImageIO.read(this::class.java.classLoader.getResource("textures/slide.png"))
-        //keypng = ImageIO.read(this::class.java.classLoader.getResource("textures/fire-flames.gif"))
-        val gifStream = this::class.java.classLoader.getResourceAsStream("textures/fire-flames.gif")
-            ?: throw IllegalArgumentException("GIF file not found: fire-flames.gif")
-        loadGifFrames(gifStream)
-        Timer(16) { repaint() }.start()
-    }
-
-    private fun loadGifFrames(inputStream: InputStream) {
-        val reader = ImageIO.getImageReadersByFormatName("gif").next()
-        val stream = ImageIO.createImageInputStream(inputStream)
-        reader.setInput(stream, true)
-        val frames = mutableListOf<BufferedImage>()
-        val delays = mutableListOf<Int>()
-        try {
-            var i = 0
-            while (true) {
-                frames.add(reader.read(i))
-                val meta = reader.getImageMetadata(i)
-                val delay = meta.getAsTree("javax_imageio_gif_image_1.0")
-                    //.childNodes.asSequence()
-                    //.filter { it.nodeName == "GraphicControlExtension" }
-                    //.firstOrNull()?.getAttribute("delayTime")?.toIntOrNull() ?: 100
-                //delays.add(delay * 10)
-                i++
-            }
-        } catch (e: IndexOutOfBoundsException) {
-            // End of frames
-        } finally {
-            reader.dispose()
-            stream.close()
-        }
-        gifFrames = frames
-        gifDelays = delays
-        if (gifFrames.isNotEmpty()) keypng = gifFrames[0]
+        keypng = ImageIO.read(this::class.java.classLoader.getResource("textures/key.png"))
     }
 
     override fun paintComponent(v: Graphics) {
@@ -1023,6 +992,14 @@ class Mappingmap(private val map: Map, private val renderCast: RenderCast) : JPa
             g2.color = Color.YELLOW
             g2.drawString("LETS GOO GAMBLING [E]", (1366+g2.font.size)/2, (768+g2.font.size)/2)
         }
+
+        ImageIO.read(this::class.java.classLoader.getResource("textures/FPS.png"))?.let {
+            val sizex = 350
+            val offsetx = (1366/2)-350/2
+            val offsety = 768/2
+            g2.drawImage(it, offsetx, offsety, (sizex)+offsetx, (sizex)+offsety, 0, 0, it.width, it.height, null)
+        }
+
         g2.font = font?.deriveFont(Font.BOLD, 50f) ?: Font("Arial", Font.BOLD, 50)
         g2.drawString("${totalKeys}", 85, 290)
         keys = totalKeys
