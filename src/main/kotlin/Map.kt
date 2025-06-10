@@ -495,15 +495,83 @@ class Map(var renderCast: RenderCast? = null) {
 
                 if (enterdirection == Direction.UP) {
                     grid[newY+1][newX] = 0
+                    if (grid[(newY+YY)-(roomTemplate.scale-(roomTemplate.scale+1))][(newX+XX)-(roomTemplate.scale/2)] == 5) {
+                        val currentY = (newY+YY)-(roomTemplate.scale-(roomTemplate.scale+1))
+                        val currentX = (newX+XX)-(roomTemplate.scale/2)
+                        // Check neighbors: x-1, x+1, y-1, y+1
+                        if (currentX > 0 && grid[currentY][currentX-1] == 5) {
+                            grid[currentY][currentX-1] = 1
+                        }
+                        if (currentX < grid[0].size-1 && grid[currentY][currentX+1] == 5) {
+                            grid[currentY][currentX+1] = 1
+                        }
+                        if (currentY > 0 && grid[currentY-1][currentX] == 5) {
+                            grid[currentY-1][currentX] = 1
+                        }
+                        if (currentY < grid.size-1 && grid[currentY+1][currentX] == 5) {
+                            grid[currentY+1][currentX] = 1
+                        }
+                    }
                 }
                 if (enterdirection == Direction.DOWN) {
                     grid[newY-1][newX] = 0
+                    if (grid[(newY+YY)-(roomTemplate.scale)][(newX+XX)-(roomTemplate.scale/2)] == 5) {
+                        val currentY = (newY+YY)-(roomTemplate.scale)
+                        val currentX = (newX+XX)-(roomTemplate.scale/2)
+                        // Check neighbors: x-1, x+1, y-1, y+1
+                        if (currentX > 0 && grid[currentY][currentX-1] == 5) {
+                            grid[currentY][currentX-1] = 1
+                        }
+                        if (currentX < grid[0].size-1 && grid[currentY][currentX+1] == 5) {
+                            grid[currentY][currentX+1] = 1
+                        }
+                        if (currentY > 0 && grid[currentY-1][currentX] == 5) {
+                            grid[currentY-1][currentX] = 1
+                        }
+                        if (currentY < grid.size-1 && grid[currentY+1][currentX] == 5) {
+                            grid[currentY+1][currentX] = 1
+                        }
+                    }
                 }
                 if (enterdirection == Direction.RIGHT) {
                     grid[newY][newX-1] = 0
+                    if (grid[(newY+YY)-(roomTemplate.scale/2)][(newX+XX)-roomTemplate.scale] == 5) {
+                        val currentY = (newY+YY)-(roomTemplate.scale/2)
+                        val currentX = (newX+XX)-roomTemplate.scale
+                        // Check neighbors: x-1, x+1, y-1, y+1
+                        if (currentX > 0 && grid[currentY][currentX-1] == 5) {
+                            grid[currentY][currentX-1] = 1
+                        }
+                        if (currentX < grid[0].size-1 && grid[currentY][currentX+1] == 5) {
+                            grid[currentY][currentX+1] = 1
+                        }
+                        if (currentY > 0 && grid[currentY-1][currentX] == 5) {
+                            grid[currentY-1][currentX] = 1
+                        }
+                        if (currentY < grid.size-1 && grid[currentY+1][currentX] == 5) {
+                            grid[currentY+1][currentX] = 1
+                        }
+                    }
                 }
                 if (enterdirection == Direction.LEFT) {
                     grid[newY][newX+1] = 0
+                    if (grid[(newY+YY)-(roomTemplate.scale/2)][(newX+XX)-(roomTemplate.scale-(roomTemplate.scale+1))] == 5) {
+                        val currentY = (newY+YY)-(roomTemplate.scale/2)
+                        val currentX = (newX+XX)-(roomTemplate.scale-(roomTemplate.scale+1))
+                        // Check neighbors: x-1, x+1, y-1, y+1
+                        if (currentX > 0 && grid[currentY][currentX-1] == 5) {
+                            grid[currentY][currentX-1] = 1
+                        }
+                        if (currentX < grid[0].size-1 && grid[currentY][currentX+1] == 5) {
+                            grid[currentY][currentX+1] = 1
+                        }
+                        if (currentY > 0 && grid[currentY-1][currentX] == 5) {
+                            grid[currentY-1][currentX] = 1
+                        }
+                        if (currentY < grid.size-1 && grid[currentY+1][currentX] == 5) {
+                            grid[currentY+1][currentX] = 1
+                        }
+                    }
                 }
 
                 if (roomTemplate.grid[XX][YY] == 3) {
