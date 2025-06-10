@@ -32,7 +32,8 @@ class Player(private val renderCast: RenderCast, private val map: Map) {
             for (gridX in gridLeft..gridRight) {
                 if (gridY !in map.grid.indices || gridX !in map.grid[0].indices ||
                     ((map.grid[gridY][gridX] == 1) ||
-                            (map.grid[gridY][gridX] == 2))) {
+                            (map.grid[gridY][gridX] == 2) ||
+                            (map.grid[gridY][gridX] == 12))) {
                     return Pair(false, null)
                 }
             }

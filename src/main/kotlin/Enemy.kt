@@ -233,10 +233,11 @@ class Enemy(
 
         if ((startY !in map.grid.indices || startX !in map.grid[0].indices ||
             goalY !in map.grid.indices || goalX !in map.grid[0].indices) or
-            //0-air 1-wall 2-black_wall 3-enemy 4-ammo 5-door 6-lightSource 7-medication 8-key 10-chest
+            //0-air 1-wall 2-black_wall 3-enemy 4-ammo 5-door 6-lightSource 7-medication 8-key 9-trader 10-chest 11-slotMachine 12-closedDoor
             ((map.grid[goalY][goalX] == 1) or
                     (map.grid[goalY][goalX] == 2) or
-                    (map.grid[goalY][goalX] == 5)
+                    (map.grid[goalY][goalX] == 5) or
+                    (map.grid[goalY][goalX] == 12)
                     )
         ) {
             return emptyList()
@@ -541,11 +542,12 @@ class Enemy(
 
         for (gridY in gridTop..gridBottom) {
             for (gridX in gridLeft..gridRight) {
-                //0-air 1-wall 2-black_wall 3-enemy 4-ammo 5-door 6-lightSource 7-medication 8-key 10-chest
+                //0-air 1-wall 2-black_wall 3-enemy 4-ammo 5-door 6-lightSource 7-medication 8-key 9-trader 10-chest 11-slotMachine 12-closedDoor
                 if ((gridY !in map.grid.indices || gridX !in map.grid[gridY].indices) or
                     ((map.grid[gridY][gridX] == 1) ||
                     (map.grid[gridY][gridX] == 2) ||
-                    (map.grid[gridY][gridX] == 5))) {
+                    (map.grid[gridY][gridX] == 5) ||
+                            (map.grid[gridY][gridX] == 12))) {
                     return Pair(false, null)
                 }
             }

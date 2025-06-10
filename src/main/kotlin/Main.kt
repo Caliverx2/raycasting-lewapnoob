@@ -1,7 +1,7 @@
 package org.example.MainKt
 
 //./gradlew shadowJar
-//0-air 1-wall 2-black_wall 3-enemy 4-ammo 5-door 6-lightSource 7-medication 8-key 10-chest
+//0-air 1-wall 2-black_wall 3-enemy 4-ammo 5-door 6-lightSource 7-medication 8-key 9-trader 10-chest 11-slotMachine 12-closedDoor
 
 import kotlinx.coroutines.runBlocking
 import javax.swing.JFrame

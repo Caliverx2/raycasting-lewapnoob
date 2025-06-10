@@ -37,7 +37,7 @@ class RenderCast(private val map: Map) : JPanel() {
     var resetPerkSlot = true
 
     private val textureMap: MutableMap<Int, BufferedImage> = mutableMapOf()
-    private val wallIndices: Set<Int> = setOf(1, 2, 5)
+    private val wallIndices: Set<Int> = setOf(1, 2, 5, 12)
     var enemyTextureId: BufferedImage? = null
     var keyTextureId: BufferedImage? = null
     var medicationTextureID: BufferedImage? = null
@@ -107,6 +107,7 @@ class RenderCast(private val map: Map) : JPanel() {
             loadTexture(1, "textures/bricks.jpg")
             loadTexture(2, "textures/black_bricks.png")
             loadTexture(5, "textures/gold.jpg")
+            loadTexture(12, "textures/iron_block.png")
         } catch (e: Exception) {
             println("Error loading textures: ${e.message}")
             floorTexture = createTexture(Color.darkGray)
@@ -114,6 +115,7 @@ class RenderCast(private val map: Map) : JPanel() {
             textureMap[1] = createTexture(Color(90, 39, 15))
             textureMap[2] = createTexture(Color(20, 50, 50))
             textureMap[5] = createTexture(Color(255, 215, 0))
+            textureMap[12] = createTexture(Color(87, 87, 87))
             enemyTextureId = createTexture(Color(255, 68, 68))
             keyTextureId = createTexture(Color(255, 255, 0))
             coinTextureID = createTexture(Color(255, 255, 0))
