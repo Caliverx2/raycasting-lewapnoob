@@ -3,7 +3,6 @@ package org.example.MainKt
 //./gradlew shadowJar
 //0-air 1-wall 2-black_wall 3-enemy 4-ammo 5-door 6-lightSource 7-medication 8-key 10-chest
 
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import javax.swing.JFrame
 import java.awt.event.KeyAdapter
@@ -12,13 +11,11 @@ import java.awt.Color
 import java.awt.Toolkit
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
-import java.awt.event.MouseMotionAdapter
 import java.awt.event.ComponentAdapter
 import java.awt.event.ComponentEvent
 import java.awt.image.BufferedImage
 import javax.swing.JLayeredPane
 import javax.swing.SwingUtilities
-import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.random.Random
@@ -271,12 +268,10 @@ fun main() = runBlocking {
     frame.addMouseMotionListener(object : MouseMotionAdapter() {
         override fun mouseMoved(e: MouseEvent) {
             player.updateAngleFromMouse()
-            renderCast.repaint()
         }
 
         override fun mouseDragged(e: MouseEvent) {
             player.updateAngleFromMouse()
-            renderCast.repaint()
         }
     })*/
 

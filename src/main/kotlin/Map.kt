@@ -11,15 +11,11 @@ import java.awt.GraphicsEnvironment
 import java.awt.RenderingHints
 import java.awt.image.BufferedImage
 import java.awt.image.ImageObserver
-import java.io.InputStream
 import javax.imageio.ImageIO;
 import kotlin.math.cos
 import kotlin.math.sin
 import javax.swing.JPanel
-import javax.swing.Timer
 import kotlin.random.Random
-import org.w3c.dom.Node
-import org.w3c.dom.Element
 
 var directionForRoom = "UP"
 
@@ -33,7 +29,8 @@ val rooms = listOf(
             intArrayOf(2, 0, 0, 0, 2),
             intArrayOf(2, 2, 5, 2, 2)
         ),
-        scale = 5
+        scale = 5,
+        weight = 0.15
     ),
     RoomTemplate(
         grid = arrayOf(
@@ -43,7 +40,8 @@ val rooms = listOf(
             intArrayOf(2, 0, 0, 0, 2),
             intArrayOf(2, 2, 5, 2, 2)
         ),
-        scale = 5
+        scale = 5,
+        weight = 0.15
     ),
     RoomTemplate(
         grid = arrayOf(
@@ -53,7 +51,8 @@ val rooms = listOf(
             intArrayOf(2, 0, 0, 0, 2),
             intArrayOf(2, 2, 5, 2, 2)
         ),
-        scale = 5
+        scale = 5,
+        weight = 0.15
     ),
     RoomTemplate(
         grid = arrayOf(
@@ -65,7 +64,8 @@ val rooms = listOf(
             intArrayOf(2, 0, 0, 0, 0, 0, 2),
             intArrayOf(2, 2, 2, 5, 2, 2, 2)
         ),
-        scale = 7
+        scale = 7,
+        weight = 0.15
     ),
     RoomTemplate(
         grid = arrayOf(
@@ -77,19 +77,21 @@ val rooms = listOf(
             intArrayOf(2, 1, 1, 0, 1, 1, 2),
             intArrayOf(2, 2, 2, 5, 2, 2, 2)
         ),
-        scale = 7
+        scale = 7,
+        weight = 0.15
     ),
     RoomTemplate(
         grid = arrayOf(
-            intArrayOf(2, 2, 2, 5, 2, 2, 2),
-            intArrayOf(2, 2, 11, 0, 11, 2, 2),
-            intArrayOf(2, 11, 0, 0, 0, 11, 2),
-            intArrayOf(5, 0, 0, 6, 0, 0, 5),
-            intArrayOf(2, 11, 0, 0, 0, 11, 2),
-            intArrayOf(2, 2, 11, 0, 11, 2, 2),
-            intArrayOf(2, 2, 2, 5, 2, 2, 2)
+            intArrayOf(2, 2,2,5,2,2, 2),
+            intArrayOf(2,2,11,0,11,2,2),
+            intArrayOf(2,11,0,0,0,11,2),
+            intArrayOf(5, 0,0,6,0,0, 5),
+            intArrayOf(2,11,0,0,0,11,2),
+            intArrayOf(2,2,11,0,11,2,2),
+            intArrayOf(2, 2,2,5,2,2, 2)
         ),
-        scale = 7
+        scale = 7,
+        weight = 0.02
     ),
     RoomTemplate(
         grid = arrayOf(
@@ -101,7 +103,8 @@ val rooms = listOf(
             intArrayOf(2, 0, 0, 0, 0, 0, 2),
             intArrayOf(2, 2, 2, 5, 2, 2, 2)
         ),
-        scale = 7
+        scale = 7,
+        weight = 0.15
     ),
     RoomTemplate(
         grid = arrayOf(
@@ -113,7 +116,8 @@ val rooms = listOf(
             intArrayOf(2, 0, 0, 0, 0, 0, 2),
             intArrayOf(2, 2, 2, 5, 2, 2, 2)
         ),
-        scale = 7
+        scale = 7,
+        weight = 0.15
     ),
     RoomTemplate(
         grid = arrayOf(
@@ -127,7 +131,8 @@ val rooms = listOf(
             intArrayOf(2, 0, 0, 0, 0, 0, 0, 0, 2),
             intArrayOf(2, 2, 2, 2, 5, 2, 2, 2, 2)
         ),
-        scale = 9
+        scale = 9,
+        weight = 0.15
     ),
     RoomTemplate(
         grid = arrayOf(
@@ -147,7 +152,8 @@ val rooms = listOf(
             intArrayOf(2, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 2),
             intArrayOf(2, 2, 2, 2, 2, 2, 2, 5, 2, 2, 2, 2, 2, 2, 2)
         ),
-        scale = 15
+        scale = 15,
+        weight = 0.05
     )
 )
 
@@ -209,7 +215,8 @@ class Map(var renderCast: RenderCast? = null) {
 
     data class RoomTemplate(
         val grid: Array<IntArray>,
-        val scale: Int
+        val scale: Int,
+        val weight: Double = 0.15
     )
 
     fun randomRoom(): RoomTemplate {
@@ -218,7 +225,16 @@ class Map(var renderCast: RenderCast? = null) {
             recentRooms.clear()
             availableRooms = roomTemplates
         }
-        val selectedRoom = availableRooms.random()
+
+        val totalWeight = availableRooms.sumOf { it.weight }
+        val randomValue = Random.nextDouble(totalWeight)
+        var cumulativeWeight = 0.0
+
+        val selectedRoom = availableRooms.first { room ->
+            cumulativeWeight += room.weight
+            randomValue <= cumulativeWeight
+        }
+
         recentRooms.add(0, selectedRoom)
         if (recentRooms.size > 3) {
             recentRooms.removeAt(recentRooms.size - 1)
@@ -997,7 +1013,7 @@ class Mappingmap(private val map: Map, private val renderCast: RenderCast) : JPa
             val sizex = 350
             val offsetx = ((1366/2)-350/2)+60
             val offsety = 768/2
-            g2.drawImage(it, offsetx, offsety, (sizex)+offsetx, (sizex)+offsety, 0, 0, it.width, it.height, null)
+            //g2.drawImage(it, offsetx, offsety, (sizex)+offsetx, (sizex)+offsety, 0, 0, it.width, it.height, null)
         }
 
         g2.font = font?.deriveFont(Font.BOLD, 50f) ?: Font("Arial", Font.BOLD, 50)
