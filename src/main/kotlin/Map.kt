@@ -19,7 +19,7 @@ import kotlin.random.Random
 
 var directionForRoom = "UP"
 
-//0-air 1-wall 2-black_wall 3-enemy 4-ammo 5-door 6-lightSource 7-medication 8-key 9-trader 10-chest 11-slotMachine
+//0-air 1-wall 2-black_wall 3-enemy 4-ammo 5-door 6-lightSource 7-medication 8-key 9-trader 10-chest 11-slotMachine 12-closedDoor
 val rooms = listOf(
     RoomTemplate(
         grid = arrayOf(
@@ -276,7 +276,7 @@ class Map(var renderCast: RenderCast? = null) {
     fun generateRoom(x: Int = 0, y: Int = 0, enterdirection: Direction) {
         directionForRoom = enterdirection.toString()
         println(directionForRoom)
-        //0-air 1-wall 2-black_wall 3-enemy 4-ammo 5-door 6-lightSource 7-medication 8-key 10-chest
+        //0-air 1-wall 2-black_wall 3-enemy 4-ammo 5-door 6-lightSource 7-medication 8-key 9-trader 10-chest 11-slotMachine 12-closedDoor
         var roomTemplate = randomRoom()
 
         gridmod = false
@@ -500,16 +500,16 @@ class Map(var renderCast: RenderCast? = null) {
                         val currentX = (newX+XX)-(roomTemplate.scale/2)
                         // Check neighbors: x-1, x+1, y-1, y+1
                         if (currentX > 0 && grid[currentY][currentX-1] == 5) {
-                            grid[currentY][currentX-1] = 1
+                            grid[currentY][currentX-1] = 12
                         }
                         if (currentX < grid[0].size-1 && grid[currentY][currentX+1] == 5) {
-                            grid[currentY][currentX+1] = 1
+                            grid[currentY][currentX+1] = 12
                         }
                         if (currentY > 0 && grid[currentY-1][currentX] == 5) {
-                            grid[currentY-1][currentX] = 1
+                            grid[currentY-1][currentX] = 12
                         }
                         if (currentY < grid.size-1 && grid[currentY+1][currentX] == 5) {
-                            grid[currentY+1][currentX] = 1
+                            grid[currentY+1][currentX] = 12
                         }
                     }
                 }
@@ -520,16 +520,16 @@ class Map(var renderCast: RenderCast? = null) {
                         val currentX = (newX+XX)-(roomTemplate.scale/2)
                         // Check neighbors: x-1, x+1, y-1, y+1
                         if (currentX > 0 && grid[currentY][currentX-1] == 5) {
-                            grid[currentY][currentX-1] = 1
+                            grid[currentY][currentX-1] = 12
                         }
                         if (currentX < grid[0].size-1 && grid[currentY][currentX+1] == 5) {
-                            grid[currentY][currentX+1] = 1
+                            grid[currentY][currentX+1] = 12
                         }
                         if (currentY > 0 && grid[currentY-1][currentX] == 5) {
-                            grid[currentY-1][currentX] = 1
+                            grid[currentY-1][currentX] = 12
                         }
                         if (currentY < grid.size-1 && grid[currentY+1][currentX] == 5) {
-                            grid[currentY+1][currentX] = 1
+                            grid[currentY+1][currentX] = 12
                         }
                     }
                 }
@@ -540,16 +540,16 @@ class Map(var renderCast: RenderCast? = null) {
                         val currentX = (newX+XX)-roomTemplate.scale
                         // Check neighbors: x-1, x+1, y-1, y+1
                         if (currentX > 0 && grid[currentY][currentX-1] == 5) {
-                            grid[currentY][currentX-1] = 1
+                            grid[currentY][currentX-1] = 12
                         }
                         if (currentX < grid[0].size-1 && grid[currentY][currentX+1] == 5) {
-                            grid[currentY][currentX+1] = 1
+                            grid[currentY][currentX+1] = 12
                         }
                         if (currentY > 0 && grid[currentY-1][currentX] == 5) {
-                            grid[currentY-1][currentX] = 1
+                            grid[currentY-1][currentX] = 12
                         }
                         if (currentY < grid.size-1 && grid[currentY+1][currentX] == 5) {
-                            grid[currentY+1][currentX] = 1
+                            grid[currentY+1][currentX] = 12
                         }
                     }
                 }
@@ -560,16 +560,16 @@ class Map(var renderCast: RenderCast? = null) {
                         val currentX = (newX+XX)-(roomTemplate.scale-(roomTemplate.scale+1))
                         // Check neighbors: x-1, x+1, y-1, y+1
                         if (currentX > 0 && grid[currentY][currentX-1] == 5) {
-                            grid[currentY][currentX-1] = 1
+                            grid[currentY][currentX-1] = 12
                         }
                         if (currentX < grid[0].size-1 && grid[currentY][currentX+1] == 5) {
-                            grid[currentY][currentX+1] = 1
+                            grid[currentY][currentX+1] = 12
                         }
                         if (currentY > 0 && grid[currentY-1][currentX] == 5) {
-                            grid[currentY-1][currentX] = 1
+                            grid[currentY-1][currentX] = 12
                         }
                         if (currentY < grid.size-1 && grid[currentY+1][currentX] == 5) {
-                            grid[currentY+1][currentX] = 1
+                            grid[currentY+1][currentX] = 12
                         }
                     }
                 }
