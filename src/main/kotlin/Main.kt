@@ -17,7 +17,9 @@ import java.awt.image.BufferedImage
 import javax.swing.JLayeredPane
 import javax.swing.SwingUtilities
 import kotlin.math.cos
+import kotlin.math.pow
 import kotlin.math.sin
+import kotlin.math.sqrt
 import kotlin.random.Random
 
 var playerHealth: Int = 100
@@ -367,14 +369,84 @@ fun main() = runBlocking {
                     }
                 }
                 KeyEvent.VK_Q -> {
-                    val randomDistance = Random.nextDouble(1.2 * tileSize, 1.6*tileSize)
-                    val itemX = positionX + randomDistance * cos(Math.toRadians(currentangle.toDouble()))
-                    val itemY = positionY + randomDistance * sin(Math.toRadians(currentangle.toDouble()))
+                    val randomDistance = Random.nextDouble(1.2 * tileSize, 1.6 * tileSize)
+                    val minWallDistance = tileSize
+
+                    fun calculateItemPosition(): Pair<Double, Double> {
+                        val itemX = positionX + randomDistance * cos(Math.toRadians(currentangle.toDouble()))
+                        val itemY = positionY + randomDistance * sin(Math.toRadians(currentangle.toDouble()))
+                        return Pair(itemX, itemY)
+                    }
+
+                    fun isValidPosition(x: Double, y: Double): Boolean {
+                        val gridX = (x / tileSize).toInt()
+                        val gridY = (y / tileSize).toInt()
+
+                        if (gridX < 0 || gridX >= map.grid[0].size || gridY < 0 || gridY >= map.grid.size) {
+                            return false
+                        }
+                        if (map.grid[gridY][gridX] != 0) {
+                            return false
+                        }
+                        for (dy in -1..1) {
+                            for (dx in -1..1) {
+                                val checkX = gridX + dx
+                                val checkY = gridY + dy
+                                if (checkX >= 0 && checkX < map.grid[0].size && checkY >= 0 && checkY < map.grid.size) {
+                                    if (map.grid[checkY][checkX] in listOf(1, 2, 5, 12)) {
+                                        val wallX = (checkX + 0.5) * tileSize
+                                        val wallY = (checkY + 0.5) * tileSize
+                                        val distance = sqrt((x - wallX).pow(2) + (y - wallY).pow(2))
+                                        if (distance < minWallDistance) {
+                                            return false
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        return true
+                    }
+
+                    fun findNearestValidPosition(startX: Double, startY: Double): Pair<Double, Double>? {
+                        val startGridX = (startX / tileSize).toInt()
+                        val startGridY = (startY / tileSize).toInt()
+                        val maxSearchRadius = 5
+
+                        for (radius in 0..maxSearchRadius) {
+                            for (dy in -radius..radius) {
+                                for (dx in -radius..radius) {
+                                    if (kotlin.math.abs(dx) == radius || kotlin.math.abs(dy) == radius) {
+                                        val gridX = startGridX + dx
+                                        val gridY = startGridY + dy
+                                        if (gridX >= 0 && gridX < map.grid[0].size && gridY >= 0 && gridY < map.grid.size) {
+                                            val testX = (gridX + 0.5) * tileSize
+                                            val testY = (gridY + 0.5) * tileSize
+                                            if (isValidPosition(testX, testY)) {
+                                                return Pair(testX, testY)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        return null
+                    }
+
+                    var (itemX, itemY) = calculateItemPosition()
+                    if (!isValidPosition(itemX, itemY)) {
+                        findNearestValidPosition(itemX, itemY)?.let { (newX, newY) ->
+                            itemX = newX
+                            itemY = newY
+                        } ?: run {
+                            return
+                        }
+                    }
+
                     when {
                         playerInventory[selectSlot]?.type!! == ItemType.KEY -> keysList.add(
                             Key(
-                                x = (itemX) - (tileSize / 2),
-                                y = (itemY) - (tileSize / 2),
+                                x = itemX - (tileSize / 2),
+                                y = itemY - (tileSize / 2),
                                 texture = renderCast?.keyTextureId!!,
                                 active = true,
                                 amount = playerInventory[selectSlot]?.quantity!!
@@ -382,8 +454,8 @@ fun main() = runBlocking {
                         )
                         playerInventory[selectSlot]?.type!! == ItemType.AMMO -> ammo.add(
                             Ammo(
-                                x = (itemX) - (tileSize / 2),
-                                y = (itemY) - (tileSize / 2),
+                                x = itemX - (tileSize / 2),
+                                y = itemY - (tileSize / 2),
                                 texture = renderCast?.ammoTextureID!!,
                                 active = true,
                                 amount = playerInventory[selectSlot]?.quantity!!
@@ -391,8 +463,8 @@ fun main() = runBlocking {
                         )
                         playerInventory[selectSlot]?.type!! == ItemType.MEDKIT -> medications.add(
                             Medication(
-                                x = (itemX) - (tileSize / 2),
-                                y = (itemY) - (tileSize / 2),
+                                x = itemX - (tileSize / 2),
+                                y = itemY - (tileSize / 2),
                                 texture = renderCast?.medicationTextureID!!,
                                 active = true,
                                 amount = playerInventory[selectSlot]?.quantity!!
@@ -400,8 +472,8 @@ fun main() = runBlocking {
                         )
                         playerInventory[selectSlot]?.type!! == ItemType.COIN -> coinsList.add(
                             Coin(
-                                x = (itemX) - (tileSize / 2),
-                                y = (itemY) - (tileSize / 2),
+                                x = itemX - (tileSize / 2),
+                                y = itemY - (tileSize / 2),
                                 texture = renderCast?.coinTextureID!!,
                                 active = true,
                                 amount = playerInventory[selectSlot]?.quantity!!
