@@ -15,8 +15,11 @@ class Enemy(
     var texture: BufferedImage,
     private val renderCast: RenderCast,
     private val map: Map,
-    var speed: Double = 0.9,
-    val maxHeal: Int = (100 + (level * 7.5) * 2).toInt()
+    val speed: Double = 0.9,
+    val maxHeal: Int = (100 + (level * 7.5) * 2).toInt(),
+    val damage: Int = ((2.5 * level)*1.5).toInt(),
+    var enemyShotAccuracy: Int = 10,
+    val enemyType: Int = 0
 ) {
     var path: List<Node> = emptyList()
     val size = 1.0
@@ -74,7 +77,6 @@ class Enemy(
         val dy: Double,
         val speed: Double = 5.0,
         val size: Double = 0.1 * tileSize,
-        val damage: Int = ((2.5 * level)*1.5).toInt(),
         var active: Boolean = true,
         val lightSource: LightSource? = null
     ) {
@@ -111,18 +113,20 @@ class Enemy(
             val dyToPlayer = y - positionY
             val distanceToPlayer = sqrt(dxToPlayer * dxToPlayer + dyToPlayer * dyToPlayer)
             if (distanceToPlayer < size + (tileSize * 0.5)) {
-                playerHealth -= damage
-                val random = Random.nextFloat()
-                if (playerHealth > 15) {
-                    renderCast.playSound(when {
-                        random < 0.20f -> "hurt1.wav"
-                        random < 0.40f -> "hurt2.wav"
-                        random < 0.60f -> "hurt3.wav"
-                        random < 0.80f -> "hurt4.wav"
-                        else -> "hurt5.wav"
-                    }, volume = 0.65f)
-                } else {
-                    renderCast.playSound("hurt6.wav", volume = 0.65f)
+                if (!godMode) {
+                    playerHealth -= damage
+                    val random = Random.nextFloat()
+                    if (playerHealth > 15) {
+                        playSound(when {
+                            random < 0.20f -> "hurt1.wav"
+                            random < 0.40f -> "hurt2.wav"
+                            random < 0.60f -> "hurt3.wav"
+                            random < 0.80f -> "hurt4.wav"
+                            else -> "hurt5.wav"
+                        }, volume = 0.65f)
+                    } else {
+                        playSound("hurt6.wav", volume = 0.65f)
+                    }
                 }
                 active = false
                 lightSource?.let { lightSources.remove(it) }
@@ -161,8 +165,8 @@ class Enemy(
     }
 
     private fun shootAtPlayer() {
-        val dx = positionX - x
-        val dy = positionY - y
+        val dx = positionX - x + Random.nextInt(-enemyShotAccuracy, enemyShotAccuracy)
+        val dy = positionY - y + Random.nextInt(-enemyShotAccuracy, enemyShotAccuracy)
         val distance = sqrt(dx * dx + dy * dy)
         if (distance > 0) {
             val directionX = dx / distance
@@ -170,7 +174,7 @@ class Enemy(
             val lightSource = LightSource(
                 x = x / tileSize,
                 y = y / tileSize,
-                color = Color(255, 100, 100),
+                color = Color(255, 70, 70),
                 intensity = 0.5,
                 range = 0.2,
                 owner = "projectile_${this.hashCode()}_${System.nanoTime()}"

@@ -18,8 +18,6 @@ import kotlin.math.exp
 import kotlin.math.sin
 import kotlin.math.sqrt
 import kotlin.random.Random
-import javax.sound.sampled.AudioSystem
-import javax.sound.sampled.FloatControl
 import kotlin.jvm.java
 import kotlin.math.min
 import kotlin.math.pow
@@ -46,6 +44,10 @@ class RenderCast(private val map: Map) : JPanel() {
     var traderTextureID: BufferedImage? = null
     var slotMachineTextureID: BufferedImage? = null
     var coinTextureID: BufferedImage? = null
+    var enemyBossTextureId: BufferedImage? = null
+    var glock34TextureId: BufferedImage? = null
+    var ppsz41TextureId: BufferedImage? = null
+    var cheyTacM200TextureId: BufferedImage? = null
     private val accessibleTiles: Set<Int> = setOf(0, 3, 6)
     private var floorTexture: BufferedImage? = null
     private var ceilingTexture: BufferedImage? = null
@@ -73,9 +75,11 @@ class RenderCast(private val map: Map) : JPanel() {
     private var visibleTrader = mutableListOf<Triple<Trader, Int, Double>>()
     private var visibleSlotMachines = mutableListOf<Triple<SlotMachine, Int, Double>>()
     private var visibleCoins = mutableListOf<Triple<Coin, Int, Double>>()
+    private var visibleGlock34 = mutableListOf<Triple<Glock34, Int, Double>>()
+    private var visiblePPSz41 = mutableListOf<Triple<PPSz41, Int, Double>>()
+    private var visibleCheyTacM200 = mutableListOf<Triple<CheyTacM200, Int, Double>>()
     private val zBuffer = DoubleArray(rayCount) { Double.MAX_VALUE }
     private var lastShotTime = 0L
-    private val SHOT_COOLDOWN = 500_000_000L * FastReload
     private var lastLightMoveTime = 0L
     private val LIGHT_MOVE_INTERVAL = 250_000_000L / 4
     private var lightMoveDirection = 0.0
@@ -83,8 +87,6 @@ class RenderCast(private val map: Map) : JPanel() {
     private var font: Font? = null
     val fontStream = this::class.java.classLoader.getResourceAsStream("font/mojangles.ttf")
         ?: throw IllegalArgumentException("Font file not found: mojangles.ttf")
-
-    enum class Perk { HealBoost, SpeedMovement, MoreHitShot, FastReload, AmmoBoost }
 
     fun getEnemies(): List<Enemy> = enemies
 
@@ -103,6 +105,10 @@ class RenderCast(private val map: Map) : JPanel() {
             traderTextureID = ImageIO.read(this::class.java.classLoader.getResource("textures/villager.png"))
             slotMachineTextureID = ImageIO.read(this::class.java.classLoader.getResource("textures/slotMachine.png"))
             coinTextureID = ImageIO.read(this::class.java.classLoader.getResource("textures/coin.png"))
+            enemyBossTextureId = ImageIO.read(this::class.java.classLoader.getResource("textures/boss.jpg"))
+            glock34TextureId = ImageIO.read(this::class.java.classLoader.getResource("textures/coin.png"))
+            ppsz41TextureId = ImageIO.read(this::class.java.classLoader.getResource("textures/coin.png"))
+            cheyTacM200TextureId = ImageIO.read(this::class.java.classLoader.getResource("textures/coin.png"))
 
             loadTexture(1, "textures/bricks.jpg")
             loadTexture(2, "textures/black_bricks.png")
@@ -124,6 +130,9 @@ class RenderCast(private val map: Map) : JPanel() {
             ammoTextureID = createTexture(Color(90,90,90))
             traderTextureID = createTexture(Color(255, 68, 68))
             slotMachineTextureID = createTexture(Color(255,140,0))
+            glock34TextureId = createTexture(Color(20, 20, 20))
+            ppsz41TextureId = createTexture(Color(20, 20, 20))
+            cheyTacM200TextureId = createTexture(Color(20, 20, 20))
         }
 
         lightSources.add(LightSource(0.0, 0.0, color = Color(200, 200, 100), intensity = 0.75, range = 0.15, owner = "player"))
@@ -351,6 +360,9 @@ class RenderCast(private val map: Map) : JPanel() {
         visibleTrader.clear()
         visibleSlotMachines.clear()
         visibleCoins.clear()
+        visibleGlock34.clear()
+        visiblePPSz41.clear()
+        visibleCheyTacM200.clear()
         lookchest = false
         looktrader = false
         lookslotMachine = false
@@ -381,6 +393,9 @@ class RenderCast(private val map: Map) : JPanel() {
         slotMachines.forEach { addEntityIfInRadius(it, it.x, it.y, it.active) }
         medications.forEach { addEntityIfInRadius(it, it.x, it.y, it.active) }
         traders.forEach { addEntityIfInRadius(it, it.x, it.y, it.active) }
+        glock34s.forEach { addEntityIfInRadius(it, it.x, it.y, it.active) }
+        ppsz41s.forEach { addEntityIfInRadius(it, it.x, it.y, it.active) }
+        cheytacm200s.forEach { addEntityIfInRadius(it, it.x, it.y, it.active) }
 
         // Raycasting loop
         for (ray in 0 until rayCount) {
@@ -533,6 +548,9 @@ class RenderCast(private val map: Map) : JPanel() {
                     is SlotMachine -> entity.size
                     is Medication -> entity.size
                     is Trader -> entity.size
+                    is Glock34 -> entity.size
+                    is PPSz41 -> entity.size
+                    is CheyTacM200 -> entity.size
                     else -> 0.0
                 }
                 val visibleList = when (entity) {
@@ -544,6 +562,9 @@ class RenderCast(private val map: Map) : JPanel() {
                     is SlotMachine -> visibleSlotMachines
                     is Medication -> visibleMedications
                     is Trader -> visibleTrader
+                    is Glock34 -> visibleGlock34
+                    is PPSz41 -> visiblePPSz41
+                    is CheyTacM200 -> visibleCheyTacM200
                     else -> mutableListOf()
                 }
                 processEntityVisibility(entity, posX, posY, size, visibleList as MutableList<Triple<Any, Int, Double>>)
@@ -1081,6 +1102,9 @@ class RenderCast(private val map: Map) : JPanel() {
                 ItemType.AMMO -> ImageIO.read(this::class.java.classLoader.getResource("textures/ammo.png"))
                 ItemType.KEY -> ImageIO.read(this::class.java.classLoader.getResource("textures/key.png"))
                 ItemType.COIN -> ImageIO.read(this::class.java.classLoader.getResource("textures/coin.png"))
+                ItemType.GLOCK34 -> ImageIO.read(this::class.java.classLoader.getResource("textures/coin.png"))
+                ItemType.PPSH41 -> ImageIO.read(this::class.java.classLoader.getResource("textures/coin.png"))
+                ItemType.CHEYTACM200 -> ImageIO.read(this::class.java.classLoader.getResource("textures/coin.png"))
             }
         } catch (e: Exception) {
             return when (type) {
@@ -1088,6 +1112,9 @@ class RenderCast(private val map: Map) : JPanel() {
                 ItemType.AMMO -> createTexture(Color(80,80,80))
                 ItemType.KEY -> createTexture(Color(255, 215, 0))
                 ItemType.COIN -> createTexture(Color(255, 255, 0))
+                ItemType.GLOCK34 -> createTexture(Color(20, 20, 20))
+                ItemType.PPSH41 -> createTexture(Color(20, 20, 20))
+                ItemType.CHEYTACM200 -> createTexture(Color(20, 20, 20))
             }
         }
     }
@@ -1262,6 +1289,9 @@ class RenderCast(private val map: Map) : JPanel() {
             is Ammo -> entity.size * tileSize / 2 / tileSize
             is Trader -> entity.size * tileSize / 2 / tileSize
             is SlotMachine -> entity.size * tileSize / 2 / tileSize
+            is Glock34 -> entity.size * tileSize / 2 / tileSize
+            is PPSz41 -> entity.size * tileSize / 2 / tileSize
+            is CheyTacM200 -> entity.size * tileSize / 2 / tileSize
             else -> 0.5
         }
         val entityX = when (entity) {
@@ -1273,6 +1303,9 @@ class RenderCast(private val map: Map) : JPanel() {
             is Ammo -> entity.x / tileSize
             is Trader -> entity.x / tileSize
             is SlotMachine -> entity.x / tileSize
+            is Glock34 -> entity.x / tileSize
+            is PPSz41 -> entity.x / tileSize
+            is CheyTacM200 -> entity.x / tileSize
             else -> 0.0
         }
         val entityY = when (entity) {
@@ -1284,6 +1317,9 @@ class RenderCast(private val map: Map) : JPanel() {
             is Ammo -> entity.y / tileSize
             is Trader -> entity.y / tileSize
             is SlotMachine -> entity.y / tileSize
+            is Glock34 -> entity.y / tileSize
+            is PPSz41 -> entity.y / tileSize
+            is CheyTacM200 -> entity.y / tileSize
             else -> 0.0
         }
 
@@ -1689,6 +1725,27 @@ class RenderCast(private val map: Map) : JPanel() {
                 hasInteraction = true,
                 shadowScale = 1.2,
                 shadowVerticalScale = 0.25
+            ),
+            Glock34::class to EntityRenderConfig(
+                height = wallHeight / 4,
+                sizeMultiplier = 1.0,
+                maxSize = 64.0,
+                shadowScale = 1.2,
+                shadowVerticalScale = 0.25
+            ),
+            PPSz41::class to EntityRenderConfig(
+                height = wallHeight / 4,
+                sizeMultiplier = 1.0,
+                maxSize = 64.0,
+                shadowScale = 1.2,
+                shadowVerticalScale = 0.25
+            ),
+            CheyTacM200::class to EntityRenderConfig(
+                height = wallHeight / 4,
+                sizeMultiplier = 1.0,
+                maxSize = 64.0,
+                shadowScale = 1.2,
+                shadowVerticalScale = 0.25
             )
         )
 
@@ -1701,6 +1758,9 @@ class RenderCast(private val map: Map) : JPanel() {
         allEntities.addAll(visibleAmmo.map { Triple(it.first, it.second.toDouble(), it.third) })
         allEntities.addAll(visibleTrader.map { Triple(it.first, it.second.toDouble(), it.third) })
         allEntities.addAll(visibleSlotMachines.map { Triple(it.first, it.second.toDouble(), it.third) })
+        allEntities.addAll(visibleGlock34.map { Triple(it.first, it.second.toDouble(), it.third) })
+        allEntities.addAll(visiblePPSz41.map { Triple(it.first, it.second.toDouble(), it.third) })
+        allEntities.addAll(visibleCheyTacM200.map { Triple(it.first, it.second.toDouble(), it.third) })
 
         allEntities.sortByDescending { it.third }
 
@@ -1716,6 +1776,9 @@ class RenderCast(private val map: Map) : JPanel() {
                 is Ammo -> entity.texture
                 is Trader -> entity.texture
                 is SlotMachine -> slotMachineTextureID ?: return@forEach
+                is Glock34 -> entity.texture
+                is PPSz41 -> entity.texture
+                is CheyTacM200 -> entity.texture
                 else -> return@forEach
             }
             val config = configMap[entity::class] ?: return@forEach
@@ -1723,51 +1786,15 @@ class RenderCast(private val map: Map) : JPanel() {
         }
     }
 
-    fun playSound(soundFile: String, volume: Float = 0.5f) {
-        try {
-            val resource = RenderCast::class.java.classLoader.getResource("audio/$soundFile")
-                ?: throw IllegalArgumentException("No sound file found: $soundFile")
-            val clip = AudioSystem.getClip()
-
-            Thread {
-                try {
-                    clip.open(AudioSystem.getAudioInputStream(resource))
-                    val gainControl = clip.getControl(FloatControl.Type.MASTER_GAIN) as FloatControl
-                    val maxGain = gainControl.maximum
-                    val minGain = gainControl.minimum
-                    val gainRange = maxGain - minGain
-                    val gain = minGain + (gainRange * volume.coerceIn(0.0f, 1.0f))
-                    gainControl.value = gain
-
-                    clip.start()
-                    clip.drain()
-                } catch (e: Exception) {
-                    println("Error playing audio $soundFile: ${e.message}")
-                }
-            }.start()
-        } catch (e: Exception) {
-            println("Error loading audio $soundFile: ${e.message}")
-        }
-    }
-
-    private val shadowTexture: BufferedImage by lazy {
-        val size = 16
-        val image = BufferedImage(size, size, BufferedImage.TYPE_INT_ARGB)
-        val g = image.createGraphics()
-        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
-        g.color = Color(0, 0, 0, 128) // 50% opacity, matching enemy shadow
-        g.fillOval(0, 0, size, size)
-        g.dispose()
-        image
-    }
-
     fun shotgun() {
         val currentTime = System.nanoTime()
         val ammoSlot = playerInventory.indexOfFirst { it?.type == ItemType.AMMO && it.quantity > 0 }
         if (currentTime - lastShotTime >= SHOT_COOLDOWN && !isShooting && ammoSlot != -1) {
-            playerInventory[ammoSlot]!!.quantity -= 1
-            if (playerInventory[ammoSlot]!!.quantity <= 0) {
-                playerInventory[ammoSlot] = null
+            if (!unlimitedAmmo) {
+                playerInventory[ammoSlot]!!.quantity -= 1
+                if (playerInventory[ammoSlot]!!.quantity <= 0) {
+                    playerInventory[ammoSlot] = null
+                }
             }
             lastShotTime = currentTime
             isShooting = true
@@ -1778,8 +1805,8 @@ class RenderCast(private val map: Map) : JPanel() {
                 random < 0.66f -> "shot2.wav"
                 else -> "shot3.wav"
             }
-
-            val shotAngleRad = Math.toRadians(currentangle.toDouble())
+            val offsetAngle = currentangle + Random.nextInt(-shotAccuracy, shotAccuracy)
+            var shotAngleRad = Math.toRadians(offsetAngle.toDouble())
             val playerPosX = positionX / tileSize
             val playerPosY = positionY / tileSize
             val rayDirX = cos(shotAngleRad)
@@ -1842,7 +1869,7 @@ class RenderCast(private val map: Map) : JPanel() {
             lightSources.find { it.owner == "player" }?.let {
                 it.x = positionX / tileSize
                 it.y = positionY / tileSize
-                lightMoveDirection = currentangle.toDouble()
+                lightMoveDirection = offsetAngle.toDouble()
                 it.intensity = 0.75
                 lastLightMoveTime = currentTime
                 isLightMoving = true
@@ -1861,15 +1888,23 @@ class RenderCast(private val map: Map) : JPanel() {
                         angleDiff = min(angleDiff, 2 * Math.PI - angleDiff)
 
                         if (angleDiff < Math.toRadians(35.0/3)) {
-                            enemy.health -= (25 * MoreHitShot).toInt()
+                            enemy.health -= (playerDamage * MoreHitShot).toInt()
                             println("enemy: ${enemy} heal: ${enemy.health}")
                             if (enemy.health <= 0) {
                                 val spawnRadius = 1.0 * tileSize
-                                val loots = when {
+                                var loots = when {
                                     random < 0.50f -> 1
                                     random < 0.80f -> 2
                                     else -> 3
                                 }
+                                if (enemy.enemyType == 1) {
+                                    loots = when {
+                                        random < 0.50f -> 13
+                                        random < 0.80f -> 15
+                                        else -> 17
+                                    }
+                                }
+
 
                                 for (i in 1..loots) {
                                     var itemX = enemy.x
@@ -1912,15 +1947,46 @@ class RenderCast(private val map: Map) : JPanel() {
                                         itemX = enemy.x
                                         itemY = enemy.y
                                     }
+                                    if (enemy.enemyType == 0) {
+                                        when {
+                                            random < 0.80f -> keysList.add(
+                                                Key(
+                                                    x = itemX,
+                                                    y = itemY,
+                                                    texture = keyTextureId!!
+                                                )
+                                            )
 
-                                    val randomItem = when {
-                                        random < 0.80f -> keysList.add(Key(x = itemX, y = itemY, texture = keyTextureId!!))
-                                        random  < 0.90f -> medications.add(Medication(x = itemX, y = itemY, texture = medicationTextureID!!, heal = 35))
-                                        else -> ammo.add(Ammo(x = itemX, y = itemY, texture = ammoTextureID!!))
+                                            random < 0.90f -> medications.add(
+                                                Medication(
+                                                    x = itemX,
+                                                    y = itemY,
+                                                    texture = medicationTextureID!!,
+                                                    heal = 35
+                                                )
+                                            )
+
+                                            else -> ammo.add(Ammo(x = itemX, y = itemY, texture = ammoTextureID!!))
+                                        }
                                     }
-                                    randomItem
+                                    if (enemy.enemyType == 1) {
+                                        when {
+                                            random < 1.00f -> keysList.add(
+                                                Key(
+                                                    x = itemX,
+                                                    y = itemY,
+                                                    texture = keyTextureId!!
+                                                )
+                                            )
+                                            else -> ammo.add(Ammo(x = itemX, y = itemY, texture = ammoTextureID!!))
+                                        }
+                                    }
                                 }
-                                points = points + (100 / level)
+                                if (enemy.enemyType == 0) {
+                                    points = points + (100 / level)
+                                } else {
+                                    points = points + (300 / level)
+                                }
                                 if (points >= 100) {
                                     playSound("levelup.wav", volume = 0.65f)
                                     var levelUpTimer: Timer? = null
@@ -2100,9 +2166,48 @@ class RenderCast(private val map: Map) : JPanel() {
                 }
             }
         }
+        glock34s.forEach { glock34 ->
+            if (glock34.active) {
+                val dx = positionX - glock34.x
+                val dy = positionY - glock34.y
+                val distance = sqrt(dx * dx + dy * dy)
+                if (distance < glock34.pickupDistance) {
+                    weapon2Unlocked = true
+                    glock34.active = false
+                    playSound("8exp.wav", 0.65f)
+                }
+            }
+        }
+        ppsz41s.forEach { ppsz41 ->
+            if (ppsz41.active) {
+                val dx = positionX - ppsz41.x
+                val dy = positionY - ppsz41.y
+                val distance = sqrt(dx * dx + dy * dy)
+                if (distance < ppsz41.pickupDistance) {
+                    weapon3Unlocked = true
+                    ppsz41.active = false
+                    playSound("8exp.wav", 0.65f)
+                }
+            }
+        }
+        cheytacm200s.forEach { cheytacm200 ->
+            if (cheytacm200.active) {
+                val dx = positionX - cheytacm200.x
+                val dy = positionY - cheytacm200.y
+                val distance = sqrt(dx * dx + dy * dy)
+                if (distance < cheytacm200.pickupDistance) {
+                    weapon4Unlocked = true
+                    cheytacm200.active = false
+                    playSound("8exp.wav", 0.65f)
+                }
+            }
+        }
         coinsList.removeIf { !it.active }
         keysList.removeIf { !it.active }
         medications.removeIf { !it.active }
         ammo.removeIf { !it.active }
+        glock34s.removeIf { !it.active }
+        ppsz41s.removeIf { !it.active }
+        cheytacm200s.removeIf { !it.active }
     }
 }

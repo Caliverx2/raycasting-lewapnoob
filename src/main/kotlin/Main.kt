@@ -15,6 +15,8 @@ import java.awt.event.MouseEvent
 import java.awt.event.ComponentAdapter
 import java.awt.event.ComponentEvent
 import java.awt.image.BufferedImage
+import javax.sound.sampled.AudioSystem
+import javax.sound.sampled.FloatControl
 import javax.swing.JLayeredPane
 import javax.swing.SwingUtilities
 import kotlin.math.cos
@@ -24,34 +26,42 @@ import kotlin.math.sqrt
 import kotlin.random.Random
 
 var playerHealth: Int = 100
+var playerDamage: Int = 25
 var level: Int = 1
 var points: Int = 0
 var coins: Int = 0
 var keys: Int = 2
 var selectSlot: Int = 1
-var selectedOfferIndex = 0
+var selectWeaponSlot: Int = 1
+var selectedOfferIndex: Int = 0
 var activateSlot: Boolean = false
 var perkGUI: Boolean = false
-val maxRayDistance = 22.0
+val maxRayDistance: Double = 22.0
+var shotAccuracy: Int = 5
 
-var map = true
-var currentangle = 45
-var tileSize = 40.0
-val mapa = 0.5
-var MouseSupport = false
+var godMode: Boolean = false
+var unlimitedAmmo: Boolean = false
+var noClip: Boolean = false
+var oneHitKills: Boolean = false
 
-var HealBoost = 1.0
-var SpeedMovement = 1.0
-var MoreHitShot = 1.0
-var FastReload = 1.0
-var AmmoBoost = 1.0
+var map: Boolean = true
+var currentangle: Int = 45
+var tileSize: Double = 40.0
+val mapa: Double = 0.5
+var MouseSupport: Boolean = false
 
-val TARGET_FPS = 90
+var HealBoost: Double = 1.0
+var SpeedMovement: Double = 1.0
+var MoreHitShot: Double = 1.0
+var FastReload: Double = 1.0
+var AmmoBoost: Double = 1.0
+
+val TARGET_FPS: Int = 90
 val FRAME_TIME_NS = 1_000_000_000L / TARGET_FPS
 var deltaTime = 1.0 / 60.0
 
-var positionX = (tileSize*11)-(tileSize/2)  //tile*positon - (half tile)
-var positionY = (tileSize*11)-(tileSize/2)  //tile*positon - (half tile)
+var positionX: Double = (tileSize*11)-(tileSize/2)  //tile*positon - (half tile)
+var positionY: Double = (tileSize*11)-(tileSize/2)  //tile*positon - (half tile)
 var enemies = mutableListOf<Enemy>()
 var lightSources = mutableListOf<LightSource>()
 var keysList = mutableListOf<Key>()
@@ -62,15 +72,23 @@ var chests = mutableListOf<Chest>()
 var ammo = mutableListOf<Ammo>()
 var traders = mutableListOf<Trader>()
 var slotMachines = mutableListOf<SlotMachine>()
+var glock34s = mutableListOf<Glock34>()
+var ppsz41s = mutableListOf<PPSz41>()
+var cheytacm200s = mutableListOf<CheyTacM200>()
 var inventoryVisible = false
 var openChest: Chest? = null
 var openTrader: Trader? = null
-var lookchest = false
-var lookslotMachine = false
-var looktrader = false
+var lookchest: Boolean = false
+var lookslotMachine: Boolean = false
+var looktrader: Boolean = false
 var playerInventory = MutableList<Item?>(9) { null }
-var isShooting = false
-var currentAmmo = 46
+var isShooting: Boolean = false
+var currentAmmo: Int = 46
+var SHOT_COOLDOWN = 500_000_000L * FastReload
+
+var weapon2Unlocked: Boolean = false
+var weapon3Unlocked: Boolean = false
+var weapon4Unlocked: Boolean = false
 
 class Medication(
     var x: Double,
@@ -101,6 +119,39 @@ class Coin(
     var texture: BufferedImage,
     var active: Boolean = true,
     var amount: Int = 1
+) {
+    val size = 0.5 * tileSize // Key size (radius)
+    val pickupDistance = 0.7 * 2 * size // radius for pickup
+}
+
+class Glock34(
+    var x: Double,
+    var y: Double,
+    var texture: BufferedImage,
+    var active: Boolean = true,
+    var amount: Int = 0
+) {
+    val size = 0.5 * tileSize // Key size (radius)
+    val pickupDistance = 0.7 * 2 * size // radius for pickup
+}
+
+class PPSz41(
+    var x: Double,
+    var y: Double,
+    var texture: BufferedImage,
+    var active: Boolean = true,
+    var amount: Int = 0
+) {
+    val size = 0.5 * tileSize // Key size (radius)
+    val pickupDistance = 0.7 * 2 * size // radius for pickup
+}
+
+class CheyTacM200(
+    var x: Double,
+    var y: Double,
+    var texture: BufferedImage,
+    var active: Boolean = true,
+    var amount: Int = 0
 ) {
     val size = 0.5 * tileSize // Key size (radius)
     val pickupDistance = 0.7 * 2 * size // radius for pickup
@@ -164,18 +215,51 @@ data class Item(val type: ItemType, var quantity: Int = 1) {
         const val MAX_AMMO_PER_SLOT = 46
         const val MAX_MEDKIT_PER_SLOT = 2
         const val MAX_COINS_PER_SLOT = 128
+        const val MAX_WEAPON_PER_SLOT = 0
 
         fun getMaxQuantity(type: ItemType): Int = when (type) {
             ItemType.KEY -> MAX_KEYS_PER_SLOT
             ItemType.AMMO -> MAX_AMMO_PER_SLOT
             ItemType.MEDKIT -> MAX_MEDKIT_PER_SLOT
             ItemType.COIN -> MAX_COINS_PER_SLOT
+            ItemType.GLOCK34 -> MAX_WEAPON_PER_SLOT
+            ItemType.PPSH41 -> MAX_WEAPON_PER_SLOT
+            ItemType.CHEYTACM200 -> MAX_WEAPON_PER_SLOT
         }
     }
 }
 
 enum class ItemType {
-    MEDKIT, AMMO, KEY, COIN
+    MEDKIT, AMMO, KEY, COIN, GLOCK34, PPSH41, CHEYTACM200
+}
+
+enum class Perk { HealBoost, SpeedMovement, MoreHitShot, FastReload, AmmoBoost }
+
+fun playSound(soundFile: String, volume: Float = 0.5f) {
+    try {
+        val resource = RenderCast::class.java.classLoader.getResource("audio/$soundFile")
+            ?: throw IllegalArgumentException("No sound file found: $soundFile")
+        val clip = AudioSystem.getClip()
+
+        Thread {
+            try {
+                clip.open(AudioSystem.getAudioInputStream(resource))
+                val gainControl = clip.getControl(FloatControl.Type.MASTER_GAIN) as FloatControl
+                val maxGain = gainControl.maximum
+                val minGain = gainControl.minimum
+                val gainRange = maxGain - minGain
+                val gain = minGain + (gainRange * volume.coerceIn(0.0f, 1.0f))
+                gainControl.value = gain
+
+                clip.start()
+                clip.drain()
+            } catch (e: Exception) {
+                println("Error playing audio $soundFile: ${e.message}")
+            }
+        }.start()
+    } catch (e: Exception) {
+        println("Error loading audio $soundFile: ${e.message}")
+    }
 }
 
 fun main() = runBlocking {
@@ -215,6 +299,33 @@ fun main() = runBlocking {
     val keysPressed: MutableMap<Int, Boolean> = mutableMapOf()
     var centerX = frame.width / 2
 
+    ///
+
+    glock34s.add(
+        Glock34(
+            x = (tileSize * (12)) - (tileSize / 2),
+            y = (tileSize * (12)) - (tileSize / 2),
+            texture = renderCast?.glock34TextureId!!,
+            active = true
+        )
+    )
+    ppsz41s.add(
+        PPSz41(
+            x = (tileSize * (10)) - (tileSize / 2),
+            y = (tileSize * (10)) - (tileSize / 2),
+            texture = renderCast?.ppsz41TextureId!!,
+            active = true
+        )
+    )
+    cheytacm200s.add(
+        CheyTacM200(
+            x = (tileSize * (14)) - (tileSize / 2),
+            y = (tileSize * (14)) - (tileSize / 2),
+            texture = renderCast?.cheyTacM200TextureId!!,
+            active = true
+        )
+    )
+
     var remainingAmmo = 46
     var slotIndexAmmo = 0
     while (remainingAmmo > 0 && slotIndexAmmo < playerInventory.size) {
@@ -242,6 +353,8 @@ fun main() = runBlocking {
         slotIndexCOIN++
     }
 
+    if (oneHitKills) MoreHitShot = 50000.0
+
     frame.addMouseListener(object : MouseAdapter() {
         override fun mousePressed(event: MouseEvent) {
             if (event.button == MouseEvent.BUTTON1) {
@@ -267,7 +380,7 @@ fun main() = runBlocking {
             }
         }
     })
-/*
+    /*
     frame.addMouseMotionListener(object : MouseMotionAdapter() {
         override fun mouseMoved(e: MouseEvent) {
             player.updateAngleFromMouse()
@@ -299,10 +412,10 @@ fun main() = runBlocking {
                         if (looktrader) {
                             if (renderCast.purchaseItem(trader, selectedOfferIndex)) {
                                 println("Purchased ${trader.offer[selectedOfferIndex].type} for ${trader.prices[selectedOfferIndex]} COINs")
-                                renderCast.playSound("purchase.wav")
+                                playSound("purchase.wav")
                             } else {
                                 println("Purchase failed: Not enough COINs or inventory full")
-                                renderCast.playSound("denied.wav")
+                                playSound("denied.wav")
                             }
                         }
                     } ?: run {
@@ -336,7 +449,7 @@ fun main() = runBlocking {
                                     remainingCOINS -= quantity
                                     currentslot++
                                 }
-                                renderCast.playSound("purchase.wav")
+                                playSound("purchase.wav")
                                 inventoryVisible = false
                             }
                         }
@@ -482,6 +595,70 @@ fun main() = runBlocking {
                         )
                     }
                     playerInventory[selectSlot] = null
+                }
+                KeyEvent.VK_R -> {
+                    if (selectWeaponSlot > 1) {
+                        selectWeaponSlot -= 1
+                        println(selectWeaponSlot)
+                        if (selectWeaponSlot == 1) {
+                            SHOT_COOLDOWN = 250_000_000L * FastReload
+                            shotAccuracy = 10
+                            playerDamage = 20
+                        }
+                        if (selectWeaponSlot == 2) {
+                            if (weapon2Unlocked){
+                                SHOT_COOLDOWN = 500_000_000L * FastReload
+                                shotAccuracy = 5
+                                playerDamage = 25
+                            } else { playSound("denied.wav") }
+                        }
+                        if (selectWeaponSlot == 3) {
+                            if (weapon3Unlocked){
+                                SHOT_COOLDOWN = 200_000_000L * FastReload
+                                shotAccuracy = 15
+                                playerDamage = 15
+                            } else { playSound("denied.wav") }
+                        }
+                        if (selectWeaponSlot == 4) {
+                            if (weapon4Unlocked){
+                                SHOT_COOLDOWN = 4_000_000_000L * FastReload
+                                shotAccuracy = 1
+                                playerDamage = 75
+                            } else { playSound("denied.wav") }
+                        }
+                    }
+                }
+                KeyEvent.VK_T -> {
+                    if (selectWeaponSlot < 4) {
+                        selectWeaponSlot += 1
+                        println(selectWeaponSlot)
+                        if (selectWeaponSlot == 1) {
+                            SHOT_COOLDOWN = 250_000_000L * FastReload
+                            shotAccuracy = 10
+                            playerDamage = 20
+                        }
+                        if (selectWeaponSlot == 2) {
+                            if (weapon2Unlocked){
+                                SHOT_COOLDOWN = 500_000_000L * FastReload
+                                shotAccuracy = 5
+                                playerDamage = 25
+                            } else { playSound("denied.wav") }
+                        }
+                        if (selectWeaponSlot == 3) {
+                            if (weapon3Unlocked){
+                                SHOT_COOLDOWN = 200_000_000L * FastReload
+                                shotAccuracy = 15
+                                playerDamage = 15
+                            } else { playSound("denied.wav") }
+                        }
+                        if (selectWeaponSlot == 4) {
+                            if (weapon4Unlocked){
+                                SHOT_COOLDOWN = 4_000_000_000L * 1.0
+                                shotAccuracy = 1
+                                playerDamage = 75
+                            } else { playSound("denied.wav") }
+                        }
+                    }
                 }
             }
         }

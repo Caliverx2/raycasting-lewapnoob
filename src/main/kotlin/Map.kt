@@ -15,11 +15,12 @@ import javax.imageio.ImageIO;
 import kotlin.math.cos
 import kotlin.math.sin
 import javax.swing.JPanel
+import kotlin.Int
 import kotlin.random.Random
 
 var directionForRoom = "UP"
 
-//0-air 1-wall 2-black_wall 3-enemy 4-ammo 5-door 6-lightSource 7-medication 8-key 9-trader 10-chest 11-slotMachine 12-closedDoor
+//0-air 1-wall 2-black_wall 3-enemy 4-ammo 5-door 6-lightSource 7-medication 8-key 9-trader 10-chest 11-slotMachine 12-closedDoor 13-boss
 val rooms = listOf(
     RoomTemplate(
         grid = arrayOf(
@@ -144,7 +145,7 @@ val rooms = listOf(
             intArrayOf(2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2),
             intArrayOf(2, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 2),
             intArrayOf(5, 0, 0, 1, 0, 0, 0, 10, 0, 0, 0, 1, 0, 0, 5),
-            intArrayOf(2, 0, 0, 1, 0, 0, 1, 3, 1, 0, 0, 1, 0, 0, 2),
+            intArrayOf(2, 0, 0, 1, 0, 0, 1, 13, 1, 0, 0, 1, 0, 0, 2),
             intArrayOf(2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2),
             intArrayOf(2, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 2),
             intArrayOf(2, 1, 0, 1, 1, 0, 1, 1, 1, 0, 1, 1, 0, 1, 2),
@@ -578,12 +579,12 @@ class Map(var renderCast: RenderCast? = null) {
                     renderCast?.let {
                         enemies.add(
                             Enemy(
-                                (tileSize * (distItemX+1)) - (tileSize / 2),
-                                (tileSize * (distItemY+1)) - (tileSize / 2),
-                                (100 + (level * 7.5) * 2).toInt(),
-                                renderCast!!.enemyTextureId!!,
+                                x = (tileSize * (distItemX+1)) - (tileSize / 2),
+                                y = (tileSize * (distItemY+1)) - (tileSize / 2),
+                                health = (100 + (level * 7.5) * 2).toInt(),
+                                texture = renderCast!!.enemyTextureId!!,
                                 renderCast = it,
-                                this,
+                                map = this,
                                 speed = (2.0 * ((10..15).random() / 10.0))
                             )
                         )
@@ -595,7 +596,7 @@ class Map(var renderCast: RenderCast? = null) {
                             LightSource(
                                 (distItemX + 0.5),
                                 (distItemY + 0.5),
-                                color = Color(20, 20, 200),
+                                color = Color(20, 20, (200 + Random.nextInt(-100, 54))),
                                 intensity = 0.25,
                                 range = 1.0,
                                 owner = "${enemies[enemies.size - 1]}"
@@ -647,7 +648,7 @@ class Map(var renderCast: RenderCast? = null) {
                             Medication(
                                 x = ((tileSize * (distItemX + 1)) - (tileSize / 2)),
                                 y = ((tileSize * (distItemY + 1)) - (tileSize / 2)),
-                                renderCast?.medicationTextureID!!,
+                                texture = renderCast?.medicationTextureID!!,
                                 heal = healRNG
                             )
                         )
@@ -698,6 +699,9 @@ class Map(var renderCast: RenderCast? = null) {
                                 ItemType.AMMO -> Random.nextInt(7, Item.MAX_AMMO_PER_SLOT / 2)
                                 ItemType.COIN -> Random.nextInt(1, 8)
                                 ItemType.MEDKIT -> Random.nextInt(1, 2)
+                                ItemType.GLOCK34 -> 0
+                                ItemType.PPSH41 -> 0
+                                ItemType.CHEYTACM200 -> 0
                             }
                             items.add(Item(itemType, quantity))
                         }
@@ -740,6 +744,9 @@ class Map(var renderCast: RenderCast? = null) {
                             ItemType.AMMO -> Random.nextInt(7, Item.MAX_AMMO_PER_SLOT / 3)
                             ItemType.COIN -> Random.nextInt(4, 15)
                             ItemType.MEDKIT -> 1
+                            ItemType.GLOCK34 -> 0
+                            ItemType.PPSH41 -> 0
+                            ItemType.CHEYTACM200 -> 0
                         }
                         items.add(Item(itemType, quantity))
                     }
@@ -778,6 +785,38 @@ class Map(var renderCast: RenderCast? = null) {
                         slotMachines.get(slotMachines.size-1).y -= offsetY*tileSize
                     }
                 }
+                if (roomTemplate.grid[XX][YY] == 13) {
+                    renderCast?.let {
+                        enemies.add(
+                            Enemy(
+                                x = (tileSize * (distItemX+1)) - (tileSize / 2),
+                                y = (tileSize * (distItemY+1)) - (tileSize / 2),
+                                health = ((200 * level * 2)*1.75).toInt(),
+                                texture = renderCast!!.enemyBossTextureId!!,
+                                renderCast = it,
+                                map = this,
+                                speed = (2.0 * ((10..15).random() / 10.0)),
+                                maxHeal = ((200 * level * 2)*1.75).toInt(),
+                                damage = ((7.5 * level)*1.5).toInt(), //2.5
+                                enemyType = 1
+                            )
+                        )
+                        if (gridmod && (offsetX != 0 || offsetY != 0)) {
+                            enemies.get(enemies.size-1).x -= offsetX*tileSize
+                            enemies.get(enemies.size-1).y -= offsetY*tileSize
+                        }
+                        lightSources.add(
+                            LightSource(
+                                (distItemX + 0.5),
+                                (distItemY + 0.5),
+                                color = Color(200, 20, 20),
+                                intensity = 0.25,
+                                range = 1.0,
+                                owner = "${enemies[enemies.size - 1]}"
+                            )
+                        )
+                    } ?: throw IllegalStateException("renderCast is null")
+                }
             }
         }
     }
@@ -794,12 +833,6 @@ class Mappingmap(private val map: Map, private val renderCast: RenderCast) : JPa
     var keypng: BufferedImage? = null
     var sliderpng: BufferedImage? = null
     private var font: Font? = null
-
-    private var gifFrames: List<BufferedImage> = listOf()
-    private var gifDelays: List<Int> = listOf()
-    private var currentFrameIndex = 0
-    private var lastFrameTime = 0L
-    private var gifObserver: ImageObserver? = null
 
     init {
         preferredSize = Dimension(miniMapSize + offsetX * 2, miniMapSize + offsetY * 2)

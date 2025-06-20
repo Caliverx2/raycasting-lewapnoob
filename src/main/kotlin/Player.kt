@@ -34,7 +34,7 @@ class Player(private val renderCast: RenderCast, private val map: Map) {
                     ((map.grid[gridY][gridX] == 1) ||
                             (map.grid[gridY][gridX] == 2) ||
                             (map.grid[gridY][gridX] == 12))) {
-                    return Pair(false, null)
+                    if (!noClip) return Pair(false, null)
                 }
             }
         }
@@ -125,12 +125,12 @@ class Player(private val renderCast: RenderCast, private val map: Map) {
         keysToDeactivate.forEach { key ->
             key.active = false
             keys += 1
-            renderCast.playSound("8exp.wav", volume = 0.65f)
+            playSound("8exp.wav", volume = 0.65f)
         }
         medicationsToDeactivate.forEach { medication ->
             medication.active = false
             playerHealth += (medication.heal * HealBoost).toInt()
-            renderCast.playSound("8exp.wav", volume = 0.65f)
+            playSound("8exp.wav", volume = 0.65f)
         }
     }
 
