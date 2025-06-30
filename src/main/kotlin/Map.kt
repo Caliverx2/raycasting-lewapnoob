@@ -699,6 +699,8 @@ class Map(var renderCast: RenderCast? = null) {
                                 ItemType.AMMO -> Random.nextInt(7, Item.MAX_AMMO_PER_SLOT / 2)
                                 ItemType.COIN -> Random.nextInt(1, 8)
                                 ItemType.MEDKIT -> Random.nextInt(1, 2)
+                                ItemType.CROWBAR -> 0
+                                ItemType.KIMBERPOLYMERPROCARRY -> 0
                                 ItemType.GLOCK34 -> 0
                                 ItemType.PPSH41 -> 0
                                 ItemType.CHEYTACM200 -> 0
@@ -744,6 +746,8 @@ class Map(var renderCast: RenderCast? = null) {
                             ItemType.AMMO -> Random.nextInt(7, Item.MAX_AMMO_PER_SLOT / 3)
                             ItemType.COIN -> Random.nextInt(4, 15)
                             ItemType.MEDKIT -> 1
+                            ItemType.CROWBAR -> 0
+                            ItemType.KIMBERPOLYMERPROCARRY -> 0
                             ItemType.GLOCK34 -> 0
                             ItemType.PPSH41 -> 0
                             ItemType.CHEYTACM200 -> 0

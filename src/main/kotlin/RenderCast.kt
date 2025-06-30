@@ -1003,6 +1003,26 @@ class RenderCast(private val map: Map) : JPanel() {
             20
         )
 
+        g2.color = Color(50, 50, 50, 180)
+        g2.fillRoundRect(
+            startX - scaleUI + ((slotSize + spacing) * 3),
+            startY - scaleUI - (slotSize + (scaleUI * 2) + ((slotSize*1)/4)),
+            (slotSize + spacing) * 3,
+            slotSize + (scaleUI * 2),
+            20,
+            20
+        )
+
+        g2.color = Color(150, 150, 150, 180)
+        g2.fillRoundRect(
+            (startX - scaleUI) + ((slotSize + spacing) * 4),
+            startY - scaleUI - (slotSize + (scaleUI * 2) + ((slotSize*1 )/4)),
+            (slotSize + spacing),
+            slotSize + (scaleUI * 2),
+            20,
+            20
+        )
+
         if (!lookchest and !looktrader and !lookslotMachine) {
             inventoryVisible = false
         }
@@ -1033,6 +1053,39 @@ class RenderCast(private val map: Map) : JPanel() {
                     g2.drawString("  ${item.quantity}", x + slotSize - 20, y + slotSize - 5)
                 }
             }
+        }
+
+        for (i in 0 until 3) {
+            val x = startX + (i+3) * (slotSize + spacing)
+            val y = (startY - (slotSize + (scaleUI * 2) + ((slotSize*1)/4)))
+            g2.color = Color(100, 100, 100)
+            g2.fillRoundRect(x, y, slotSize, slotSize, 17, 17)
+            var slotRender = 2
+
+            if (i == 0) {
+                slotRender = selectWeaponSlot-1
+            }
+
+            if (i == 1) {
+                slotRender = selectWeaponSlot
+            }
+
+            if (i == 2) {
+                slotRender = selectWeaponSlot+1
+            }
+
+            try {
+                playerWeaponInventory[slotRender]?.let { item ->
+                    g2.drawImage(
+                        getItemTexture(item.type),
+                        x + (slotSize / 5),
+                        y + (slotSize / 5),
+                        (slotSize / 4) * 3,
+                        (slotSize / 4) * 3,
+                        null
+                    )
+                }
+            } catch (e: Exception) {}
         }
 
         if (!inventoryVisible) return
@@ -1122,9 +1175,11 @@ class RenderCast(private val map: Map) : JPanel() {
                 ItemType.AMMO -> ImageIO.read(this::class.java.classLoader.getResource("textures/ammo.png"))
                 ItemType.KEY -> ImageIO.read(this::class.java.classLoader.getResource("textures/key.png"))
                 ItemType.COIN -> ImageIO.read(this::class.java.classLoader.getResource("textures/coin.png"))
-                ItemType.GLOCK34 -> ImageIO.read(this::class.java.classLoader.getResource("textures/coin.png"))
-                ItemType.PPSH41 -> ImageIO.read(this::class.java.classLoader.getResource("textures/coin.png"))
-                ItemType.CHEYTACM200 -> ImageIO.read(this::class.java.classLoader.getResource("textures/coin.png"))
+                ItemType.CROWBAR -> ImageIO.read(this::class.java.classLoader.getResource("textures/crowbar.png"))
+                ItemType.KIMBERPOLYMERPROCARRY -> ImageIO.read(this::class.java.classLoader.getResource("textures/crowbar.png"))
+                ItemType.GLOCK34 -> ImageIO.read(this::class.java.classLoader.getResource("textures/glock34.png"))
+                ItemType.PPSH41 -> ImageIO.read(this::class.java.classLoader.getResource("textures/ppsz41.png"))
+                ItemType.CHEYTACM200 -> ImageIO.read(this::class.java.classLoader.getResource("textures/ammo.png"))
             }
         } catch (e: Exception) {
             return when (type) {
@@ -1132,8 +1187,10 @@ class RenderCast(private val map: Map) : JPanel() {
                 ItemType.AMMO -> createTexture(Color(80,80,80))
                 ItemType.KEY -> createTexture(Color(255, 215, 0))
                 ItemType.COIN -> createTexture(Color(255, 255, 0))
-                ItemType.GLOCK34 -> createTexture(Color(20, 20, 20))
-                ItemType.PPSH41 -> createTexture(Color(20, 20, 20))
+                ItemType.CROWBAR -> createTexture(Color(220, 20, 20))
+                ItemType.KIMBERPOLYMERPROCARRY -> createTexture(Color(140, 140, 140))
+                ItemType.GLOCK34 -> createTexture(Color(80, 80, 80))
+                ItemType.PPSH41 -> createTexture(Color(40, 40, 40))
                 ItemType.CHEYTACM200 -> createTexture(Color(20, 20, 20))
             }
         }

@@ -51,7 +51,7 @@ var map: Boolean = true
 var currentangle: Int = 45
 var tileSize: Double = 40.0
 val mapa: Double = 0.5
-var MouseSupport: Boolean = true
+var MouseSupport: Boolean = false
 
 var HealBoost: Double = 1.0
 var SpeedMovement: Double = 1.0
@@ -85,14 +85,15 @@ var lookchest: Boolean = false
 var lookslotMachine: Boolean = false
 var looktrader: Boolean = false
 var playerInventory = MutableList<Item?>(9) { null }
+var playerWeaponInventory = MutableList<Item?>(6) { null }
 var isShooting: Boolean = false
 var currentAmmo: Int = 46
 var SHOT_COOLDOWN = 500_000_000L * FastReload
 var speedBullet: Double = 1.0
 
-var weapon2Unlocked: Boolean = true
-var weapon3Unlocked: Boolean = true
-var weapon4Unlocked: Boolean = true
+var weapon2Unlocked: Boolean = false
+var weapon3Unlocked: Boolean = false
+var weapon4Unlocked: Boolean = false
 
 class Medication(
     var x: Double,
@@ -219,22 +220,24 @@ data class Item(val type: ItemType, var quantity: Int = 1) {
         const val MAX_AMMO_PER_SLOT = 46
         const val MAX_MEDKIT_PER_SLOT = 2
         const val MAX_COINS_PER_SLOT = 128
-        const val MAX_WEAPON_PER_SLOT = 0
+        const val MAX_WEAPON_PER_SLOT = 1
 
         fun getMaxQuantity(type: ItemType): Int = when (type) {
             ItemType.KEY -> MAX_KEYS_PER_SLOT
             ItemType.AMMO -> MAX_AMMO_PER_SLOT
             ItemType.MEDKIT -> MAX_MEDKIT_PER_SLOT
             ItemType.COIN -> MAX_COINS_PER_SLOT
+            ItemType.CROWBAR -> MAX_WEAPON_PER_SLOT
             ItemType.GLOCK34 -> MAX_WEAPON_PER_SLOT
             ItemType.PPSH41 -> MAX_WEAPON_PER_SLOT
             ItemType.CHEYTACM200 -> MAX_WEAPON_PER_SLOT
+            ItemType.KIMBERPOLYMERPROCARRY -> MAX_WEAPON_PER_SLOT
         }
     }
 }
 
 enum class ItemType {
-    MEDKIT, AMMO, KEY, COIN, GLOCK34, PPSH41, CHEYTACM200
+    MEDKIT, AMMO, KEY, COIN, CROWBAR, GLOCK34, PPSH41, CHEYTACM200, KIMBERPOLYMERPROCARRY
 }
 
 enum class Perk { HealBoost, SpeedMovement, MoreHitShot, FastReload, AmmoBoost }
@@ -330,31 +333,46 @@ fun main() = runBlocking {
         )
     )
 
-    var remainingAmmo = 46
-    var slotIndexAmmo = 0
-    while (remainingAmmo > 0 && slotIndexAmmo < playerInventory.size) {
-        val quantity = minOf(remainingAmmo, Item.MAX_AMMO_PER_SLOT)
-        playerInventory[slotIndexAmmo] = Item(ItemType.AMMO, quantity)
-        remainingAmmo -= quantity
-        slotIndexAmmo++
+    //playerInventory
+    fun addStackableItem(
+        inventory: MutableList<Item?>,
+        itemType: ItemType,
+        initialAmount: Int,
+        startIndex: Int,
+        maxPerSlot: Int
+    ) {
+        var remaining = initialAmount
+        var currentIndex = startIndex
+        while (remaining > 0 && currentIndex < inventory.size) {
+            val quantity = minOf(remaining, maxPerSlot)
+            inventory[currentIndex] = Item(itemType, quantity)
+            remaining -= quantity
+            currentIndex++
+        }
     }
 
-    var remainingKeys = 200
-    var slotIndexKey = 1
-    while (remainingKeys > 0 && slotIndexKey < playerInventory.size) {
-        val quantity = minOf(remainingKeys, Item.MAX_KEYS_PER_SLOT)
-        playerInventory[slotIndexKey] = Item(ItemType.KEY, quantity)
-        remainingKeys -= quantity
-        slotIndexKey++
-    }
+    addStackableItem(playerInventory, ItemType.AMMO, 46, 0, Item.MAX_AMMO_PER_SLOT)
+    addStackableItem(playerInventory, ItemType.KEY, 200, 1, Item.MAX_KEYS_PER_SLOT)
+    addStackableItem(playerInventory, ItemType.COIN, 128, 5, Item.MAX_COINS_PER_SLOT)
 
-    var remainingCOINS = 128
-    var slotIndexCOIN = 5
-    while (remainingCOINS > 0 && slotIndexCOIN < playerInventory.size) {
-        val quantity = minOf(remainingCOINS, Item.MAX_COINS_PER_SLOT)
-        playerInventory[slotIndexCOIN] = Item(ItemType.COIN, quantity)
-        remainingCOINS -= quantity
-        slotIndexCOIN++
+    //playerWeaponInventory
+    val weaponsToAdd = listOf(
+        Pair(ItemType.CROWBAR, 1),
+        Pair(ItemType.KIMBERPOLYMERPROCARRY, 2),
+        Pair(ItemType.GLOCK34, 3),
+        Pair(ItemType.PPSH41, 4),
+        Pair(ItemType.CHEYTACM200, 5)
+    )
+
+    weaponsToAdd.forEach { (itemType, startIndex) ->
+        var remaining = 1
+        var currentIndex = startIndex
+        while (remaining > 0 && currentIndex < playerWeaponInventory.size) {
+            val quantity = minOf(remaining, Item.MAX_WEAPON_PER_SLOT)
+            playerWeaponInventory[currentIndex] = Item(itemType, quantity)
+            remaining -= quantity
+            currentIndex++
+        }
     }
 
     if (oneHitKills) MoreHitShot = 50000.0
@@ -611,18 +629,10 @@ fun main() = runBlocking {
                         selectWeaponSlot -= 1
                         println(selectWeaponSlot)
 
-                        if (selectWeaponSlot == 1) {
+                        if (selectWeaponSlot == 1) { //crowbar
                             MAX_RAY_DISTANCE = 2
                             speedBullet = 1.0
                             SHOT_COOLDOWN = 150_000_000L * FastReload
-                            shotAccuracy = 5
-                            playerDamage = 25
-                        }
-
-                        if (selectWeaponSlot == 2) {
-                            MAX_RAY_DISTANCE = 12
-                            speedBullet = 1.0
-                            SHOT_COOLDOWN = 250_000_000L * FastReload
                             shotAccuracy = 5
                             playerDamage = 25
                         }
@@ -666,7 +676,7 @@ fun main() = runBlocking {
                     if (selectWeaponSlot < 5) {
                         selectWeaponSlot += 1
                         println(selectWeaponSlot)
-                        if (selectWeaponSlot == 1) {
+                        if (selectWeaponSlot == 1) { //crowbar
                             MAX_RAY_DISTANCE = 2
                             speedBullet = 1.0
                             SHOT_COOLDOWN = 150_000_000L * FastReload
