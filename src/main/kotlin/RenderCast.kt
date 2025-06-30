@@ -1813,7 +1813,7 @@ class RenderCast(private val map: Map) : JPanel() {
         val currentTime = System.nanoTime()
         val ammoSlot = playerInventory.indexOfFirst { it?.type == ItemType.AMMO && it.quantity > 0 }
         if (currentTime - lastShotTime >= SHOT_COOLDOWN && !isShooting && ammoSlot != -1) {
-            if (!unlimitedAmmo) {
+            if (!unlimitedAmmo and (selectWeaponSlot > 1)) {
                 playerInventory[ammoSlot]!!.quantity -= 1
                 if (playerInventory[ammoSlot]!!.quantity <= 0) {
                     playerInventory[ammoSlot] = null
@@ -1821,13 +1821,17 @@ class RenderCast(private val map: Map) : JPanel() {
             }
             lastShotTime = currentTime
             isShooting = true
-
             val random = Random.nextFloat()
-            val soundFile = when {
-                random < 0.33f -> "shot1.wav"
-                random < 0.66f -> "shot2.wav"
-                else -> "shot3.wav"
+
+            if (selectWeaponSlot > 1) {
+                val soundFile = when {
+                    random < 0.33f -> "shot1.wav"
+                    random < 0.66f -> "shot2.wav"
+                    else -> "shot3.wav"
+                }
+                playSound(soundFile, volume = 0.65f)
             }
+
             val offsetAngle = currentangle + Random.nextInt(-shotAccuracy, shotAccuracy)
             var shotAngleRad = Math.toRadians(offsetAngle.toDouble())
             val playerPosX = positionX / tileSize
@@ -1862,20 +1866,25 @@ class RenderCast(private val map: Map) : JPanel() {
 
             var hitWall = false
             var wallDistance = Double.MAX_VALUE
+            var rayLength = 0.0
 
-            while (!hitWall) {
+            while (!hitWall && rayLength < MAX_RAY_DISTANCE) { // Dodano warunek rayLength
                 if (sideDistX < sideDistY) {
                     sideDistX += deltaDistX
                     mapX += stepX
                     side = 0
+                    rayLength = sideDistX // Aktualizacja długości promienia
                 } else {
                     sideDistY += deltaDistY
                     mapY += stepY
                     side = 1
+                    rayLength = sideDistY // Aktualizacja długości promienia
                 }
+
                 if (mapY !in map.grid.indices || mapX !in map.grid[0].indices) {
                     break
                 }
+
                 if (wallIndices.contains(map.grid[mapY][mapX])) {
                     hitWall = true
                     wallDistance = if (side == 0) {
@@ -1887,24 +1896,24 @@ class RenderCast(private val map: Map) : JPanel() {
                 }
             }
 
-            playSound(soundFile, volume = 0.65f)
-
-            lightSources.find { it.owner == "player" }?.let {
-                it.x = positionX / tileSize
-                it.y = positionY / tileSize
-                it.color = Color(200, 200, 100)
-                lightMoveDirection = offsetAngle.toDouble()
-                it.intensity = 0.75
-                lastLightMoveTime = currentTime
-                isLightMoving = true
+            if (selectWeaponSlot > 1) {
+                lightSources.find { it.owner == "player" }?.let {
+                    it.x = positionX / tileSize
+                    it.y = positionY / tileSize
+                    it.color = Color(200, 200, 100)
+                    lightMoveDirection = offsetAngle.toDouble()
+                    it.intensity = 0.75
+                    lastLightMoveTime = currentTime
+                    isLightMoving = true
+                }
             }
 
             enemies.toList().forEach { enemy ->
                 val dx = enemy.x / tileSize - playerPosX
                 val dy = enemy.y / tileSize - playerPosY
-                val rayLength = dx * rayDirX + dy * rayDirY
+                val rayLengthToEnemy = dx * rayDirX + dy * rayDirY
 
-                if (rayLength > 0 && rayLength < wallDistance) {
+                if (rayLengthToEnemy > 0 && rayLengthToEnemy < wallDistance && rayLengthToEnemy <= MAX_RAY_DISTANCE) {
                     val perpendicularDistance = abs(dx * rayDirY - dy * rayDirX)
                     if ((perpendicularDistance < (enemy.size * 20) / 2 / tileSize) && (enemy.health >= 1)) {
                         val angleToEnemy = atan2(dy, dx)

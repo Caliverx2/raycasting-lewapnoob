@@ -33,12 +33,13 @@ var points: Int = 0
 var coins: Int = 0
 var keys: Int = 2
 var selectSlot: Int = 1
-var selectWeaponSlot: Int = 1
+var selectWeaponSlot: Int = 2
 var selectedOfferIndex: Int = 0
 var activateSlot: Boolean = false
 var perkGUI: Boolean = false
 val maxRayDistance: Double = 22.0
 var shotAccuracy: Int = 5
+var MAX_RAY_DISTANCE = 80
 
 var godMode: Boolean = false
 var unlimitedAmmo: Boolean = false
@@ -89,9 +90,9 @@ var currentAmmo: Int = 46
 var SHOT_COOLDOWN = 500_000_000L * FastReload
 var speedBullet: Double = 1.0
 
-var weapon2Unlocked: Boolean = false
-var weapon3Unlocked: Boolean = false
-var weapon4Unlocked: Boolean = false
+var weapon2Unlocked: Boolean = true
+var weapon3Unlocked: Boolean = true
+var weapon4Unlocked: Boolean = true
 
 class Medication(
     var x: Double,
@@ -609,30 +610,50 @@ fun main() = runBlocking {
                     if (selectWeaponSlot > 1) {
                         selectWeaponSlot -= 1
                         println(selectWeaponSlot)
+
                         if (selectWeaponSlot == 1) {
+                            MAX_RAY_DISTANCE = 2
+                            speedBullet = 1.0
+                            SHOT_COOLDOWN = 150_000_000L * FastReload
+                            shotAccuracy = 5
+                            playerDamage = 25
+                        }
+
+                        if (selectWeaponSlot == 2) {
+                            MAX_RAY_DISTANCE = 12
+                            speedBullet = 1.0
+                            SHOT_COOLDOWN = 250_000_000L * FastReload
+                            shotAccuracy = 5
+                            playerDamage = 25
+                        }
+                        if (selectWeaponSlot == 2) {
+                            MAX_RAY_DISTANCE = 12
                             speedBullet = 1.0
                             SHOT_COOLDOWN = 250_000_000L * FastReload
                             shotAccuracy = 10
                             playerDamage = 20
                         }
-                        if (selectWeaponSlot == 2) {
+                        if (selectWeaponSlot == 3) {
                             if (weapon2Unlocked){
+                                MAX_RAY_DISTANCE = 12
                                 speedBullet = 1.0
                                 SHOT_COOLDOWN = 500_000_000L * FastReload
                                 shotAccuracy = 5
                                 playerDamage = 25
                             } else { playSound("denied.wav") }
                         }
-                        if (selectWeaponSlot == 3) {
+                        if (selectWeaponSlot == 4) {
                             if (weapon3Unlocked){
+                                MAX_RAY_DISTANCE = 12
                                 speedBullet = 1.5
                                 SHOT_COOLDOWN = 200_000_000L * FastReload
                                 shotAccuracy = 15
                                 playerDamage = 15
                             } else { playSound("denied.wav") }
                         }
-                        if (selectWeaponSlot == 4) {
+                        if (selectWeaponSlot == 5) {
                             if (weapon4Unlocked){
+                                MAX_RAY_DISTANCE = 280
                                 speedBullet = 2.0
                                 SHOT_COOLDOWN = 4_000_000_000L * FastReload
                                 shotAccuracy = 1
@@ -642,33 +663,44 @@ fun main() = runBlocking {
                     }
                 }
                 KeyEvent.VK_T -> {
-                    if (selectWeaponSlot < 4) {
+                    if (selectWeaponSlot < 5) {
                         selectWeaponSlot += 1
                         println(selectWeaponSlot)
                         if (selectWeaponSlot == 1) {
+                            MAX_RAY_DISTANCE = 2
+                            speedBullet = 1.0
+                            SHOT_COOLDOWN = 150_000_000L * FastReload
+                            shotAccuracy = 5
+                            playerDamage = 25
+                        }
+                        if (selectWeaponSlot == 2) {
+                            MAX_RAY_DISTANCE = 12
                             speedBullet = 1.0
                             SHOT_COOLDOWN = 250_000_000L * FastReload
                             shotAccuracy = 10
                             playerDamage = 20
                         }
-                        if (selectWeaponSlot == 2) {
+                        if (selectWeaponSlot == 3) {
                             if (weapon2Unlocked){
+                                MAX_RAY_DISTANCE = 12
                                 speedBullet = 1.0
                                 SHOT_COOLDOWN = 500_000_000L * FastReload
                                 shotAccuracy = 5
                                 playerDamage = 25
                             } else { playSound("denied.wav") }
                         }
-                        if (selectWeaponSlot == 3) {
+                        if (selectWeaponSlot == 4) {
                             if (weapon3Unlocked){
+                                MAX_RAY_DISTANCE = 12
                                 speedBullet = 1.5
                                 SHOT_COOLDOWN = 200_000_000L * FastReload
                                 shotAccuracy = 15
                                 playerDamage = 15
                             } else { playSound("denied.wav") }
                         }
-                        if (selectWeaponSlot == 4) {
+                        if (selectWeaponSlot == 5) {
                             if (weapon4Unlocked){
+                                MAX_RAY_DISTANCE = 280
                                 speedBullet = 2.0
                                 SHOT_COOLDOWN = 4_000_000_000L * 1.0
                                 shotAccuracy = 1
