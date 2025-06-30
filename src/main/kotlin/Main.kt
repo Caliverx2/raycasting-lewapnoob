@@ -14,6 +14,7 @@ import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import java.awt.event.ComponentAdapter
 import java.awt.event.ComponentEvent
+import java.awt.event.MouseMotionAdapter
 import java.awt.image.BufferedImage
 import javax.sound.sampled.AudioSystem
 import javax.sound.sampled.FloatControl
@@ -43,12 +44,13 @@ var godMode: Boolean = false
 var unlimitedAmmo: Boolean = false
 var noClip: Boolean = false
 var oneHitKills: Boolean = false
+var allWeaponUnlock: Boolean = false
 
 var map: Boolean = true
 var currentangle: Int = 45
 var tileSize: Double = 40.0
 val mapa: Double = 0.5
-var MouseSupport: Boolean = false
+var MouseSupport: Boolean = true
 
 var HealBoost: Double = 1.0
 var SpeedMovement: Double = 1.0
@@ -56,7 +58,7 @@ var MoreHitShot: Double = 1.0
 var FastReload: Double = 1.0
 var AmmoBoost: Double = 1.0
 
-val TARGET_FPS: Int = 90
+val TARGET_FPS: Int = 90//90
 val FRAME_TIME_NS = 1_000_000_000L / TARGET_FPS
 var deltaTime = 1.0 / 60.0
 
@@ -85,6 +87,7 @@ var playerInventory = MutableList<Item?>(9) { null }
 var isShooting: Boolean = false
 var currentAmmo: Int = 46
 var SHOT_COOLDOWN = 500_000_000L * FastReload
+var speedBullet: Double = 1.0
 
 var weapon2Unlocked: Boolean = false
 var weapon3Unlocked: Boolean = false
@@ -305,7 +308,7 @@ fun main() = runBlocking {
         Glock34(
             x = (tileSize * (12)) - (tileSize / 2),
             y = (tileSize * (12)) - (tileSize / 2),
-            texture = renderCast?.glock34TextureId!!,
+            texture = renderCast.glock34TextureId!!,
             active = true
         )
     )
@@ -313,7 +316,7 @@ fun main() = runBlocking {
         PPSz41(
             x = (tileSize * (10)) - (tileSize / 2),
             y = (tileSize * (10)) - (tileSize / 2),
-            texture = renderCast?.ppsz41TextureId!!,
+            texture = renderCast.ppsz41TextureId!!,
             active = true
         )
     )
@@ -321,7 +324,7 @@ fun main() = runBlocking {
         CheyTacM200(
             x = (tileSize * (14)) - (tileSize / 2),
             y = (tileSize * (14)) - (tileSize / 2),
-            texture = renderCast?.cheyTacM200TextureId!!,
+            texture = renderCast.cheyTacM200TextureId!!,
             active = true
         )
     )
@@ -354,6 +357,11 @@ fun main() = runBlocking {
     }
 
     if (oneHitKills) MoreHitShot = 50000.0
+    if (allWeaponUnlock) {
+        weapon2Unlocked = true
+        weapon3Unlocked = true
+        weapon4Unlocked = true
+    }
 
     frame.addMouseListener(object : MouseAdapter() {
         override fun mousePressed(event: MouseEvent) {
@@ -380,16 +388,17 @@ fun main() = runBlocking {
             }
         }
     })
-    /*
-    frame.addMouseMotionListener(object : MouseMotionAdapter() {
-        override fun mouseMoved(e: MouseEvent) {
-            player.updateAngleFromMouse()
-        }
+    if (MouseSupport) {
+        frame.addMouseMotionListener(object : MouseMotionAdapter() {
+            override fun mouseMoved(e: MouseEvent) {
+                player.updateAngleFromMouse()
+            }
 
-        override fun mouseDragged(e: MouseEvent) {
-            player.updateAngleFromMouse()
-        }
-    })*/
+            override fun mouseDragged(e: MouseEvent) {
+                player.updateAngleFromMouse()
+            }
+        })
+    }
 
     frame.addKeyListener(object : KeyAdapter() {
         override fun keyPressed(event: KeyEvent) {
@@ -601,12 +610,14 @@ fun main() = runBlocking {
                         selectWeaponSlot -= 1
                         println(selectWeaponSlot)
                         if (selectWeaponSlot == 1) {
+                            speedBullet = 1.0
                             SHOT_COOLDOWN = 250_000_000L * FastReload
                             shotAccuracy = 10
                             playerDamage = 20
                         }
                         if (selectWeaponSlot == 2) {
                             if (weapon2Unlocked){
+                                speedBullet = 1.0
                                 SHOT_COOLDOWN = 500_000_000L * FastReload
                                 shotAccuracy = 5
                                 playerDamage = 25
@@ -614,6 +625,7 @@ fun main() = runBlocking {
                         }
                         if (selectWeaponSlot == 3) {
                             if (weapon3Unlocked){
+                                speedBullet = 1.5
                                 SHOT_COOLDOWN = 200_000_000L * FastReload
                                 shotAccuracy = 15
                                 playerDamage = 15
@@ -621,6 +633,7 @@ fun main() = runBlocking {
                         }
                         if (selectWeaponSlot == 4) {
                             if (weapon4Unlocked){
+                                speedBullet = 2.0
                                 SHOT_COOLDOWN = 4_000_000_000L * FastReload
                                 shotAccuracy = 1
                                 playerDamage = 75
@@ -633,12 +646,14 @@ fun main() = runBlocking {
                         selectWeaponSlot += 1
                         println(selectWeaponSlot)
                         if (selectWeaponSlot == 1) {
+                            speedBullet = 1.0
                             SHOT_COOLDOWN = 250_000_000L * FastReload
                             shotAccuracy = 10
                             playerDamage = 20
                         }
                         if (selectWeaponSlot == 2) {
                             if (weapon2Unlocked){
+                                speedBullet = 1.0
                                 SHOT_COOLDOWN = 500_000_000L * FastReload
                                 shotAccuracy = 5
                                 playerDamage = 25
@@ -646,6 +661,7 @@ fun main() = runBlocking {
                         }
                         if (selectWeaponSlot == 3) {
                             if (weapon3Unlocked){
+                                speedBullet = 1.5
                                 SHOT_COOLDOWN = 200_000_000L * FastReload
                                 shotAccuracy = 15
                                 playerDamage = 15
@@ -653,6 +669,7 @@ fun main() = runBlocking {
                         }
                         if (selectWeaponSlot == 4) {
                             if (weapon4Unlocked){
+                                speedBullet = 2.0
                                 SHOT_COOLDOWN = 4_000_000_000L * 1.0
                                 shotAccuracy = 1
                                 playerDamage = 75

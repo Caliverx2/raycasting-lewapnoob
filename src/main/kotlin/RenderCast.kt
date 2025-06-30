@@ -10,6 +10,7 @@ import java.awt.image.BufferedImage
 import javax.swing.Timer
 import javax.imageio.ImageIO
 import javax.swing.JPanel
+import kotlin.collections.forEach
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.atan2
@@ -85,6 +86,8 @@ class RenderCast(private val map: Map) : JPanel() {
     private var lightMoveDirection = 0.0
     private var isLightMoving = false
     private var font: Font? = null
+    private var configGlobal: EntityRenderConfig? = null
+    private var configUpdate: Boolean = false
     val fontStream = this::class.java.classLoader.getResourceAsStream("font/mojangles.ttf")
         ?: throw IllegalArgumentException("Font file not found: mojangles.ttf")
 
@@ -106,8 +109,8 @@ class RenderCast(private val map: Map) : JPanel() {
             slotMachineTextureID = ImageIO.read(this::class.java.classLoader.getResource("textures/slotMachine.png"))
             coinTextureID = ImageIO.read(this::class.java.classLoader.getResource("textures/coin.png"))
             enemyBossTextureId = ImageIO.read(this::class.java.classLoader.getResource("textures/boss.jpg"))
-            glock34TextureId = ImageIO.read(this::class.java.classLoader.getResource("textures/coin.png"))
-            ppsz41TextureId = ImageIO.read(this::class.java.classLoader.getResource("textures/coin.png"))
+            glock34TextureId = ImageIO.read(this::class.java.classLoader.getResource("textures/glock34.png"))
+            ppsz41TextureId = ImageIO.read(this::class.java.classLoader.getResource("textures/ppsz41.png"))
             cheyTacM200TextureId = ImageIO.read(this::class.java.classLoader.getResource("textures/coin.png"))
 
             loadTexture(1, "textures/bricks.jpg")
@@ -188,7 +191,7 @@ class RenderCast(private val map: Map) : JPanel() {
         g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
         update()
         try {
-            renderWallsToBuffer()
+            renderWallsToBuffer(configGlobal)
         } catch (e: Exception) {
         }
         val scaleX = width.toDouble() / screenWidth
@@ -287,7 +290,7 @@ class RenderCast(private val map: Map) : JPanel() {
         return true
     }
     //
-    fun renderWallsToBuffer() {
+    fun renderWallsToBuffer(config: EntityRenderConfig?) {
         val currentTime = System.nanoTime()
 
         // Player position in tile coordinates
@@ -324,7 +327,7 @@ class RenderCast(private val map: Map) : JPanel() {
         if (isLightMoving && currentTime - lastLightMoveTime >= LIGHT_MOVE_INTERVAL) {
             lastLightMoveTime = currentTime
             val angleRad = Math.toRadians(lightMoveDirection)
-            val moveDistance = tileSize / 2.5 / tileSize
+            val moveDistance = (tileSize / 2.5 / tileSize) * speedBullet
             lightSources.find { it.owner == "player" }?.let { playerLight ->
                 val newX = playerLight.x + moveDistance * cos(angleRad)
                 val newY = playerLight.y + moveDistance * sin(angleRad)
@@ -689,18 +692,35 @@ class RenderCast(private val map: Map) : JPanel() {
                 var shadowColor = Color(50, 50, 50)
                 if (!isCeiling) {
                     entitiesInRadius.forEach { (entity, entityX, entityY) ->
-                        val shadowRadius = if (entity is Coin || entity is SlotMachine) 0.1 else 0.25
-                        val dx = floorX - entityX - 100
-                        val dy = floorY - entityY - 100
-                        val distanceToEntity = sqrt(dx * dx + dy * dy)
-                        if (distanceToEntity <= shadowRadius) {
-                            isShadow = true
-                            val shadowFactor = 1.0 - (distanceToEntity / shadowRadius)
-                            shadowColor = Color(
-                                (50 * shadowFactor).toInt().coerceIn(0, 255),
-                                (50 * shadowFactor).toInt().coerceIn(0, 255),
-                                (50 * shadowFactor).toInt().coerceIn(0, 255)
-                            )
+                        if (configUpdate) {
+                            val shadowRadius = config!!.shadowVerticalScale
+                            val dx = floorX - entityX - 100
+                            val dy = floorY - entityY - 100
+                            val distanceToEntity = sqrt(dx * dx + dy * dy)
+                            if (distanceToEntity <= shadowRadius) {
+                                isShadow = true
+                                val shadowFactor = 1.0 - (distanceToEntity / shadowRadius)
+                                shadowColor = Color(
+                                    (50 * shadowFactor).toInt().coerceIn(0, 255),
+                                    (50 * shadowFactor).toInt().coerceIn(0, 255),
+                                    (50 * shadowFactor).toInt().coerceIn(0, 255)
+                                )
+                            }
+                        }
+                        if (!configUpdate) {
+                            val shadowRadius = if (entity is Coin || entity is SlotMachine || entity is Glock34 || entity is PPSz41 || entity is CheyTacM200) 0.1 else 0.25
+                            val dx = floorX - entityX - 100
+                            val dy = floorY - entityY - 100
+                            val distanceToEntity = sqrt(dx * dx + dy * dy)
+                            if (distanceToEntity <= shadowRadius) {
+                                isShadow = true
+                                val shadowFactor = 1.0 - (distanceToEntity / shadowRadius)
+                                shadowColor = Color(
+                                    (50 * shadowFactor).toInt().coerceIn(0, 255),
+                                    (50 * shadowFactor).toInt().coerceIn(0, 255),
+                                    (50 * shadowFactor).toInt().coerceIn(0, 255)
+                                )
+                            }
                         }
                     }
                 }
@@ -1665,6 +1685,7 @@ class RenderCast(private val map: Map) : JPanel() {
     }
 
     private fun renderAllEntities() {
+
         val configMap = mapOf(
             Chest::class to EntityRenderConfig(
                 height = wallHeight / 4,
@@ -1687,28 +1708,28 @@ class RenderCast(private val map: Map) : JPanel() {
                 sizeMultiplier = 1.0,
                 maxSize = 64.0, // From renderKeys
                 shadowScale = 1.2, // From renderKeys
-                shadowVerticalScale = 0.25 // From renderKeys (shadowSize / 4)
+                shadowVerticalScale = 0.1 // From renderKeys (shadowSize / 4)
             ),
             Coin::class to EntityRenderConfig(
                 height = wallHeight / 4,
                 sizeMultiplier = 1.0,
                 maxSize = 64.0,
                 shadowScale = 1.2,
-                shadowVerticalScale = 0.25
+                shadowVerticalScale = 0.1
             ),
             Medication::class to EntityRenderConfig(
                 height = wallHeight / 4,
                 sizeMultiplier = 1.0,
                 maxSize = 64.0,
                 shadowScale = 1.2,
-                shadowVerticalScale = 0.25
+                shadowVerticalScale = 0.1
             ),
             Ammo::class to EntityRenderConfig(
                 height = wallHeight / 4,
                 sizeMultiplier = 1.0,
                 maxSize = 64.0,
                 shadowScale = 1.2,
-                shadowVerticalScale = 0.25
+                shadowVerticalScale = 0.14
             ),
             Trader::class to EntityRenderConfig(
                 height = wallHeight / 4,
@@ -1724,28 +1745,28 @@ class RenderCast(private val map: Map) : JPanel() {
                 maxSize = 64.0,
                 hasInteraction = true,
                 shadowScale = 1.2,
-                shadowVerticalScale = 0.25
+                shadowVerticalScale = 0.1
             ),
             Glock34::class to EntityRenderConfig(
                 height = wallHeight / 4,
                 sizeMultiplier = 1.0,
                 maxSize = 64.0,
                 shadowScale = 1.2,
-                shadowVerticalScale = 0.25
+                shadowVerticalScale = 0.1
             ),
             PPSz41::class to EntityRenderConfig(
                 height = wallHeight / 4,
-                sizeMultiplier = 1.0,
-                maxSize = 64.0,
+                sizeMultiplier = 2.0,
+                maxSize = 64.0*2,
                 shadowScale = 1.2,
-                shadowVerticalScale = 0.25
+                shadowVerticalScale = 0.1
             ),
             CheyTacM200::class to EntityRenderConfig(
-                height = wallHeight / 4,
+                height = wallHeight / 3,
                 sizeMultiplier = 1.0,
                 maxSize = 64.0,
                 shadowScale = 1.2,
-                shadowVerticalScale = 0.25
+                shadowVerticalScale = 0.1
             )
         )
 
@@ -1782,6 +1803,8 @@ class RenderCast(private val map: Map) : JPanel() {
                 else -> return@forEach
             }
             val config = configMap[entity::class] ?: return@forEach
+            configGlobal = config
+            configUpdate = true
             renderEntity(entity, screenX, distance, texture, config, zBuffer, buffer)
         }
     }
@@ -1869,6 +1892,7 @@ class RenderCast(private val map: Map) : JPanel() {
             lightSources.find { it.owner == "player" }?.let {
                 it.x = positionX / tileSize
                 it.y = positionY / tileSize
+                it.color = Color(200, 200, 100)
                 lightMoveDirection = offsetAngle.toDouble()
                 it.intensity = 0.75
                 lastLightMoveTime = currentTime
@@ -1971,14 +1995,34 @@ class RenderCast(private val map: Map) : JPanel() {
                                     }
                                     if (enemy.enemyType == 1) {
                                         when {
-                                            random < 1.00f -> keysList.add(
+                                            ((random < 0.25f) and (!weapon2Unlocked)) -> glock34s.add(
+                                                Glock34(
+                                                    x = itemX,
+                                                    y = itemY,
+                                                    texture = glock34TextureId!!
+                                                )
+                                            )
+                                            ((random < 0.50f) and (!weapon3Unlocked)) -> ppsz41s.add(
+                                                PPSz41(
+                                                    x = itemX,
+                                                    y = itemY,
+                                                    texture = ppsz41TextureId!!
+                                                )
+                                            )
+                                            ((random < 0.75f) and (!weapon4Unlocked)) -> cheytacm200s.add(
+                                                CheyTacM200(
+                                                    x = itemX,
+                                                    y = itemY,
+                                                    texture = cheyTacM200TextureId!!
+                                                )
+                                            )
+                                            else -> keysList.add(
                                                 Key(
                                                     x = itemX,
                                                     y = itemY,
                                                     texture = keyTextureId!!
                                                 )
                                             )
-                                            else -> ammo.add(Ammo(x = itemX, y = itemY, texture = ammoTextureID!!))
                                         }
                                     }
                                 }
@@ -2172,9 +2216,39 @@ class RenderCast(private val map: Map) : JPanel() {
                 val dy = positionY - glock34.y
                 val distance = sqrt(dx * dx + dy * dy)
                 if (distance < glock34.pickupDistance) {
-                    weapon2Unlocked = true
+                    if (weapon2Unlocked) {
+                        var remainingAmmo = (15 * AmmoBoost).toInt()
+
+                        val ammoSlots = playerInventory.indices.filter {
+                            playerInventory[it]?.type == ItemType.AMMO && playerInventory[it]!!.quantity < Item.MAX_AMMO_PER_SLOT
+                        }
+
+                        for (slot in ammoSlots) {
+                            if (remainingAmmo <= 0) break
+                            val currentSlot = playerInventory[slot]!!
+                            val spaceInSlot = Item.MAX_AMMO_PER_SLOT - currentSlot.quantity
+                            val coinToAdd = minOf(remainingAmmo, spaceInSlot)
+                            currentSlot.quantity += coinToAdd
+                            remainingAmmo -= coinToAdd
+                            glock34.active = false
+                            playSound("8exp.wav", 0.65f)
+                        }
+
+                        while (remainingAmmo > 0) {
+                            val emptySlot = playerInventory.indexOfFirst { it == null }
+                            if (emptySlot == -1) break
+                            val ammoToAdd = minOf(remainingAmmo, Item.MAX_COINS_PER_SLOT)
+                            playerInventory[emptySlot] = Item(ItemType.AMMO, ammoToAdd)
+                            remainingAmmo -= ammoToAdd
+                            glock34.active = false
+                            playSound("8exp.wav", 0.65f)
+                        }
+                    }
+                    if (!weapon2Unlocked) {
+                        playSound("8exp.wav", 0.65f)
+                        weapon2Unlocked = true
+                    }
                     glock34.active = false
-                    playSound("8exp.wav", 0.65f)
                 }
             }
         }
@@ -2184,9 +2258,39 @@ class RenderCast(private val map: Map) : JPanel() {
                 val dy = positionY - ppsz41.y
                 val distance = sqrt(dx * dx + dy * dy)
                 if (distance < ppsz41.pickupDistance) {
-                    weapon3Unlocked = true
+                    if (weapon3Unlocked) {
+                        var remainingAmmo = (15 * AmmoBoost).toInt()
+
+                        val ammoSlots = playerInventory.indices.filter {
+                            playerInventory[it]?.type == ItemType.AMMO && playerInventory[it]!!.quantity < Item.MAX_AMMO_PER_SLOT
+                        }
+
+                        for (slot in ammoSlots) {
+                            if (remainingAmmo <= 0) break
+                            val currentSlot = playerInventory[slot]!!
+                            val spaceInSlot = Item.MAX_AMMO_PER_SLOT - currentSlot.quantity
+                            val coinToAdd = minOf(remainingAmmo, spaceInSlot)
+                            currentSlot.quantity += coinToAdd
+                            remainingAmmo -= coinToAdd
+                            ppsz41.active = false
+                            playSound("8exp.wav", 0.65f)
+                        }
+
+                        while (remainingAmmo > 0) {
+                            val emptySlot = playerInventory.indexOfFirst { it == null }
+                            if (emptySlot == -1) break
+                            val ammoToAdd = minOf(remainingAmmo, Item.MAX_COINS_PER_SLOT)
+                            playerInventory[emptySlot] = Item(ItemType.AMMO, ammoToAdd)
+                            remainingAmmo -= ammoToAdd
+                            ppsz41.active = false
+                            playSound("8exp.wav", 0.65f)
+                        }
+                    }
+                    if (!weapon3Unlocked) {
+                        playSound("8exp.wav", 0.65f)
+                        weapon3Unlocked = true
+                    }
                     ppsz41.active = false
-                    playSound("8exp.wav", 0.65f)
                 }
             }
         }
@@ -2196,9 +2300,39 @@ class RenderCast(private val map: Map) : JPanel() {
                 val dy = positionY - cheytacm200.y
                 val distance = sqrt(dx * dx + dy * dy)
                 if (distance < cheytacm200.pickupDistance) {
-                    weapon4Unlocked = true
+                    if (weapon4Unlocked) {
+                        var remainingAmmo = (15 * AmmoBoost).toInt()
+
+                        val ammoSlots = playerInventory.indices.filter {
+                            playerInventory[it]?.type == ItemType.AMMO && playerInventory[it]!!.quantity < Item.MAX_AMMO_PER_SLOT
+                        }
+
+                        for (slot in ammoSlots) {
+                            if (remainingAmmo <= 0) break
+                            val currentSlot = playerInventory[slot]!!
+                            val spaceInSlot = Item.MAX_AMMO_PER_SLOT - currentSlot.quantity
+                            val coinToAdd = minOf(remainingAmmo, spaceInSlot)
+                            currentSlot.quantity += coinToAdd
+                            remainingAmmo -= coinToAdd
+                            cheytacm200.active = false
+                            playSound("8exp.wav", 0.65f)
+                        }
+
+                        while (remainingAmmo > 0) {
+                            val emptySlot = playerInventory.indexOfFirst { it == null }
+                            if (emptySlot == -1) break
+                            val ammoToAdd = minOf(remainingAmmo, Item.MAX_COINS_PER_SLOT)
+                            playerInventory[emptySlot] = Item(ItemType.AMMO, ammoToAdd)
+                            remainingAmmo -= ammoToAdd
+                            cheytacm200.active = false
+                            playSound("8exp.wav", 0.65f)
+                        }
+                    }
+                    if (!weapon4Unlocked) {
+                        playSound("8exp.wav", 0.65f)
+                        weapon4Unlocked = true
+                    }
                     cheytacm200.active = false
-                    playSound("8exp.wav", 0.65f)
                 }
             }
         }

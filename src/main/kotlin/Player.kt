@@ -227,6 +227,9 @@ class Player(private val renderCast: RenderCast, private val map: Map) {
             chests = mutableListOf<Chest>()
             ammo = mutableListOf<Ammo>()
             traders = mutableListOf<Trader>()
+            glock34s = mutableListOf<Glock34>()
+            ppsz41s = mutableListOf<PPSz41>()
+            cheytacm200s = mutableListOf<CheyTacM200>()
 
             lightSources.add(LightSource(0.0, 0.0, color = Color(200, 200, 100), intensity = 0.75, range = 0.15, owner = "player"))
             enemies.add(Enemy((tileSize * 2) - (tileSize / 2), (tileSize * 2) - (tileSize / 2), health = 100, renderCast.enemyTextureId!!, renderCast, map, speed = (2.0 * ((18..19).random() / 10.0))))
