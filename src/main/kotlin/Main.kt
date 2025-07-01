@@ -36,6 +36,7 @@ var selectWeaponSlot: Int = 2
 var selectedOfferIndex: Int = 0
 var activateSlot: Boolean = false
 var perkGUI: Boolean = false
+var weaponGUI: Boolean = true
 val maxRayDistance: Double = 22.0
 var shotAccuracy: Int = 5
 var maxShotDistance = 80
@@ -227,16 +228,16 @@ data class Item(val type: ItemType, var quantity: Int = 1) {
             ItemType.MEDKIT -> MAX_MEDKIT_PER_SLOT
             ItemType.COIN -> MAX_COINS_PER_SLOT
             ItemType.CROWBAR -> MAX_WEAPON_PER_SLOT
+            ItemType.KIMBERPOLYMERPROCARRY -> MAX_WEAPON_PER_SLOT
             ItemType.GLOCK34 -> MAX_WEAPON_PER_SLOT
             ItemType.PPSH41 -> MAX_WEAPON_PER_SLOT
             ItemType.CHEYTACM200 -> MAX_WEAPON_PER_SLOT
-            ItemType.KIMBERPOLYMERPROCARRY -> MAX_WEAPON_PER_SLOT
         }
     }
 }
 
 enum class ItemType {
-    MEDKIT, AMMO, KEY, COIN, CROWBAR, GLOCK34, PPSH41, CHEYTACM200, KIMBERPOLYMERPROCARRY
+    MEDKIT, AMMO, KEY, COIN, CROWBAR, KIMBERPOLYMERPROCARRY, GLOCK34, PPSH41, CHEYTACM200
 }
 
 enum class Perk { HealBoost, SpeedMovement, MoreHitShot, FastReload, AmmoBoost }
@@ -294,7 +295,7 @@ fun updateWeaponStatus() {
             playerDamage = 25
             shotUnblock = true
         } else {
-            playSound(soundFile = "denied.wav", volume = 0.9f)
+            playSound(soundFile = "denied.wav", volume = 0.5f)
             shotUnblock = false
         }
     }
@@ -307,20 +308,20 @@ fun updateWeaponStatus() {
             playerDamage = 15
             shotUnblock = true
         } else {
-            playSound(soundFile = "denied.wav", volume = 0.9f)
+            playSound(soundFile = "denied.wav", volume = 0.5f)
             shotUnblock = false
         }
     }
     if (selectWeaponSlot == 5) { //cheytamc200
         if (weapon4Unlocked){
             maxShotDistance = 280
-            speedBullet = 2.0
+            speedBullet = 3.0
             SHOT_COOLDOWN = 4_000_000_000L * FastReload
             shotAccuracy = 1
-            playerDamage = 75
+            playerDamage = 85
             shotUnblock = true
         } else {
-            playSound(soundFile = "denied.wav", volume = 0.9f)
+            playSound(soundFile = "denied.wav", volume = 0.5f)
             shotUnblock = false
         }
     }
@@ -549,7 +550,7 @@ fun main() = runBlocking {
                     if ((!looktrader) or (selectedOfferIndex >= 4)) {
                         selectSlot = event.keyCode - KeyEvent.VK_0-1
                         activateSlot = true
-                        println(selectSlot)
+                        println("selectSlot: $selectSlot")
                         println(playerInventory[selectSlot])
                         if (playerInventory[selectSlot] != null) {
                             if (playerInventory[selectSlot]?.type == ItemType.MEDKIT && playerInventory[selectSlot]?.quantity in 1..2) {
@@ -688,14 +689,14 @@ fun main() = runBlocking {
                 KeyEvent.VK_R -> {
                     if (selectWeaponSlot > 1) {
                         selectWeaponSlot -= 1
-                        println(selectWeaponSlot)
+                        println("selectWeaponSlot: $selectWeaponSlot")
                         updateWeaponStatus()
                     }
                 }
                 KeyEvent.VK_T -> {
                     if (selectWeaponSlot < 5) {
                         selectWeaponSlot += 1
-                        println(selectWeaponSlot)
+                        println("selectWeaponSlot: $selectWeaponSlot")
                         updateWeaponStatus()
                     }
                 }

@@ -24,11 +24,11 @@ import kotlin.math.min
 import kotlin.math.pow
 
 class RenderCast(private val map: Map) : JPanel() {
-    private val screenWidth = 320//100
-    private val screenHeight = 200//100
+    private val screenWidth = (320*1.0).toInt() //1:1 3:4 9:16
+    private val screenHeight = (180*1.0).toInt()//320:200
     private val fov = 90.0
     private val textureSize = 64
-    private val rayCount = (screenWidth*0.85).toInt()//100
+    private val rayCount = (screenWidth*0.85).toInt()//85
     private val wallHeight = 32.0
     private var levelUp = false
     val slotSize = 39
@@ -59,11 +59,11 @@ class RenderCast(private val map: Map) : JPanel() {
     private var lastRenderFpsUpdate = System.nanoTime()
     private var lastRenderFrameTime = System.nanoTime()
 
-    private val minBrightness = 0.0
-    private val maxBrightness = 1.9
-    private val shadeDistanceScale = 10.0
+    private val minBrightness = -5.0//0.0
+    private val maxBrightness = 5.0//1.9
+    private val shadeDistanceScale = 5.0//10.0
     private val fogColor = Color(180, 180, 180)
-    private val fogDensity = 0.5/4
+    private val fogDensity = 0.5/4 //0.5/4
 
     private val rayCosines = DoubleArray(rayCount)
     private val raySines = DoubleArray(rayCount)
@@ -760,7 +760,7 @@ class RenderCast(private val map: Map) : JPanel() {
 
         if (mouseX in (1366/2)-(scaleUI*3+10) until (1366/2)-scaleUI-10 && mouseY in ((768/2)-(heightUI/2)) until ((768/2)-(heightUI/2))+heightUI) {
             playSound("click.wav")
-            println("${perkSlots[0]}")
+            println("perkSlots: ${perkSlots[0]}")
             selectedPerk(perkSlots[0])
             perkGUI = false
             resetPerkSlot = true
@@ -768,7 +768,7 @@ class RenderCast(private val map: Map) : JPanel() {
 
         if (mouseX in (1366/2)-scaleUI until (1366/2)+scaleUI && mouseY in ((768/2)-(heightUI/2)) until ((768/2)-(heightUI/2))+heightUI) {
             playSound("click.wav")
-            println("${perkSlots[1]}")
+            println("perkSlots: ${perkSlots[1]}")
             selectedPerk(perkSlots[1])
             perkGUI = false
             resetPerkSlot = true
@@ -776,7 +776,7 @@ class RenderCast(private val map: Map) : JPanel() {
 
         if (mouseX in (1366/2)+scaleUI+spacing until (1366/2)+(scaleUI*3+10) && mouseY in ((768/2)-(heightUI/2)) until ((768/2)-(heightUI/2))+heightUI) {
             playSound("click.wav")
-            println("${perkSlots[2]}")
+            println("perkSlots: ${perkSlots[2]}")
             selectedPerk(perkSlots[2])
             perkGUI = false
             resetPerkSlot = true
@@ -785,23 +785,19 @@ class RenderCast(private val map: Map) : JPanel() {
 
     fun selectedPerk(perk: Perk?) {
         if (perk == Perk.HealBoost) {
-            println("$HealBoost HB")
             HealBoost += HealBoost * (0.5/4)
             playerHealth += (HealBoost * 100).toInt()
             println("$HealBoost HB")
         }
         if (perk == Perk.SpeedMovement) {
-            println("$SpeedMovement SM")
             SpeedMovement += 0.15
             println("$SpeedMovement SM")
         }
         if (perk == Perk.MoreHitShot) {
-            println("$MoreHitShot MHS")
             MoreHitShot += MoreHitShot/4
             println("$MoreHitShot MHS")
         }
         if (perk == Perk.FastReload) {
-            println("$FastReload FR")
             FastReload -= -0.1
             println("$FastReload FR")
         }
@@ -1004,53 +1000,65 @@ class RenderCast(private val map: Map) : JPanel() {
             20
         )
 
-        g2.color = Color(50, 50, 50, 180)
-        g2.fillRoundRect(
-            startX - scaleUI + ((slotSize + spacing) * 3),
-            startY - scaleUI - (slotSize + (scaleUI * 2) + ((slotSize*1)/4)),
-            (slotSize + spacing) * 3,
-            slotSize + (scaleUI * 2),
-            20,
-            20
-        )
+        if (weaponGUI) {
+            g2.color = Color(50, 50, 50, 180)
+            g2.fillRoundRect(
+                startX - scaleUI + ((slotSize + spacing) * 3),
+                startY - scaleUI - (slotSize + (scaleUI * 2) + ((slotSize * 1) / 4)),
+                (slotSize + spacing) * 3,
+                slotSize + (scaleUI * 2),
+                20,
+                20
+            )
 
-        g2.color = Color(150, 150, 150, 180)
-        g2.fillRoundRect(
-            (startX - scaleUI) + ((slotSize + spacing) * 4),
-            startY - scaleUI - (slotSize + (scaleUI * 2) + ((slotSize*1 )/4)),
-            (slotSize + spacing),
-            slotSize + (scaleUI * 2),
-            20,
-            20
-        )
+            g2.color = Color(150, 150, 150, 180)
+            g2.fillRoundRect(
+                (startX - scaleUI) + ((slotSize + spacing) * 4),
+                startY - scaleUI - (slotSize + (scaleUI * 2) + ((slotSize * 1) / 4)),
+                (slotSize + spacing),
+                slotSize + (scaleUI * 2),
+                20,
+                20
+            )
 
-        if (selectWeaponSlot == 1) {
-            weaponName = "CROWBAR"
-        }
-        if (selectWeaponSlot == 2) {
-            weaponName = "Kimber Polymer Pro Carry"
-        }
-        if (selectWeaponSlot == 3) {
-            weaponName = "GLOCK 34"
-        }
-        if (selectWeaponSlot == 4) {
-            weaponName = "PPSh-41"
-        }
-        if (selectWeaponSlot == 5) {
-            weaponName = "CheyTac M200"
-        }
 
-        g2.color = Color(180, 180, 180)
-        g2.font = font?.deriveFont(Font.TYPE1_FONT, 17.toFloat()) ?: Font("Arial", Font.BOLD, 1)
-        if (selectWeaponSlot == 2) {
-            g2.drawString("Kimber Polymer", startX + (6) * (slotSize + spacing), startY-(slotSize*2/3 + spacing)-10)
-            g2.drawString("Pro Carry", startX + (6) * (slotSize + spacing), startY-(slotSize*2/3 + spacing)+10)
-        } else {
-            g2.drawString("$weaponName", startX + (6) * (slotSize + spacing), startY-(slotSize*2/3 + spacing))
+            if (selectWeaponSlot == 1) {
+                weaponName = "Crowbar"
+            }
+            if (selectWeaponSlot == 2) {
+                weaponName = "Kimber Polymer Pro Carry"
+            }
+            if (selectWeaponSlot == 3) {
+                weaponName = "Glock 34"
+            }
+            if (selectWeaponSlot == 4) {
+                weaponName = "PPSh-41"
+            }
+            if (selectWeaponSlot == 5) {
+                weaponName = "CheyTac M200"
+            }
+
+            g2.color = Color(180, 180, 180)
+            g2.font = font?.deriveFont(Font.TYPE1_FONT, 17.toFloat()) ?: Font("Arial", Font.BOLD, 1)
+            if (selectWeaponSlot == 2) {
+                g2.drawString(
+                    "Kimber Polymer",
+                    startX + (6) * (slotSize + spacing),
+                    startY - (slotSize * 2 / 3 + spacing) - 10
+                )
+                g2.drawString(
+                    "Pro Carry",
+                    startX + (6) * (slotSize + spacing),
+                    startY - (slotSize * 2 / 3 + spacing) + 10
+                )
+            } else {
+                g2.drawString("$weaponName", startX + (6) * (slotSize + spacing), startY - (slotSize * 2 / 3 + spacing))
+            }
         }
 
         if (!lookchest and !looktrader and !lookslotMachine) {
             inventoryVisible = false
+            weaponGUI = true
         }
 
         for (i in 0 until totalSlots) {
@@ -1081,64 +1089,68 @@ class RenderCast(private val map: Map) : JPanel() {
             }
         }
 
-        for (i in 0 until 3) {
-            val x = startX + (i+3) * (slotSize + spacing)
-            val y = (startY - (slotSize + (scaleUI * 2) + ((slotSize*1)/4)))
-            g2.color = Color(100, 100, 100)
-            g2.fillRoundRect(x, y, slotSize, slotSize, 17, 17)
-            var slotRender = 2
+        if (weaponGUI) {
+            for (i in 0 until 3) {
+                val x = startX + (i + 3) * (slotSize + spacing)
+                val y = (startY - (slotSize + (scaleUI * 2) + ((slotSize * 1) / 4)))
+                g2.color = Color(100, 100, 100)
+                g2.fillRoundRect(x, y, slotSize, slotSize, 17, 17)
+                var slotRender = 2
 
-            if (i == 0) {
-                slotRender = selectWeaponSlot-1
-            }
-
-            if (i == 1) {
-                slotRender = selectWeaponSlot
-            }
-
-            if (i == 2) {
-                slotRender = selectWeaponSlot+1
-            }
-
-            g2.color = Color(180, 180, 180)
-            g2.font = font?.deriveFont(Font.TYPE1_FONT, 17.toFloat()) ?: Font("Arial", Font.BOLD, 1)
-            g2.drawString("<-R", startX + (3) * (slotSize + spacing), y)
-            g2.drawString("  T->", startX + (5) * (slotSize + spacing), y)
-
-            try {
-                playerWeaponInventory[slotRender]?.let { item ->
-                    if ((item.type == ItemType.PPSH41) or (item.type == ItemType.CHEYTACM200)) {
-                        g2.drawImage(getItemTexture(item.type), x, y, (slotSize), (slotSize), null)
-                    } else {
-                        g2.drawImage(
-                            getItemTexture(item.type),
-                            x + (slotSize / 5),
-                            y + (slotSize / 5),
-                            (slotSize / 4) * 3,
-                            (slotSize / 4) * 3,
-                            null
-                        )
-                    }
-                    if ((item.type == ItemType.GLOCK34) and (weapon2Unlocked == false)) {
-                        g2.color = Color(100, 100, 100, 180)
-                        g2.fillRoundRect(x, y, slotSize, slotSize, 17, 17)
-                    }
-                    if ((item.type == ItemType.PPSH41) and (weapon3Unlocked == false)) {
-                        g2.color = Color(100, 100, 100,180)
-                        g2.fillRoundRect(x, y, slotSize, slotSize, 17, 17)
-                    }
-                    if ((item.type == ItemType.CHEYTACM200) and (weapon4Unlocked == false)) {
-                        g2.color = Color(100, 100, 100, 180)
-                        g2.fillRoundRect(x, y, slotSize, slotSize, 17, 17)
-                    }
+                if (i == 0) {
+                    slotRender = selectWeaponSlot - 1
                 }
-            } catch (e: Exception) {}
+
+                if (i == 1) {
+                    slotRender = selectWeaponSlot
+                }
+
+                if (i == 2) {
+                    slotRender = selectWeaponSlot + 1
+                }
+
+                g2.color = Color(180, 180, 180)
+                g2.font = font?.deriveFont(Font.TYPE1_FONT, 17.toFloat()) ?: Font("Arial", Font.BOLD, 1)
+                g2.drawString("<-R", startX + (3) * (slotSize + spacing), y)
+                g2.drawString("  T->", startX + (5) * (slotSize + spacing), y)
+
+                try {
+                    playerWeaponInventory[slotRender]?.let { item ->
+                        if ((item.type == ItemType.PPSH41) or (item.type == ItemType.CHEYTACM200)) {
+                            g2.drawImage(getItemTexture(item.type), x, y, (slotSize), (slotSize), null)
+                        } else {
+                            g2.drawImage(
+                                getItemTexture(item.type),
+                                x + (slotSize / 5),
+                                y + (slotSize / 5),
+                                (slotSize / 4) * 3,
+                                (slotSize / 4) * 3,
+                                null
+                            )
+                        }
+                        if ((item.type == ItemType.GLOCK34) and (weapon2Unlocked == false)) {
+                            g2.color = Color(100, 100, 100, 180)
+                            g2.fillRoundRect(x, y, slotSize, slotSize, 17, 17)
+                        }
+                        if ((item.type == ItemType.PPSH41) and (weapon3Unlocked == false)) {
+                            g2.color = Color(100, 100, 100, 180)
+                            g2.fillRoundRect(x, y, slotSize, slotSize, 17, 17)
+                        }
+                        if ((item.type == ItemType.CHEYTACM200) and (weapon4Unlocked == false)) {
+                            g2.color = Color(100, 100, 100, 180)
+                            g2.fillRoundRect(x, y, slotSize, slotSize, 17, 17)
+                        }
+                    }
+                } catch (e: Exception) {
+                }
+            }
         }
 
         if (!inventoryVisible) return
 
         // GUI chest
         if (lookchest){
+            weaponGUI = false
             openChest?.let { chest ->
                 val chestY = 500
                 g2.color = Color(50, 50, 50, 220)
@@ -1175,6 +1187,7 @@ class RenderCast(private val map: Map) : JPanel() {
 
         // GUI trader
         if (looktrader) {
+            weaponGUI = false
             openTrader?.let { trade ->
                 val chestY = 500
                 g2.color = Color(50, 50, 50, 220)

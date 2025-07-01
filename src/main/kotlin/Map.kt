@@ -275,7 +275,7 @@ class Map(var renderCast: RenderCast? = null) {
 
     fun generateRoom(x: Int = 0, y: Int = 0, enterdirection: Direction) {
         directionForRoom = enterdirection.toString()
-        println(directionForRoom)
+        println("directionForRoom: $directionForRoom")
         var roomTemplate = randomRoom()
 
         gridmod = false
@@ -964,8 +964,14 @@ class Mappingmap(private val map: Map, private val renderCast: RenderCast) : JPa
             val enemyY = (playerMapY + relativeY * tileScale).toInt()
             if (enemyX >= offsetX && enemyX < miniMapSize + offsetX && enemyY >= offsetY && enemyY < miniMapSize + offsetY) {
                 if (enemy.health > 0) {
-                    g2.color = Color.RED
-                    g2.fillOval(enemyX - 3, enemyY - 3, 9, 9)
+                    if (enemy.enemyType == 0) {
+                        g2.color = Color.ORANGE
+                        g2.fillOval(enemyX - 3, enemyY - 3, 9, 9)
+                    }
+                    if (enemy.enemyType == 1) {
+                        g2.color = Color.RED
+                        g2.fillOval(enemyX - 3, enemyY - 3, 12, 12)
+                    }
                 } else {
                     g2.color = Color(0, 80, 130, 255)
                     g2.fillOval(enemyX - 3, enemyY - 3, 7, 7)
