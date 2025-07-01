@@ -55,7 +55,7 @@ class Enemy(
     private var shootTimer = 0
     private val minShootInterval = (1.25 * TARGET_FPS).toInt()
     private val maxShootInterval = (2.5 * TARGET_FPS).toInt()
-    private var nextShootTime = Random.nextInt(minShootInterval, maxShootInterval + 1)
+    private var nextShootTime = Random.nextInt(from = minShootInterval, until = maxShootInterval + 1)
     private val projectiles = mutableListOf<Projectile>()
 
     companion object {
@@ -85,14 +85,14 @@ class Enemy(
 
         fun update() {
             if (!active) {
-                lightSource?.let { lightSources.remove(it) }
+                lightSource?.let { lightSources.remove(element = it) }
                 return
             }
 
             elapsedTime += deltaTime
             if (elapsedTime >= lifetime) {
                 active = false
-                lightSource?.let { lightSources.remove(it) }
+                lightSource?.let { lightSources.remove(element = it) }
                 return
             }
 
@@ -104,20 +104,20 @@ class Enemy(
             if (gridY in map.grid.indices && gridX in map.grid[0].indices) {
                 if (map.grid[gridY][gridX] == 1 || map.grid[gridY][gridX] == 2 || map.grid[gridY][gridX] == 5) {
                     active = false
-                    lightSource?.let { lightSources.remove(it) }
+                    lightSource?.let { lightSources.remove(element = it) }
                     return
                 }
             }
 
             val dxToPlayer = x - positionX
             val dyToPlayer = y - positionY
-            val distanceToPlayer = sqrt(dxToPlayer * dxToPlayer + dyToPlayer * dyToPlayer)
+            val distanceToPlayer = sqrt(x = dxToPlayer * dxToPlayer + dyToPlayer * dyToPlayer)
             if (distanceToPlayer < size + (tileSize * 0.5)) {
                 if (!godMode) {
                     playerHealth -= damage
                     val random = Random.nextFloat()
                     if (playerHealth > 15) {
-                        playSound(when {
+                        playSound(soundFile = when {
                             random < 0.20f -> "hurt1.wav"
                             random < 0.40f -> "hurt2.wav"
                             random < 0.60f -> "hurt3.wav"
@@ -125,11 +125,11 @@ class Enemy(
                             else -> "hurt5.wav"
                         }, volume = 0.65f)
                     } else {
-                        playSound("hurt6.wav", volume = 0.65f)
+                        playSound(soundFile = "hurt6.wav", volume = 0.65f)
                     }
                 }
                 active = false
-                lightSource?.let { lightSources.remove(it) }
+                lightSource?.let { lightSources.remove(element = it) }
                 if (playerHealth <= 0) {
                     playerHealth = 0
                 }
@@ -165,8 +165,8 @@ class Enemy(
     }
 
     private fun shootAtPlayer() {
-        val dx = positionX - x + Random.nextInt(-enemyShotAccuracy, enemyShotAccuracy)
-        val dy = positionY - y + Random.nextInt(-enemyShotAccuracy, enemyShotAccuracy)
+        val dx = positionX - x + Random.nextInt(from = -enemyShotAccuracy, until = enemyShotAccuracy)
+        val dy = positionY - y + Random.nextInt(from = -enemyShotAccuracy, until = enemyShotAccuracy)
         val distance = sqrt(dx * dx + dy * dy)
         if (distance > 0) {
             val directionX = dx / distance
@@ -180,12 +180,12 @@ class Enemy(
                 owner = "projectile_${this.hashCode()}_${System.nanoTime()}"
             )
             lightSources.add(lightSource)
-            projectiles.add(Projectile(x, y, directionX, directionY, lightSource = lightSource))
+            projectiles.add(Projectile(x= x, y = y, dx = directionX, dy = directionY, lightSource = lightSource))
         }
     }
 
     private fun heuristic(node: Node, goal: Node): Double {
-        return (abs(node.x - goal.x) + abs(node.y - goal.y)).toDouble()
+        return (abs(n = node.x - goal.x) + abs(n = node.y - goal.y)).toDouble()
     }
 
     private fun isAlignedWithEnemies(node: Node, enemies: List<Enemy>): Boolean {
@@ -197,8 +197,8 @@ class Enemy(
             if (other !== this && other.health > 0) {
                 val otherX = other.x
                 val otherY = other.y
-                if (abs(otherY - nodeY) < tileSize / 2) sameRowCount++
-                if (abs(otherX - nodeX) < tileSize / 2) sameColCount++
+                if (abs(x = otherY - nodeY) < tileSize / 2) sameRowCount++
+                if (abs(x = otherX - nodeX) < tileSize / 2) sameColCount++
             }
         }
         return sameRowCount >= 2 || sameColCount >= 2
@@ -213,7 +213,7 @@ class Enemy(
             if (other !== this && other.health > 0) {
                 val dx = nodeX - other.x
                 val dy = nodeY - other.y
-                val distance = sqrt(dx * dx + dy * dy)
+                val distance = sqrt(x = dx * dx + dy * dy)
                 if (distance < ENEMY_AVOIDANCE_RADIUS) {
                     cost += ENEMY_AVOIDANCE_COST * (1.0 - distance / ENEMY_AVOIDANCE_RADIUS)
                 }
@@ -237,7 +237,6 @@ class Enemy(
 
         if ((startY !in map.grid.indices || startX !in map.grid[0].indices ||
             goalY !in map.grid.indices || goalX !in map.grid[0].indices) or
-            //0-air 1-wall 2-black_wall 3-enemy 4-ammo 5-door 6-lightSource 7-medication 8-key 9-trader 10-chest 11-slotMachine 12-closedDoor
             ((map.grid[goalY][goalX] == 1) or
                     (map.grid[goalY][goalX] == 2) or
                     (map.grid[goalY][goalX] == 5) or
@@ -249,26 +248,26 @@ class Enemy(
 
         val dxToGoal = (goalX - startX).toDouble()
         val dyToGoal = (goalY - startY).toDouble()
-        val distanceToGoal = sqrt(dxToGoal * dxToGoal + dyToGoal * dyToGoal)
+        val distanceToGoal = sqrt(x = dxToGoal * dxToGoal + dyToGoal * dyToGoal)
         if (distanceToGoal <= DIRECT_MOVE_THRESHOLD) {
-            val (canMove, _) = canMoveTo((goalX + 0.5) * tileSize, (goalY + 0.5) * tileSize)
+            val (canMove, _) = canMoveTo(newX = (goalX + 0.5) * tileSize, newY = (goalY + 0.5) * tileSize)
             if (canMove) {
-                return listOf(Node(goalX, goalY))
+                return listOf(Node(x = goalX, y = goalY))
             }
         }
 
-        val cacheKey = Pair(Node(startX, startY), Node(goalX, goalY))
+        val cacheKey = Pair(first =  Node(x = startX, y = startY), second = Node(x = goalX, y = goalY))
         pathCache[cacheKey]?.let { return it }
 
         data class AStarNode(val node: Node, val fScore: Double, val gScore: Double)
 
         val openSet = PriorityQueue<AStarNode>(compareBy { it.fScore })
-        val startNode = Node(startX, startY)
-        openSet.add(AStarNode(startNode, heuristic(startNode, Node(goalX, goalY)), 0.0))
+        val startNode = Node(x = startX, y = startY)
+        openSet.add(AStarNode(startNode, fScore = heuristic(startNode, goal = Node(x = goalX, y = goalY)), gScore = 0.0))
 
         val cameFrom = mutableMapOf<Node, Node>()
         val gScore = mutableMapOf(startNode to 0.0)
-        val fScore = mutableMapOf(startNode to heuristic(startNode, Node(goalX, goalY)))
+        val fScore = mutableMapOf(startNode to heuristic(startNode, goal = Node(x = goalX, y = goalY)))
         val enemies = renderCast.getEnemies()
 
         while (openSet.isNotEmpty()) {
@@ -285,13 +284,13 @@ class Enemy(
                 return result
             }
 
-            for (neighbor in getNeighbors(current)) {
-                val tentativeGScore = gScore[current]!! + calculateNodeCost(neighbor, enemies)
-                if (tentativeGScore < gScore.getOrDefault(neighbor, Double.MAX_VALUE)) {
+            for (neighbor in getNeighbors(node = current)) {
+                val tentativeGScore = gScore[current]!! + calculateNodeCost(node = neighbor, enemies)
+                if (tentativeGScore < gScore.getOrDefault(key = neighbor, defaultValue = Double.MAX_VALUE)) {
                     cameFrom[neighbor] = current
                     gScore[neighbor] = tentativeGScore
-                    fScore[neighbor] = tentativeGScore + heuristic(neighbor, Node(goalX, goalY))
-                    openSet.add(AStarNode(neighbor, fScore[neighbor]!!, gScore[neighbor]!!))
+                    fScore[neighbor] = tentativeGScore + heuristic(node = neighbor, goal = Node(x = goalX, y = goalY))
+                    openSet.add(AStarNode(node = neighbor, fScore = fScore[neighbor]!!, gScore = gScore[neighbor]!!))
                 }
             }
         }
@@ -302,10 +301,10 @@ class Enemy(
     fun getNeighbors(node: Node): List<Node> {
         val neighbors = mutableListOf<Node>()
         val directions = listOf(
-            Node(node.x + 1, node.y),
-            Node(node.x - 1, node.y),
-            Node(node.x, node.y + 1),
-            Node(node.x, node.y - 1)
+            Node(x = node.x + 1, y = node.y),
+            Node(x = node.x - 1, y = node.y),
+            Node(x = node.x, y = node.y + 1),
+            Node(x = node.x, y = node.y - 1)
         )
 
         for (dir in directions) {
@@ -327,7 +326,7 @@ class Enemy(
             if (other !== this && other.health > 0) {
                 val dx = x - other.x
                 val dy = y - other.y
-                val distance = sqrt(dx * dx + dy * dy)
+                val distance = sqrt(x = dx * dx + dy * dy)
                 if (distance in 0.1..ENEMY_AVOIDANCE_RADIUS) {
                     val force = (ENEMY_AVOIDANCE_RADIUS - distance) / ENEMY_AVOIDANCE_RADIUS
                     repelX += (dx / distance) * force * speed
@@ -335,7 +334,7 @@ class Enemy(
                 }
             }
         }
-        return Pair(repelX, repelY)
+        return Pair(first = repelX, second = repelY)
     }
 
     fun update() {
@@ -349,7 +348,7 @@ class Enemy(
             lastY = y
             projectiles.forEach { projectile ->
                 projectile.active = false
-                projectile.lightSource?.let { lightSources.remove(it) }
+                projectile.lightSource?.let { lightSources.remove(element = it) }
             }
             projectiles.clear()
             lightSources.removeIf { it.owner == this.toString() }
@@ -359,7 +358,7 @@ class Enemy(
         val deltaTime = 1.0 / TARGET_FPS
         val dx = x - lastX
         val dy = y - lastY
-        val distanceMoved = sqrt(dx * dx + dy * dy)
+        val distanceMoved = sqrt(x = dx * dx + dy * dy)
         accumulatedDistance += distanceMoved
         lastX = x
         lastY = y
@@ -373,7 +372,7 @@ class Enemy(
 
         val dxToPlayer = x - positionX
         val dyToPlayer = y - positionY
-        val distanceToPlayer = sqrt(dxToPlayer * dxToPlayer + dyToPlayer * dyToPlayer)
+        val distanceToPlayer = sqrt(x = dxToPlayer * dxToPlayer + dyToPlayer * dyToPlayer)
 
         if (isChasing && distanceToPlayer > CHASE_STOP_DISTANCE) {
             isChasing = false
@@ -387,7 +386,7 @@ class Enemy(
         if (shootTimer >= nextShootTime && isChasing && distanceToPlayer < (maxRayDistance*tileSize-3)) {
             shootAtPlayer()
             shootTimer = 0
-            nextShootTime = Random.nextInt(minShootInterval, maxShootInterval + 1)
+            nextShootTime = Random.nextInt(from = minShootInterval, until = maxShootInterval + 1)
         }
 
         projectiles.forEach { it.update() }
@@ -414,7 +413,7 @@ class Enemy(
             smoothedMoveX = smoothedMoveX * (1.0 - smoothingFactor) + rawMoveX * smoothingFactor
             smoothedMoveY = smoothedMoveY * (1.0 - smoothingFactor) + rawMoveY * smoothingFactor
 
-            val (canMove, collidedEnemy) = canMoveTo(x + smoothedMoveX, y + smoothedMoveY)
+            val (canMove, collidedEnemy) = canMoveTo(newX = x + smoothedMoveX, newY = y + smoothedMoveY)
             if (canMove) {
                 x += smoothedMoveX
                 y += smoothedMoveY
@@ -422,7 +421,7 @@ class Enemy(
                 lastMoveY = smoothedMoveY
                 isMoving = true
                 stuckCounter = 0
-            } else if (collidedEnemy != null && tryPush(collidedEnemy, smoothedMoveX, smoothedMoveY)) {
+            } else if (collidedEnemy != null && tryPush(otherEnemy = collidedEnemy, moveX = smoothedMoveX, moveY = smoothedMoveY)) {
                 x += smoothedMoveX
                 y += smoothedMoveY
                 lastMoveX = smoothedMoveX
@@ -452,14 +451,14 @@ class Enemy(
 
             val dx = targetX - x
             val dy = targetY - y
-            val distance = sqrt(dx * dx + dy * dy)
+            val distance = sqrt(x = dx * dx + dy * dy)
 
             if (distance > 0.1) {
                 val moveSpeed = speed * deltaTime * TARGET_FPS
                 val rawMoveX = (dx / distance) * moveSpeed
                 val rawMoveY = (dy / distance) * moveSpeed
 
-                val (repelX, repelY) = calculateRepulsion(renderCast.getEnemies())
+                val (repelX, repelY) = calculateRepulsion(enemies = renderCast.getEnemies())
                 smoothedMoveX = smoothedMoveX * (1.0 - smoothingFactor) + (rawMoveX + repelX) * smoothingFactor
                 smoothedMoveY = smoothedMoveY * (1.0 - smoothingFactor) + (rawMoveY + repelY) * smoothingFactor
 
@@ -474,7 +473,7 @@ class Enemy(
                     lastMoveY = smoothedMoveY
                     stuckCounter = 0
                 } else if (collidedEnemy != null) {
-                    if (tryPush(collidedEnemy, smoothedMoveX, smoothedMoveY)) {
+                    if (tryPush(otherEnemy = collidedEnemy, moveX = smoothedMoveX, moveY = smoothedMoveY)) {
                         x = newX
                         y = newY
                         lastMoveX = smoothedMoveX
@@ -484,7 +483,7 @@ class Enemy(
                         stuckCounter++
                         val nudgeX = x - (dx / distance) * 0.1
                         val nudgeY = y - (dy / distance) * 0.1
-                        if (canMoveTo(nudgeX, nudgeY).first) {
+                        if (canMoveTo(newX = nudgeX, newY = nudgeY).first) {
                             x = nudgeX
                             y = nudgeY
                         }
@@ -493,13 +492,13 @@ class Enemy(
                     stuckCounter++
                     val nudgeX = x - (dx / distance) * 0.1
                     val nudgeY = y - (dy / distance) * 0.1
-                    if (canMoveTo(nudgeX, nudgeY).first) {
+                    if (canMoveTo(newX = nudgeX, newY = nudgeY).first) {
                         x = nudgeX
                         y = nudgeY
                     }
                 }
             } else {
-                path = path.drop(1)
+                path = path.drop(n = 1)
                 stuckCounter = 0
                 isMoving = path.isNotEmpty()
             }
@@ -508,7 +507,7 @@ class Enemy(
         randomMoveTimer++
         if (idleTimer >= idleThreshold && randomMoveTimer >= randomMoveInterval && isChasing) {
             val directions = listOf(
-                Pair(1.0, 0.0), Pair(-1.0, 0.0), Pair(0.0, 1.0), Pair(0.0, -1.0)
+                Pair(first = 1.0, second = 0.0), Pair(first = -1.0, second = 0.0), Pair(first = 0.0, second = 1.0), Pair(first = 0.0, second = -1.0)
             )
             val (moveX, moveY) = directions.random()
             val newX = x + moveX * randomMoveDistance
@@ -546,13 +545,12 @@ class Enemy(
 
         for (gridY in gridTop..gridBottom) {
             for (gridX in gridLeft..gridRight) {
-                //0-air 1-wall 2-black_wall 3-enemy 4-ammo 5-door 6-lightSource 7-medication 8-key 9-trader 10-chest 11-slotMachine 12-closedDoor
                 if ((gridY !in map.grid.indices || gridX !in map.grid[gridY].indices) or
                     ((map.grid[gridY][gridX] == 1) ||
                     (map.grid[gridY][gridX] == 2) ||
                     (map.grid[gridY][gridX] == 5) ||
                             (map.grid[gridY][gridX] == 12))) {
-                    return Pair(false, null)
+                    return Pair(first = false, second = null)
                 }
             }
         }
@@ -561,22 +559,22 @@ class Enemy(
             if (otherEnemy !== this && otherEnemy !== exclude && otherEnemy.health > 0) {
                 val dx = newX - otherEnemy.x
                 val dy = newY - otherEnemy.y
-                val distance = sqrt(dx * dx + dy * dy)
+                val distance = sqrt(x = dx * dx + dy * dy)
                 if (distance < size) {
-                    return Pair(false, otherEnemy)
+                    return Pair(first = false, second = otherEnemy)
                 }
             }
         }
 
         val dx = newX - positionX
         val dy = newY - positionY
-        val newDistance = sqrt(dx * dx + dy * dy)
-        val currentDistance = sqrt((x - positionX) * (x - positionX) + (y - positionY) * (y - positionY))
+        val newDistance = sqrt(x = dx * dx + dy * dy)
+        val currentDistance = sqrt(x = (x - positionX) * (x - positionX) + (y - positionY) * (y - positionY))
         if (newDistance < MIN_PLAYER_DISTANCE && newDistance < currentDistance) {
-            return Pair(false, null)
+            return Pair(first = false, second = null)
         }
 
-        return Pair(true, null)
+        return Pair(first = true, second = null)
     }
 
     fun tryPush(otherEnemy: Enemy, moveX: Double, moveY: Double): Boolean {
@@ -588,7 +586,7 @@ class Enemy(
         }
         val newEnemyX = otherEnemy.x + moveX * 0.5
         val newEnemyY = otherEnemy.y + moveY * 0.5
-        val (canMove, _) = otherEnemy.canMoveTo(newEnemyX, newEnemyY, this)
+        val (canMove, _) = otherEnemy.canMoveTo(newX = newEnemyX, newY = newEnemyY, exclude = this)
         if (canMove) {
             otherEnemy.x = newEnemyX
             otherEnemy.y = newEnemyY

@@ -1,8 +1,7 @@
 package org.example.MainKt
 
-//I announce that this week a new chapter for this project will begin. New types of enemies, weapons, level system
 //./gradlew shadowJar
-//0-air 1-wall 2-black_wall 3-enemy 4-ammo 5-door 6-lightSource 7-medication 8-key 9-trader 10-chest 11-slotMachine 12-closedDoor
+//0-air 1-wall 2-black_wall 3-enemy 4-ammo 5-door 6-lightSource 7-medication 8-key 9-trader 10-chest 11-slotMachine 12-closedDoor 13-boss
 
 import kotlinx.coroutines.runBlocking
 import javax.swing.JFrame
@@ -39,13 +38,16 @@ var activateSlot: Boolean = false
 var perkGUI: Boolean = false
 val maxRayDistance: Double = 22.0
 var shotAccuracy: Int = 5
-var MAX_RAY_DISTANCE = 80
+var maxShotDistance = 80
 
 var godMode: Boolean = false
 var unlimitedAmmo: Boolean = false
 var noClip: Boolean = false
 var oneHitKills: Boolean = false
 var allWeaponUnlock: Boolean = false
+var weapon2Unlocked: Boolean = false
+var weapon3Unlocked: Boolean = false
+var weapon4Unlocked: Boolean = false
 
 var map: Boolean = true
 var currentangle: Int = 45
@@ -90,10 +92,7 @@ var isShooting: Boolean = false
 var currentAmmo: Int = 46
 var SHOT_COOLDOWN = 500_000_000L * FastReload
 var speedBullet: Double = 1.0
-
-var weapon2Unlocked: Boolean = false
-var weapon3Unlocked: Boolean = false
-var weapon4Unlocked: Boolean = false
+var shotUnblock: Boolean = true
 
 class Medication(
     var x: Double,
@@ -125,7 +124,7 @@ class Coin(
     var active: Boolean = true,
     var amount: Int = 1
 ) {
-    val size = 0.5 * tileSize // Key size (radius)
+    val size = 0.5 * tileSize // Coin size (radius)
     val pickupDistance = 0.7 * 2 * size // radius for pickup
 }
 
@@ -136,7 +135,7 @@ class Glock34(
     var active: Boolean = true,
     var amount: Int = 0
 ) {
-    val size = 0.5 * tileSize // Key size (radius)
+    val size = 0.5 * tileSize // Glock34 size (radius)
     val pickupDistance = 0.7 * 2 * size // radius for pickup
 }
 
@@ -147,7 +146,7 @@ class PPSz41(
     var active: Boolean = true,
     var amount: Int = 0
 ) {
-    val size = 0.5 * tileSize // Key size (radius)
+    val size = 0.5 * tileSize // PPSz41 size (radius)
     val pickupDistance = 0.7 * 2 * size // radius for pickup
 }
 
@@ -158,7 +157,7 @@ class CheyTacM200(
     var active: Boolean = true,
     var amount: Int = 0
 ) {
-    val size = 0.5 * tileSize // Key size (radius)
+    val size = 0.5 * tileSize // CheyTacM200 size (radius)
     val pickupDistance = 0.7 * 2 * size // radius for pickup
 }
 
@@ -169,8 +168,8 @@ class Ammo(
     var active: Boolean = true,
     val amount: Int = 10
 ) {
-    val size = 0.5 * tileSize
-    val pickupDistance = 0.7 * 2 * size
+    val size = 0.5 * tileSize // Ammo size (radius)
+    val pickupDistance = 0.7 * 2 * size // radius for pickup
 }
 
 class LightSource(
@@ -269,6 +268,64 @@ fun playSound(soundFile: String, volume: Float = 0.5f) {
     }
 }
 
+fun updateWeaponStatus() {
+    if (selectWeaponSlot == 1) { //crowbar
+        maxShotDistance = 2
+        speedBullet = 1.0
+        SHOT_COOLDOWN = 150_000_000L * FastReload
+        shotAccuracy = 5
+        playerDamage = 25
+        shotUnblock = true
+    }
+    if (selectWeaponSlot == 2) { //kimberpolymeryprocarry
+        maxShotDistance = 12
+        speedBullet = 1.0
+        SHOT_COOLDOWN = 250_000_000L * FastReload
+        shotAccuracy = 10
+        playerDamage = 20
+        shotUnblock = true
+    }
+    if (selectWeaponSlot == 3) { //glock34
+        if (weapon2Unlocked){
+            maxShotDistance = 12
+            speedBullet = 1.0
+            SHOT_COOLDOWN = 500_000_000L * FastReload
+            shotAccuracy = 5
+            playerDamage = 25
+            shotUnblock = true
+        } else {
+            playSound(soundFile = "denied.wav", volume = 0.9f)
+            shotUnblock = false
+        }
+    }
+    if (selectWeaponSlot == 4) { //ppsz41
+        if (weapon3Unlocked){
+            maxShotDistance = 12
+            speedBullet = 1.5
+            SHOT_COOLDOWN = 200_000_000L * FastReload
+            shotAccuracy = 15
+            playerDamage = 15
+            shotUnblock = true
+        } else {
+            playSound(soundFile = "denied.wav", volume = 0.9f)
+            shotUnblock = false
+        }
+    }
+    if (selectWeaponSlot == 5) { //cheytamc200
+        if (weapon4Unlocked){
+            maxShotDistance = 280
+            speedBullet = 2.0
+            SHOT_COOLDOWN = 4_000_000_000L * FastReload
+            shotAccuracy = 1
+            playerDamage = 75
+            shotUnblock = true
+        } else {
+            playSound(soundFile = "denied.wav", volume = 0.9f)
+            shotUnblock = false
+        }
+    }
+}
+
 fun main() = runBlocking {
     val frame = JFrame("rolada z gówna")
     frame.defaultCloseOperation = JFrame.EXIT_ON_CLOSE
@@ -306,8 +363,8 @@ fun main() = runBlocking {
     val keysPressed: MutableMap<Int, Boolean> = mutableMapOf()
     var centerX = frame.width / 2
 
-    ///
 
+    // temp, spawn all guns
     glock34s.add(
         Glock34(
             x = (tileSize * (12)) - (tileSize / 2),
@@ -351,30 +408,31 @@ fun main() = runBlocking {
         }
     }
 
-    addStackableItem(playerInventory, ItemType.AMMO, 46, 0, Item.MAX_AMMO_PER_SLOT)
-    addStackableItem(playerInventory, ItemType.KEY, 200, 1, Item.MAX_KEYS_PER_SLOT)
-    addStackableItem(playerInventory, ItemType.COIN, 128, 5, Item.MAX_COINS_PER_SLOT)
+    addStackableItem(playerInventory, ItemType.AMMO, initialAmount = 46, startIndex = 0, maxPerSlot = Item.MAX_AMMO_PER_SLOT)
+    addStackableItem(playerInventory, ItemType.KEY, initialAmount = 200, startIndex = 1, maxPerSlot = Item.MAX_KEYS_PER_SLOT)
+    addStackableItem(playerInventory, ItemType.COIN, initialAmount = 128, startIndex = 5, maxPerSlot = Item.MAX_COINS_PER_SLOT)
 
     //playerWeaponInventory
     val weaponsToAdd = listOf(
-        Pair(ItemType.CROWBAR, 1),
-        Pair(ItemType.KIMBERPOLYMERPROCARRY, 2),
-        Pair(ItemType.GLOCK34, 3),
-        Pair(ItemType.PPSH41, 4),
-        Pair(ItemType.CHEYTACM200, 5)
+        Pair(first = ItemType.CROWBAR, second = 1),
+        Pair(first = ItemType.KIMBERPOLYMERPROCARRY, second = 2),
+        Pair(first = ItemType.GLOCK34, second = 3),
+        Pair(first = ItemType.PPSH41, second = 4),
+        Pair(first = ItemType.CHEYTACM200, second = 5)
     )
 
     weaponsToAdd.forEach { (itemType, startIndex) ->
         var remaining = 1
         var currentIndex = startIndex
         while (remaining > 0 && currentIndex < playerWeaponInventory.size) {
-            val quantity = minOf(remaining, Item.MAX_WEAPON_PER_SLOT)
+            val quantity = minOf(a = remaining, b = Item.MAX_WEAPON_PER_SLOT)
             playerWeaponInventory[currentIndex] = Item(itemType, quantity)
             remaining -= quantity
             currentIndex++
         }
     }
 
+    // cheat(devmode)
     if (oneHitKills) MoreHitShot = 50000.0
     if (allWeaponUnlock) {
         weapon2Unlocked = true
@@ -382,19 +440,20 @@ fun main() = runBlocking {
         weapon4Unlocked = true
     }
 
+    // all input
     frame.addMouseListener(object : MouseAdapter() {
         override fun mousePressed(event: MouseEvent) {
             if (event.button == MouseEvent.BUTTON1) {
                 if (inventoryVisible and lookchest) {
-                    renderCast.clickInventoryGUI(event.x, event.y)
+                    renderCast.clickInventoryGUI(mouseX = event.x, mouseY = event.y)
                     return
                 }
                 if (perkGUI) {
-                    renderCast.clickPerkGUI(event.x, event.y)
+                    renderCast.clickPerkGUI(mouseX = event.x, mouseY = event.y)
                     return
                 }
                 if (inventoryVisible and looktrader) {
-                    renderCast.clickTrader(event.x, event.y)
+                    renderCast.clickTrader(mouseX = event.x, mouseY = event.y)
                     return
                 }
                 if (!inventoryVisible or !perkGUI) renderCast.shotgun()
@@ -407,6 +466,8 @@ fun main() = runBlocking {
             }
         }
     })
+
+        //Mouse Support Mode
     if (MouseSupport) {
         frame.addMouseMotionListener(object : MouseMotionAdapter() {
             override fun mouseMoved(e: MouseEvent) {
@@ -472,12 +533,12 @@ fun main() = runBlocking {
 
                                 var remainingCOINS = ((coins-3) + (3*multiplier)).toInt()
                                 while (remainingCOINS > 0 && currentslot < playerInventory.size) {
-                                    val quantity = minOf(remainingCOINS, Item.MAX_COINS_PER_SLOT)
-                                    playerInventory[currentslot] = Item(ItemType.COIN, quantity)
+                                    val quantity = minOf(a = remainingCOINS, b = Item.MAX_COINS_PER_SLOT)
+                                    playerInventory[currentslot] = Item(type = ItemType.COIN, quantity)
                                     remainingCOINS -= quantity
                                     currentslot++
                                 }
-                                playSound("purchase.wav")
+                                playSound(soundFile = "purchase.wav")
                                 inventoryVisible = false
                             }
                         }
@@ -511,13 +572,13 @@ fun main() = runBlocking {
                     }
                 }
                 KeyEvent.VK_Q -> {
-                    val randomDistance = Random.nextDouble(1.2 * tileSize, 1.6 * tileSize)
+                    val randomDistance = Random.nextDouble(from = 1.2 * tileSize, until = 1.6 * tileSize)
                     val minWallDistance = tileSize
 
                     fun calculateItemPosition(): Pair<Double, Double> {
                         val itemX = positionX + randomDistance * cos(Math.toRadians(currentangle.toDouble()))
                         val itemY = positionY + randomDistance * sin(Math.toRadians(currentangle.toDouble()))
-                        return Pair(itemX, itemY)
+                        return Pair(first = itemX, second = itemY)
                     }
 
                     fun isValidPosition(x: Double, y: Double): Boolean {
@@ -538,7 +599,7 @@ fun main() = runBlocking {
                                     if (map.grid[checkY][checkX] in listOf(1, 2, 5, 12)) {
                                         val wallX = (checkX + 0.5) * tileSize
                                         val wallY = (checkY + 0.5) * tileSize
-                                        val distance = sqrt((x - wallX).pow(2) + (y - wallY).pow(2))
+                                        val distance = sqrt(x = (x - wallX).pow(n = 2) + (y - wallY).pow(n = 2))
                                         if (distance < minWallDistance) {
                                             return false
                                         }
@@ -557,14 +618,14 @@ fun main() = runBlocking {
                         for (radius in 0..maxSearchRadius) {
                             for (dy in -radius..radius) {
                                 for (dx in -radius..radius) {
-                                    if (kotlin.math.abs(dx) == radius || kotlin.math.abs(dy) == radius) {
+                                    if (kotlin.math.abs(dx) == radius || kotlin.math.abs(n = dy) == radius) {
                                         val gridX = startGridX + dx
                                         val gridY = startGridY + dy
                                         if (gridX >= 0 && gridX < map.grid[0].size && gridY >= 0 && gridY < map.grid.size) {
                                             val testX = (gridX + 0.5) * tileSize
                                             val testY = (gridY + 0.5) * tileSize
-                                            if (isValidPosition(testX, testY)) {
-                                                return Pair(testX, testY)
+                                            if (isValidPosition(x = testX, y = testY)) {
+                                                return Pair(first = testX, second = testY)
                                             }
                                         }
                                     }
@@ -575,8 +636,8 @@ fun main() = runBlocking {
                     }
 
                     var (itemX, itemY) = calculateItemPosition()
-                    if (!isValidPosition(itemX, itemY)) {
-                        findNearestValidPosition(itemX, itemY)?.let { (newX, newY) ->
+                    if (!isValidPosition(x = itemX, y = itemY)) {
+                        findNearestValidPosition(startX = itemX, startY = itemY)?.let { (newX, newY) ->
                             itemX = newX
                             itemY = newY
                         } ?: run {
@@ -628,95 +689,14 @@ fun main() = runBlocking {
                     if (selectWeaponSlot > 1) {
                         selectWeaponSlot -= 1
                         println(selectWeaponSlot)
-
-                        if (selectWeaponSlot == 1) { //crowbar
-                            MAX_RAY_DISTANCE = 2
-                            speedBullet = 1.0
-                            SHOT_COOLDOWN = 150_000_000L * FastReload
-                            shotAccuracy = 5
-                            playerDamage = 25
-                        }
-                        if (selectWeaponSlot == 2) {
-                            MAX_RAY_DISTANCE = 12
-                            speedBullet = 1.0
-                            SHOT_COOLDOWN = 250_000_000L * FastReload
-                            shotAccuracy = 10
-                            playerDamage = 20
-                        }
-                        if (selectWeaponSlot == 3) {
-                            if (weapon2Unlocked){
-                                MAX_RAY_DISTANCE = 12
-                                speedBullet = 1.0
-                                SHOT_COOLDOWN = 500_000_000L * FastReload
-                                shotAccuracy = 5
-                                playerDamage = 25
-                            } else { playSound("denied.wav") }
-                        }
-                        if (selectWeaponSlot == 4) {
-                            if (weapon3Unlocked){
-                                MAX_RAY_DISTANCE = 12
-                                speedBullet = 1.5
-                                SHOT_COOLDOWN = 200_000_000L * FastReload
-                                shotAccuracy = 15
-                                playerDamage = 15
-                            } else { playSound("denied.wav") }
-                        }
-                        if (selectWeaponSlot == 5) {
-                            if (weapon4Unlocked){
-                                MAX_RAY_DISTANCE = 280
-                                speedBullet = 2.0
-                                SHOT_COOLDOWN = 4_000_000_000L * FastReload
-                                shotAccuracy = 1
-                                playerDamage = 75
-                            } else { playSound("denied.wav") }
-                        }
+                        updateWeaponStatus()
                     }
                 }
                 KeyEvent.VK_T -> {
                     if (selectWeaponSlot < 5) {
                         selectWeaponSlot += 1
                         println(selectWeaponSlot)
-                        if (selectWeaponSlot == 1) { //crowbar
-                            MAX_RAY_DISTANCE = 2
-                            speedBullet = 1.0
-                            SHOT_COOLDOWN = 150_000_000L * FastReload
-                            shotAccuracy = 5
-                            playerDamage = 25
-                        }
-                        if (selectWeaponSlot == 2) {
-                            MAX_RAY_DISTANCE = 12
-                            speedBullet = 1.0
-                            SHOT_COOLDOWN = 250_000_000L * FastReload
-                            shotAccuracy = 10
-                            playerDamage = 20
-                        }
-                        if (selectWeaponSlot == 3) {
-                            if (weapon2Unlocked){
-                                MAX_RAY_DISTANCE = 12
-                                speedBullet = 1.0
-                                SHOT_COOLDOWN = 500_000_000L * FastReload
-                                shotAccuracy = 5
-                                playerDamage = 25
-                            } else { playSound("denied.wav") }
-                        }
-                        if (selectWeaponSlot == 4) {
-                            if (weapon3Unlocked){
-                                MAX_RAY_DISTANCE = 12
-                                speedBullet = 1.5
-                                SHOT_COOLDOWN = 200_000_000L * FastReload
-                                shotAccuracy = 15
-                                playerDamage = 15
-                            } else { playSound("denied.wav") }
-                        }
-                        if (selectWeaponSlot == 5) {
-                            if (weapon4Unlocked){
-                                MAX_RAY_DISTANCE = 280
-                                speedBullet = 2.0
-                                SHOT_COOLDOWN = 4_000_000_000L * 1.0
-                                shotAccuracy = 1
-                                playerDamage = 75
-                            } else { playSound("denied.wav") }
-                        }
+                        updateWeaponStatus()
                     }
                 }
             }
@@ -730,6 +710,7 @@ fun main() = runBlocking {
         }
     })
 
+    // game timming(time clocking)
     var lastFrameTime = System.nanoTime()
     var lastFpsUpdate = System.nanoTime()
     var accumulatedTime = 0.0

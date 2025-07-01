@@ -34,7 +34,7 @@ class Player(private val renderCast: RenderCast, private val map: Map) {
                     ((map.grid[gridY][gridX] == 1) ||
                             (map.grid[gridY][gridX] == 2) ||
                             (map.grid[gridY][gridX] == 12))) {
-                    if (!noClip) return Pair(false, null)
+                    if (!noClip) return Pair(first = false, second = null)
                 }
             }
         }
@@ -43,13 +43,13 @@ class Player(private val renderCast: RenderCast, private val map: Map) {
         renderCast.getEnemies().forEach { enemy ->
             val dx = x - enemy.x
             val dy = y - enemy.y
-            val distance = sqrt(dx * dx + dy * dy)
+            val distance = sqrt(x = dx * dx + dy * dy)
             if (distance < playerSize / 2 + 5.0) {
-                return Pair(false, enemy)
+                return Pair(first = false, second = enemy)
             }
         }
 
-        return Pair(true, null)
+        return Pair(first = true, second = null)
     }
 
     fun tryPushEnemy(enemy: Enemy, deltaX: Double, deltaY: Double): Boolean {
@@ -63,7 +63,7 @@ class Player(private val renderCast: RenderCast, private val map: Map) {
         // push enemy
         val newEnemyX = enemy.x + deltaX
         val newEnemyY = enemy.y + deltaY
-        val (canMove, _) = enemy.canMoveTo(newEnemyX, newEnemyY) // Użycie Pair<Boolean, Enemy?>
+        val (canMove, _) = enemy.canMoveTo(newX = newEnemyX, newY = newEnemyY) // Użycie Pair<Boolean, Enemy?>
         if (canMove) {
             enemy.x = newEnemyX
             enemy.y = newEnemyY
@@ -78,7 +78,7 @@ class Player(private val renderCast: RenderCast, private val map: Map) {
     private fun tryMove(deltaX: Double, deltaY: Double) {
         val newX = positionX + deltaX
         val newY = positionY + deltaY
-        val (canMove, collidedEnemy) = canMoveTo(newX, newY, deltaX, deltaY)
+        val (canMove, collidedEnemy) = canMoveTo(x = newX, y = newY, deltaX = deltaX, deltaY = deltaY)
         if (canMove) {
             positionX = newX
             positionY = newY
@@ -94,12 +94,12 @@ class Player(private val renderCast: RenderCast, private val map: Map) {
 
         // Try moving in X only
         val newXOnly = positionX + deltaX
-        val (canMoveX, collidedEnemyX) = canMoveTo(newXOnly, positionY, deltaX, 0.0)
+        val (canMoveX, collidedEnemyX) = canMoveTo(x = newXOnly, y = positionY, deltaX = deltaX, deltaY = 0.0)
         if (canMoveX) {
             movementSpeed = 1.00
             positionX = newXOnly
             return
-        } else if (collidedEnemyX != null && tryPushEnemy(collidedEnemyX, deltaX, 0.0)) {
+        } else if (collidedEnemyX != null && tryPushEnemy(enemy = collidedEnemyX, deltaX = deltaX, deltaY = 0.0)) {
             movementSpeed = 1.00
             positionX = newXOnly
             return
@@ -107,11 +107,11 @@ class Player(private val renderCast: RenderCast, private val map: Map) {
 
         // Try moving in Y only
         val newYOnly = positionY + deltaY
-        val (canMoveY, collidedEnemyY) = canMoveTo(positionX, newYOnly, 0.0, deltaY)
+        val (canMoveY, collidedEnemyY) = canMoveTo(x = positionX, y = newYOnly, deltaX = 0.0, deltaY = deltaY)
         if (canMoveY) {
             movementSpeed = 1.00
             positionY = newYOnly
-        } else if (collidedEnemyY != null && tryPushEnemy(collidedEnemyY, 0.0, deltaY)) {
+        } else if (collidedEnemyY != null && tryPushEnemy(enemy = collidedEnemyY, deltaX = 0.0, deltaY = deltaY)) {
             movementSpeed = 1.00
             positionY = newYOnly
         }
@@ -125,12 +125,12 @@ class Player(private val renderCast: RenderCast, private val map: Map) {
         keysToDeactivate.forEach { key ->
             key.active = false
             keys += 1
-            playSound("8exp.wav", volume = 0.65f)
+            playSound(soundFile = "8exp.wav", volume = 0.65f)
         }
         medicationsToDeactivate.forEach { medication ->
             medication.active = false
             playerHealth += (medication.heal * HealBoost).toInt()
-            playSound("8exp.wav", volume = 0.65f)
+            playSound(soundFile = "8exp.wav", volume = 0.65f)
         }
     }
 
@@ -199,7 +199,7 @@ class Player(private val renderCast: RenderCast, private val map: Map) {
                     gridY > lastGridY -> Map.Direction.UP
                     else -> Map.Direction.DOWN
                 }
-                map.generateRoom((positionX/tileSize).toInt(), (positionY/tileSize).toInt(), direction)
+                map.generateRoom(x = (positionX/tileSize).toInt(), y = (positionY/tileSize).toInt(), enterdirection = direction)
             }
             lastGridX = gridX
             lastGridY = gridY
@@ -231,15 +231,15 @@ class Player(private val renderCast: RenderCast, private val map: Map) {
             ppsz41s = mutableListOf<PPSz41>()
             cheytacm200s = mutableListOf<CheyTacM200>()
 
-            lightSources.add(LightSource(0.0, 0.0, color = Color(200, 200, 100), intensity = 0.75, range = 0.15, owner = "player"))
-            enemies.add(Enemy((tileSize * 2) - (tileSize / 2), (tileSize * 2) - (tileSize / 2), health = 100, renderCast.enemyTextureId!!, renderCast, map, speed = (2.0 * ((18..19).random() / 10.0))))
-            enemies.add(Enemy((tileSize * 2) - (tileSize / 2), (tileSize * 20) - (tileSize / 2), health = 100, renderCast.enemyTextureId!!, renderCast , map, speed = (2.0 * ((18..19).random() / 10.0))))
-            enemies.add(Enemy((tileSize * 20) - (tileSize / 2), (tileSize * 20) - (tileSize / 2), health = 100, renderCast.enemyTextureId!!, renderCast, map, speed = (2.0 * ((18..19).random() / 10.0))))
-            enemies.add(Enemy((tileSize * 20) - (tileSize / 2), (tileSize * 2) - (tileSize / 2), health = 100, renderCast.enemyTextureId!!, renderCast, map, speed = (2.0 * ((18..19).random() / 10.0))))
-            lightSources.add(LightSource((enemies[0].x / tileSize), (enemies[0].y / tileSize), color = Color(20, 22, 255), intensity = 0.35, range = 1.5, owner = "${enemies[0]}"))
-            lightSources.add(LightSource((enemies[1].x / tileSize), (enemies[1].y / tileSize), color = Color(255, 255, 22), intensity = 0.35, range = 1.5, owner = "${enemies[1]}"))
-            lightSources.add(LightSource((enemies[2].x / tileSize), (enemies[2].y / tileSize), color = Color(22, 255, 22), intensity = 0.35, range = 1.5, owner = "${enemies[2]}"))
-            lightSources.add(LightSource((enemies[3].x / tileSize), (enemies[3].y / tileSize), color = Color(255, 22, 22), intensity = 0.35, range = 1.5, owner = "${enemies[3]}"))
+            lightSources.add(LightSource(x = 0.0, y = 0.0, color = Color(200, 200, 100), intensity = 0.75, range = 0.15, owner = "player"))
+            enemies.add(Enemy(x = (tileSize * 2) - (tileSize / 2), y = (tileSize * 2) - (tileSize / 2), health = 100, texture = renderCast.enemyTextureId!!, renderCast, map, speed = (2.0 * ((18..19).random() / 10.0))))
+            enemies.add(Enemy(x = (tileSize * 2) - (tileSize / 2), y = (tileSize * 20) - (tileSize / 2), health = 100, texture = renderCast.enemyTextureId!!, renderCast , map, speed = (2.0 * ((18..19).random() / 10.0))))
+            enemies.add(Enemy(x = (tileSize * 20) - (tileSize / 2), y = (tileSize * 20) - (tileSize / 2), health = 100, texture = renderCast.enemyTextureId!!, renderCast, map, speed = (2.0 * ((18..19).random() / 10.0))))
+            enemies.add(Enemy(x = (tileSize * 20) - (tileSize / 2), y = (tileSize * 2) - (tileSize / 2), health = 100, texture = renderCast.enemyTextureId!!, renderCast, map, speed = (2.0 * ((18..19).random() / 10.0))))
+            lightSources.add(LightSource(x = (enemies[0].x / tileSize), y = (enemies[0].y / tileSize), color = Color(20, 22, 255), intensity = 0.35, range = 1.5, owner = "${enemies[0]}"))
+            lightSources.add(LightSource(x = (enemies[1].x / tileSize), y = (enemies[1].y / tileSize), color = Color(255, 255, 22), intensity = 0.35, range = 1.5, owner = "${enemies[1]}"))
+            lightSources.add(LightSource(x = (enemies[2].x / tileSize), y = (enemies[2].y / tileSize), color = Color(22, 255, 22), intensity = 0.35, range = 1.5, owner = "${enemies[2]}"))
+            lightSources.add(LightSource(x = (enemies[3].x / tileSize), y = (enemies[3].y / tileSize), color = Color(255, 22, 22), intensity = 0.35, range = 1.5, owner = "${enemies[3]}"))
             // renderCast
             map.grid = arrayOf(
                 intArrayOf(2,5,2,2,2,2,2,2,2,2,5,2,2,2,2,2,2,2,2,5,2),

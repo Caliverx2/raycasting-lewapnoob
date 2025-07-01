@@ -1,5 +1,7 @@
 package org.example.MainKt
 
+//0-air 1-wall 2-black_wall 3-enemy 4-ammo 5-door 6-lightSource 7-medication 8-key 9-trader 10-chest 11-slotMachine 12-closedDoor 13-boss
+
 import org.example.MainKt.Map.RoomTemplate
 import java.awt.BasicStroke
 import java.awt.Color
@@ -10,7 +12,6 @@ import java.awt.Graphics2D
 import java.awt.GraphicsEnvironment
 import java.awt.RenderingHints
 import java.awt.image.BufferedImage
-import java.awt.image.ImageObserver
 import javax.imageio.ImageIO;
 import kotlin.math.cos
 import kotlin.math.sin
@@ -19,8 +20,6 @@ import kotlin.Int
 import kotlin.random.Random
 
 var directionForRoom = "UP"
-
-//0-air 1-wall 2-black_wall 3-enemy 4-ammo 5-door 6-lightSource 7-medication 8-key 9-trader 10-chest 11-slotMachine 12-closedDoor 13-boss
 val rooms = listOf(
     RoomTemplate(
         grid = arrayOf(
@@ -277,7 +276,6 @@ class Map(var renderCast: RenderCast? = null) {
     fun generateRoom(x: Int = 0, y: Int = 0, enterdirection: Direction) {
         directionForRoom = enterdirection.toString()
         println(directionForRoom)
-        //0-air 1-wall 2-black_wall 3-enemy 4-ammo 5-door 6-lightSource 7-medication 8-key 9-trader 10-chest 11-slotMachine 12-closedDoor
         var roomTemplate = randomRoom()
 
         gridmod = false
@@ -1140,7 +1138,7 @@ class Mappingmap(private val map: Map, private val renderCast: RenderCast) : JPa
         g2.font = font?.deriveFont(Font.BOLD, 17f) ?: Font("Arial", Font.BOLD, 50)
         g2.drawString("level up", (1366/2)-70, 100)
         g2.color = Color.WHITE
-        g2.font = Font("Arial", Font.BOLD, 17)
+        g2.font = Font("SansSerif", Font.PLAIN, 14)
         g2.drawString("\uD83D\uDE0E", (1366/2)+10, 100)
     }
 }

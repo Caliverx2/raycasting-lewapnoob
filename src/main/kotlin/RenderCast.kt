@@ -982,6 +982,7 @@ class RenderCast(private val map: Map) : JPanel() {
         val startX = 1366 - (slotSize + spacing) * 9 - 20
         val startY = 600
         val totalSlots = playerInventory.size
+        var weaponName = " "
 
         g2.color = Color(50, 50, 50, 180)
         g2.fillRoundRect(
@@ -1022,6 +1023,31 @@ class RenderCast(private val map: Map) : JPanel() {
             20,
             20
         )
+
+        if (selectWeaponSlot == 1) {
+            weaponName = "CROWBAR"
+        }
+        if (selectWeaponSlot == 2) {
+            weaponName = "Kimber Polymer Pro Carry"
+        }
+        if (selectWeaponSlot == 3) {
+            weaponName = "GLOCK 34"
+        }
+        if (selectWeaponSlot == 4) {
+            weaponName = "PPSh-41"
+        }
+        if (selectWeaponSlot == 5) {
+            weaponName = "CheyTac M200"
+        }
+
+        g2.color = Color(180, 180, 180)
+        g2.font = font?.deriveFont(Font.TYPE1_FONT, 17.toFloat()) ?: Font("Arial", Font.BOLD, 1)
+        if (selectWeaponSlot == 2) {
+            g2.drawString("Kimber Polymer", startX + (6) * (slotSize + spacing), startY-(slotSize*2/3 + spacing)-10)
+            g2.drawString("Pro Carry", startX + (6) * (slotSize + spacing), startY-(slotSize*2/3 + spacing)+10)
+        } else {
+            g2.drawString("$weaponName", startX + (6) * (slotSize + spacing), startY-(slotSize*2/3 + spacing))
+        }
 
         if (!lookchest and !looktrader and !lookslotMachine) {
             inventoryVisible = false
@@ -1074,16 +1100,37 @@ class RenderCast(private val map: Map) : JPanel() {
                 slotRender = selectWeaponSlot+1
             }
 
+            g2.color = Color(180, 180, 180)
+            g2.font = font?.deriveFont(Font.TYPE1_FONT, 17.toFloat()) ?: Font("Arial", Font.BOLD, 1)
+            g2.drawString("<-R", startX + (3) * (slotSize + spacing), y)
+            g2.drawString("  T->", startX + (5) * (slotSize + spacing), y)
+
             try {
                 playerWeaponInventory[slotRender]?.let { item ->
-                    g2.drawImage(
-                        getItemTexture(item.type),
-                        x + (slotSize / 5),
-                        y + (slotSize / 5),
-                        (slotSize / 4) * 3,
-                        (slotSize / 4) * 3,
-                        null
-                    )
+                    if ((item.type == ItemType.PPSH41) or (item.type == ItemType.CHEYTACM200)) {
+                        g2.drawImage(getItemTexture(item.type), x, y, (slotSize), (slotSize), null)
+                    } else {
+                        g2.drawImage(
+                            getItemTexture(item.type),
+                            x + (slotSize / 5),
+                            y + (slotSize / 5),
+                            (slotSize / 4) * 3,
+                            (slotSize / 4) * 3,
+                            null
+                        )
+                    }
+                    if ((item.type == ItemType.GLOCK34) and (weapon2Unlocked == false)) {
+                        g2.color = Color(100, 100, 100, 180)
+                        g2.fillRoundRect(x, y, slotSize, slotSize, 17, 17)
+                    }
+                    if ((item.type == ItemType.PPSH41) and (weapon3Unlocked == false)) {
+                        g2.color = Color(100, 100, 100,180)
+                        g2.fillRoundRect(x, y, slotSize, slotSize, 17, 17)
+                    }
+                    if ((item.type == ItemType.CHEYTACM200) and (weapon4Unlocked == false)) {
+                        g2.color = Color(100, 100, 100, 180)
+                        g2.fillRoundRect(x, y, slotSize, slotSize, 17, 17)
+                    }
                 }
             } catch (e: Exception) {}
         }
@@ -1176,7 +1223,7 @@ class RenderCast(private val map: Map) : JPanel() {
                 ItemType.KEY -> ImageIO.read(this::class.java.classLoader.getResource("textures/key.png"))
                 ItemType.COIN -> ImageIO.read(this::class.java.classLoader.getResource("textures/coin.png"))
                 ItemType.CROWBAR -> ImageIO.read(this::class.java.classLoader.getResource("textures/crowbar.png"))
-                ItemType.KIMBERPOLYMERPROCARRY -> ImageIO.read(this::class.java.classLoader.getResource("textures/crowbar.png"))
+                ItemType.KIMBERPOLYMERPROCARRY -> ImageIO.read(this::class.java.classLoader.getResource("textures/kimberpolymerprocarry.png"))
                 ItemType.GLOCK34 -> ImageIO.read(this::class.java.classLoader.getResource("textures/glock34.png"))
                 ItemType.PPSH41 -> ImageIO.read(this::class.java.classLoader.getResource("textures/ppsz41.png"))
                 ItemType.CHEYTACM200 -> ImageIO.read(this::class.java.classLoader.getResource("textures/ammo.png"))
@@ -1869,7 +1916,9 @@ class RenderCast(private val map: Map) : JPanel() {
     fun shotgun() {
         val currentTime = System.nanoTime()
         val ammoSlot = playerInventory.indexOfFirst { it?.type == ItemType.AMMO && it.quantity > 0 }
-        if (currentTime - lastShotTime >= SHOT_COOLDOWN && !isShooting && ammoSlot != -1) {
+        updateWeaponStatus()
+
+        if (currentTime - lastShotTime >= SHOT_COOLDOWN && !isShooting && ammoSlot != -1 && shotUnblock == true) {
             if (!unlimitedAmmo and (selectWeaponSlot > 1)) {
                 playerInventory[ammoSlot]!!.quantity -= 1
                 if (playerInventory[ammoSlot]!!.quantity <= 0) {
@@ -1925,17 +1974,17 @@ class RenderCast(private val map: Map) : JPanel() {
             var wallDistance = Double.MAX_VALUE
             var rayLength = 0.0
 
-            while (!hitWall && rayLength < MAX_RAY_DISTANCE) { // Dodano warunek rayLength
+            while (!hitWall && rayLength < maxShotDistance) {
                 if (sideDistX < sideDistY) {
                     sideDistX += deltaDistX
                     mapX += stepX
                     side = 0
-                    rayLength = sideDistX // Aktualizacja długości promienia
+                    rayLength = sideDistX
                 } else {
                     sideDistY += deltaDistY
                     mapY += stepY
                     side = 1
-                    rayLength = sideDistY // Aktualizacja długości promienia
+                    rayLength = sideDistY
                 }
 
                 if (mapY !in map.grid.indices || mapX !in map.grid[0].indices) {
@@ -1970,7 +2019,7 @@ class RenderCast(private val map: Map) : JPanel() {
                 val dy = enemy.y / tileSize - playerPosY
                 val rayLengthToEnemy = dx * rayDirX + dy * rayDirY
 
-                if (rayLengthToEnemy > 0 && rayLengthToEnemy < wallDistance && rayLengthToEnemy <= MAX_RAY_DISTANCE) {
+                if (rayLengthToEnemy > 0 && rayLengthToEnemy < wallDistance && rayLengthToEnemy <= maxShotDistance) {
                     val perpendicularDistance = abs(dx * rayDirY - dy * rayDirX)
                     if ((perpendicularDistance < (enemy.size * 20) / 2 / tileSize) && (enemy.health >= 1)) {
                         val angleToEnemy = atan2(dy, dx)
@@ -2314,6 +2363,7 @@ class RenderCast(private val map: Map) : JPanel() {
                         playSound("8exp.wav", 0.65f)
                         weapon2Unlocked = true
                     }
+                    updateWeaponStatus()
                     glock34.active = false
                 }
             }
@@ -2356,6 +2406,7 @@ class RenderCast(private val map: Map) : JPanel() {
                         playSound("8exp.wav", 0.65f)
                         weapon3Unlocked = true
                     }
+                    updateWeaponStatus()
                     ppsz41.active = false
                 }
             }
@@ -2398,6 +2449,7 @@ class RenderCast(private val map: Map) : JPanel() {
                         playSound("8exp.wav", 0.65f)
                         weapon4Unlocked = true
                     }
+                    updateWeaponStatus()
                     cheytacm200.active = false
                 }
             }
