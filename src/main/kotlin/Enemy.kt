@@ -1,4 +1,4 @@
-package org.example.MainKt
+package org.lewapnoob.raycast
 
 import java.awt.Color
 import java.awt.Graphics2D

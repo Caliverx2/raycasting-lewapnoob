@@ -1,8 +1,7 @@
-package org.example.MainKt
+package org.lewapnoob.raycast
 
 //0-air 1-wall 2-black_wall 3-enemy 4-ammo 5-door 6-lightSource 7-medication 8-key 9-trader 10-chest 11-slotMachine 12-closedDoor 13-boss
 
-import org.example.MainKt.Map.RoomTemplate
 import java.awt.BasicStroke
 import java.awt.Color
 import java.awt.Dimension
@@ -157,6 +156,12 @@ val rooms = listOf(
     )
 )
 
+data class RoomTemplate(
+    val grid: Array<IntArray>,
+    val scale: Int,
+    val weight: Double = 0.15
+)
+
 class Map(var renderCast: RenderCast? = null) {
     var grid: Array<IntArray> = arrayOf(
         intArrayOf(2,5,2,2,2,2,2,2,2,2,5,2,2,2,2,2,2,2,2,5,2),
@@ -212,12 +217,6 @@ class Map(var renderCast: RenderCast? = null) {
     var clear = true
     private val roomTemplates = rooms
     private val recentRooms = mutableListOf<RoomTemplate>()
-
-    data class RoomTemplate(
-        val grid: Array<IntArray>,
-        val scale: Int,
-        val weight: Double = 0.15
-    )
 
     fun randomRoom(): RoomTemplate {
         var availableRooms = roomTemplates.filter { it !in recentRooms.take(3) }
@@ -703,7 +702,7 @@ class Map(var renderCast: RenderCast? = null) {
                                 ItemType.PPSH41 -> 0
                                 ItemType.CHEYTACM200 -> 0
                             }
-                            items.add(Item(itemType, quantity))
+                            if (quantity > 0) items.add(Item(itemType, quantity))
                         }
                         traders.add(
                             Trader(

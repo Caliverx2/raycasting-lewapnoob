@@ -1,4 +1,4 @@
-package org.example.MainKt
+package org.lewapnoob.raycast
 
 import java.awt.Color
 import java.awt.Font
@@ -62,7 +62,7 @@ class RenderCast(private val map: Map) : JPanel() {
     private val minBrightness = -5.0//0.0
     private val maxBrightness = 5.0//1.9
     private val shadeDistanceScale = 5.0//10.0
-    private val fogColor = Color(180, 180, 180)
+    private val fogColor = Color(120, 120, 120)
     private val fogDensity = 0.5/4 //0.5/4
 
     private val rayCosines = DoubleArray(rayCount)
@@ -133,8 +133,8 @@ class RenderCast(private val map: Map) : JPanel() {
             ammoTextureID = createTexture(Color(90,90,90))
             traderTextureID = createTexture(Color(255, 68, 68))
             slotMachineTextureID = createTexture(Color(255,140,0))
-            glock34TextureId = createTexture(Color(20, 20, 20))
-            ppsz41TextureId = createTexture(Color(20, 20, 20))
+            glock34TextureId = createTexture(Color(80, 80, 80))
+            ppsz41TextureId = createTexture(Color(40, 40, 40))
             cheyTacM200TextureId = createTexture(Color(20, 20, 20))
         }
 
@@ -150,7 +150,7 @@ class RenderCast(private val map: Map) : JPanel() {
         lightSources.add(LightSource((enemies[2].x / tileSize), (enemies[2].y / tileSize), color = Color(22, 255, 22), intensity = 0.35, range = 1.5, owner = "${enemies[2]}"))
         lightSources.add(LightSource((enemies[3].x / tileSize), (enemies[3].y / tileSize), color = Color(255, 22, 22), intensity = 0.35, range = 1.5, owner = "${enemies[3]}"))
 
-        buffer = BufferedImage(screenWidth, screenHeight, BufferedImage.TYPE_INT_RGB)
+        buffer = BufferedImage(screenWidth, screenHeight, BufferedImage.TYPE_INT_RGB)//BufferedImage(screenWidth, screenHeight, BufferedImage.TYPE_USHORT_555_RGB)
         bufferGraphics = buffer.createGraphics()
 
         val rayAngleStep = fov / (rayCount - 1)

@@ -4,7 +4,7 @@ plugins {
     id("java")
 }
 
-group = "org.example"
+group = "org.lewapnoob"
 version = "2"
 
 repositories {
@@ -36,15 +36,15 @@ tasks {
 
 tasks.withType<Jar> {
     manifest {
-        attributes["Main-Class"] = "org.example.MainKt.MainKt"
+        attributes["Main-Class"] = "org.lewapnoob.raycast.MainKt"
     }
 }
 
 tasks.jar {
     manifest {
         attributes(
-            "Main-Class" to "org.example.MainKt.MainKt",
-            "Class-Path" to "org.example.MainKt.MainKt",
+            "Main-Class" to "org.lewapnoob.raycast.MainKt",
+            "Class-Path" to "org.lewapnoob.raycast.MainKt",
             "JVM-Options" to "-Xmx2048m -Xms1024m"
         )
     }

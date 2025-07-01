@@ -1,4 +1,4 @@
-package org.example.MainKt
+package org.lewapnoob.raycast
 
 //./gradlew shadowJar
 //0-air 1-wall 2-black_wall 3-enemy 4-ammo 5-door 6-lightSource 7-medication 8-key 9-trader 10-chest 11-slotMachine 12-closedDoor 13-boss
