@@ -338,7 +338,7 @@ class Enemy(
     }
 
     fun update() {
-        if (health <= 0) {
+        if ((health <= 0) or deathGUI) {
             path = emptyList()
             isMoving = false
             idleTimer = 0

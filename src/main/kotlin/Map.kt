@@ -1,6 +1,6 @@
 package org.lewapnoob.raycast
 
-//0-air 1-wall 2-black_wall 3-enemy 4-ammo 5-door 6-lightSource 7-medication 8-key 9-trader 10-chest 11-slotMachine 12-closedDoor 13-boss
+//0-air 1-wall 2-black_wall 3-enemy 4-ammo 5-door 6-lightSource 7-medication 8-key 9-trader 10-chest 11-slotMachine 12-closedDoor 13-boss 14-tnt
 
 import java.awt.BasicStroke
 import java.awt.Color
@@ -139,13 +139,13 @@ val rooms = listOf(
             intArrayOf(2, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 2),
             intArrayOf(2, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 2),
             intArrayOf(2, 1, 0, 1, 1, 0, 1, 1, 1, 0, 1, 1, 0, 1, 2),
-            intArrayOf(2, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 2),
+            intArrayOf(2, 0, 0, 1, 14, 0, 0, 0, 0, 0, 14, 1, 0, 0, 2),
             intArrayOf(2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2),
             intArrayOf(2, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 2),
             intArrayOf(5, 0, 0, 1, 0, 0, 0, 10, 0, 0, 0, 1, 0, 0, 5),
             intArrayOf(2, 0, 0, 1, 0, 0, 1, 13, 1, 0, 0, 1, 0, 0, 2),
             intArrayOf(2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2),
-            intArrayOf(2, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 2),
+            intArrayOf(2, 0, 0, 1, 14, 0, 0, 0, 0, 0, 14, 1, 0, 0, 2),
             intArrayOf(2, 1, 0, 1, 1, 0, 1, 1, 1, 0, 1, 1, 0, 1, 2),
             intArrayOf(2, 0, 3, 0, 0, 0, 0, 0, 0, 3, 0, 0, 3, 0, 2),
             intArrayOf(2, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 2),
@@ -332,6 +332,22 @@ class Map(var renderCast: RenderCast? = null) {
                         slotMachine.x += offsetX*tileSize
                         slotMachine.y += offsetY*tileSize
                     }
+                    tnts.forEach { tnt ->
+                        tnt.x += offsetX*tileSize
+                        tnt.y += offsetY*tileSize
+                    }
+                    glock34s.forEach { glock34 ->
+                        glock34.x += offsetX*tileSize
+                        glock34.y += offsetY*tileSize
+                    }
+                    ppsz41s.forEach { ppsz41 ->
+                        ppsz41.x += offsetX*tileSize
+                        ppsz41.y += offsetY*tileSize
+                    }
+                    cheytacm200s.forEach { cheytacm200 ->
+                        cheytacm200.x += offsetX*tileSize
+                        cheytacm200.y += offsetY*tileSize
+                    }
                 }
                 currentRooms += 1
                 val keysSlot = playerInventory.indexOfFirst { it?.type == ItemType.KEY && it.quantity > 0 }
@@ -425,6 +441,22 @@ class Map(var renderCast: RenderCast? = null) {
                     slotMachines.forEach { slotMachine ->
                         slotMachine.x += offsetX*tileSize
                         slotMachine.y += offsetY*tileSize
+                    }
+                    tnts.forEach { tnt ->
+                        tnt.x += offsetX*tileSize
+                        tnt.y += offsetY*tileSize
+                    }
+                    glock34s.forEach { glock34 ->
+                        glock34.x += offsetX*tileSize
+                        glock34.y += offsetY*tileSize
+                    }
+                    ppsz41s.forEach { ppsz41 ->
+                        ppsz41.x += offsetX*tileSize
+                        ppsz41.y += offsetY*tileSize
+                    }
+                    cheytacm200s.forEach { cheytacm200 ->
+                        cheytacm200.x += offsetX*tileSize
+                        cheytacm200.y += offsetY*tileSize
                     }
                 }
             }
@@ -818,6 +850,25 @@ class Map(var renderCast: RenderCast? = null) {
                         )
                     } ?: throw IllegalStateException("renderCast is null")
                 }
+                if (roomTemplate.grid[XX][YY] == 14) {
+                    var random = Random.nextFloat()
+                    when {
+                        random < 0.5f -> tnts.add(
+                            Tnt(
+                                x = (tileSize * (distItemX+1)) - (tileSize / 2),
+                                y = (tileSize * (distItemY+1)) - (tileSize / 2),
+                                texture = renderCast?.tntTextureID!!,
+                                active = true
+                            )
+                        )
+                        else -> null
+                    }
+
+                    if (gridmod && (offsetX != 0 || offsetY != 0)) {
+                        tnts.get(tnts.size-1).x -= offsetX*tileSize
+                        tnts.get(tnts.size-1).y -= offsetY*tileSize
+                    }
+                }
             }
         }
     }
@@ -1083,9 +1134,10 @@ class Mappingmap(private val map: Map, private val renderCast: RenderCast) : JPa
         g2.color = Color.darkGray
         g2.fillRoundRect(playerMapX - 2, playerMapY - 2, 5, 5, 5, 5)
 
-        g2.color = Color.white
-        g2.fillRect(683, 384, 3, 3)
-
+        if (!deathGUI and !perkGUI) {
+            g2.color = Color.white
+            g2.fillRect(683, 384, 3, 3)
+        }
         g2.color = Color.YELLOW
         g2.font = font?.deriveFont(Font.BOLD, 17f) ?: Font("Arial", Font.BOLD, 17)
 
@@ -1096,21 +1148,21 @@ class Mappingmap(private val map: Map, private val renderCast: RenderCast) : JPa
         g2.drawString("POINTS: ${points}", 10, 380)
         g2.drawString("AMMO: ${totalAmmo}", 10, 400)
         g2.drawString("COINS: ${coins}", 10, 420)
-        if (lookchest and !inventoryVisible) {
+        if (lookchest and !inventoryVisible and !deathGUI) {
             g2.color = Color(50, 50, 50, 180)
             g2.fillRoundRect(((1366+g2.font.size)/2)-10, ((768+g2.font.size)/2)-25, 150, 40, arcSize, arcSize)
             g2.color = Color.YELLOW
             g2.drawString("Open chest[E]", (1366+g2.font.size)/2, (768+g2.font.size)/2)
         }
 
-        if (looktrader and !inventoryVisible) {
+        if (looktrader and !inventoryVisible and !deathGUI) {
             g2.color = Color(50, 50, 50, 180)
             g2.fillRoundRect(((1366+g2.font.size)/2)-10, ((768+g2.font.size)/2)-25, 105, 40, arcSize, arcSize)
             g2.color = Color.YELLOW
             g2.drawString("Trade[E]", (1366+g2.font.size)/2, (768+g2.font.size)/2)
         }
 
-        if (lookslotMachine and !inventoryVisible) {
+        if (lookslotMachine and !inventoryVisible and !deathGUI) {
             g2.color = Color(50, 50, 50, 180)
             g2.fillRoundRect(((1366+g2.font.size)/2)-10, ((768+g2.font.size)/2)-25, 225, 40, arcSize, arcSize)
             g2.color = Color.YELLOW

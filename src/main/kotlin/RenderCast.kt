@@ -24,8 +24,8 @@ import kotlin.math.min
 import kotlin.math.pow
 
 class RenderCast(private val map: Map) : JPanel() {
-    private val screenWidth = (320*1.0).toInt() //1:1 3:4 9:16
-    private val screenHeight = (180*1.0).toInt()//320:200
+    private val screenWidth = (320*1.0).toInt() //1:1 4:3 9:16
+    private val screenHeight = (180*1.0).toInt()//320:180
     private val fov = 90.0
     private val textureSize = 64
     private val rayCount = (screenWidth*0.85).toInt()//85
@@ -44,6 +44,7 @@ class RenderCast(private val map: Map) : JPanel() {
     var ammoTextureID: BufferedImage? = null
     var traderTextureID: BufferedImage? = null
     var slotMachineTextureID: BufferedImage? = null
+    var tntTextureID:  BufferedImage? = null
     var coinTextureID: BufferedImage? = null
     var enemyBossTextureId: BufferedImage? = null
     var glock34TextureId: BufferedImage? = null
@@ -75,6 +76,7 @@ class RenderCast(private val map: Map) : JPanel() {
     private var visibleAmmo = mutableListOf<Triple<Ammo, Int, Double>>()
     private var visibleTrader = mutableListOf<Triple<Trader, Int, Double>>()
     private var visibleSlotMachines = mutableListOf<Triple<SlotMachine, Int, Double>>()
+    private var visibleTnt = mutableListOf<Triple<Tnt, Int, Double>>()
     private var visibleCoins = mutableListOf<Triple<Coin, Int, Double>>()
     private var visibleGlock34 = mutableListOf<Triple<Glock34, Int, Double>>()
     private var visiblePPSz41 = mutableListOf<Triple<PPSz41, Int, Double>>()
@@ -112,6 +114,7 @@ class RenderCast(private val map: Map) : JPanel() {
             glock34TextureId = ImageIO.read(this::class.java.classLoader.getResource("textures/glock34.png"))
             ppsz41TextureId = ImageIO.read(this::class.java.classLoader.getResource("textures/ppsz41.png"))
             cheyTacM200TextureId = ImageIO.read(this::class.java.classLoader.getResource("textures/coin.png"))
+            tntTextureID = ImageIO.read(this::class.java.classLoader.getResource("textures/chest.png"))
 
             loadTexture(1, "textures/bricks.jpg")
             loadTexture(2, "textures/black_bricks.png")
@@ -136,6 +139,7 @@ class RenderCast(private val map: Map) : JPanel() {
             glock34TextureId = createTexture(Color(80, 80, 80))
             ppsz41TextureId = createTexture(Color(40, 40, 40))
             cheyTacM200TextureId = createTexture(Color(20, 20, 20))
+            tntTextureID = createTexture(Color(255, 20, 20))
         }
 
         lightSources.add(LightSource(0.0, 0.0, color = Color(200, 200, 100), intensity = 0.75, range = 0.15, owner = "player"))
@@ -201,6 +205,7 @@ class RenderCast(private val map: Map) : JPanel() {
         g2d.scale(1.0 / scaleX, 1.0 / scaleY)
         renderInventoryUI(g2d)
         renderPerkGUI(g2d)
+        renderDeathPlayerGUI(g2d)
         if (levelUp) {
             Mappingmap(map, this).levelUp(g2d)
         }
@@ -366,6 +371,7 @@ class RenderCast(private val map: Map) : JPanel() {
         visibleGlock34.clear()
         visiblePPSz41.clear()
         visibleCheyTacM200.clear()
+        visibleTnt.clear()
         lookchest = false
         looktrader = false
         lookslotMachine = false
@@ -399,6 +405,7 @@ class RenderCast(private val map: Map) : JPanel() {
         glock34s.forEach { addEntityIfInRadius(it, it.x, it.y, it.active) }
         ppsz41s.forEach { addEntityIfInRadius(it, it.x, it.y, it.active) }
         cheytacm200s.forEach { addEntityIfInRadius(it, it.x, it.y, it.active) }
+        tnts.forEach { addEntityIfInRadius(it, it.x, it.y, it.active) }
 
         // Raycasting loop
         for (ray in 0 until rayCount) {
@@ -554,6 +561,7 @@ class RenderCast(private val map: Map) : JPanel() {
                     is Glock34 -> entity.size
                     is PPSz41 -> entity.size
                     is CheyTacM200 -> entity.size
+                    is Tnt -> entity.size
                     else -> 0.0
                 }
                 val visibleList = when (entity) {
@@ -568,6 +576,7 @@ class RenderCast(private val map: Map) : JPanel() {
                     is Glock34 -> visibleGlock34
                     is PPSz41 -> visiblePPSz41
                     is CheyTacM200 -> visibleCheyTacM200
+                    is Tnt -> visibleTnt
                     else -> mutableListOf()
                 }
                 processEntityVisibility(entity, posX, posY, size, visibleList as MutableList<Triple<Any, Int, Double>>)
@@ -969,6 +978,146 @@ class RenderCast(private val map: Map) : JPanel() {
         if (mouseX in 870 until 1180 && mouseY in 537 until 574) {
             selectedOfferIndex = 3
             playSound("click.wav")
+        }
+    }
+
+    fun renderDeathPlayerGUI(g2: Graphics2D) {
+        if (!deathGUI) return
+
+        var scaleUI = 225
+        val heightUI = 200
+        val arcSize = 50
+        var nameOption = ""
+
+        g2.color = Color(50, 50, 50, 180)
+        g2.fillRoundRect((1366/2)-(scaleUI), (768/2)-(heightUI), scaleUI*2, heightUI*2, arcSize, arcSize)
+        g2.color = Color(150, 150, 150, 180)
+        g2.fillRoundRect((1366/2)-(scaleUI)+4, (768/2)-(heightUI)+4, scaleUI*2-8, heightUI*2-8, arcSize, arcSize)
+        scaleUI = 200
+        for (i in 1..3) {
+            g2.color = Color(40, 40, 40, 180)
+            g2.fillRoundRect((1366/2)-(scaleUI)+8, (768)-heightUI-((heightUI*i*2)/5)+8, scaleUI*2-16, (heightUI*2-16)/5, arcSize, arcSize)
+        }
+        g2.color = Color.WHITE
+        g2.font = font?.deriveFont(Font.TYPE1_FONT, 50.toFloat()) ?: Font("Arial", Font.BOLD, 1)
+        g2.drawString("     You died!", (1366/2)-(scaleUI)+8, ((768)-heightUI-((heightUI*3.6*2)/5)+8).toInt())
+        for (i in 1..3) {
+            if (i==3) nameOption = "  Next Challenge"
+            if (i==2) nameOption = "  Reset"
+            if (i==1) nameOption = "  Exit Game"
+            g2.font = font?.deriveFont(Font.TYPE1_FONT, 40.toFloat()) ?: Font("Arial", Font.BOLD, 1)
+            g2.drawString(nameOption,(1366/2)-(scaleUI)+8, ((768)-heightUI-((heightUI*(i-0.65)*2)/5)+8).toInt()) //(768)-heightUI-((heightUI*i*2)/5)+8)
+        }
+    }
+
+    fun clickDeathPlayerGUI(mouseX: Int, mouseY: Int) {
+        if (!deathGUI) return
+        if (mouseX in 500 until 880 && mouseY in 367 until 438) {
+            println("1")
+            playSound("click.wav")
+            killingPlayer(renderCast = this, map = map)
+            deathGUI = false
+        }
+        if (mouseX in 500 until 880 && mouseY in 446 until 520) {
+            println("2")
+            playSound("click.wav")
+            level = 1
+            HealBoost = 1.0
+            SpeedMovement = 1.0
+            MoreHitShot = 1.0
+            FastReload = 1.0
+            AmmoBoost = 1.0
+            selectSlot = 1
+            selectWeaponSlot = 2
+            positionX = (tileSize*11)-(tileSize/2)
+            positionY = (tileSize*11)-(tileSize/2)
+            weapon2Unlocked = false
+            weapon3Unlocked = false
+            weapon4Unlocked = false
+            enemies = mutableListOf<Enemy>()
+            lightSources = mutableListOf<LightSource>()
+            keysList = mutableListOf<Key>()
+            coinsList = mutableListOf<Coin>()
+            projectiles = mutableListOf<Enemy.Projectile>()
+            medications = mutableListOf<Medication>()
+            chests = mutableListOf<Chest>()
+            ammo = mutableListOf<Ammo>()
+            traders = mutableListOf<Trader>()
+            slotMachines = mutableListOf<SlotMachine>()
+            glock34s = mutableListOf<Glock34>()
+            ppsz41s = mutableListOf<PPSz41>()
+            cheytacm200s = mutableListOf<CheyTacM200>()
+            tnts = mutableListOf<Tnt>()
+            playerInventory = MutableList<Item?>(9) { null }
+            playerWeaponInventory = MutableList<Item?>(6) { null }
+            if (oneHitKills) MoreHitShot = 50000.0
+            if (allWeaponUnlock) {
+                weapon2Unlocked = true
+                weapon3Unlocked = true
+                weapon4Unlocked = true
+            }
+            starterPackItem()
+
+            lightSources.add(LightSource(x = 0.0, y = 0.0, color = Color(200, 200, 100), intensity = 0.75, range = 0.15, owner = "player"))
+            enemies.add(Enemy(x = (tileSize * 2) - (tileSize / 2), y = (tileSize * 2) - (tileSize / 2), health = 100, texture = enemyTextureId!!, renderCast = this, map, speed = (2.0 * ((18..19).random() / 10.0))))
+            enemies.add(Enemy(x = (tileSize * 2) - (tileSize / 2), y = (tileSize * 20) - (tileSize / 2), health = 100, texture = enemyTextureId!!, renderCast = this , map, speed = (2.0 * ((18..19).random() / 10.0))))
+            enemies.add(Enemy(x = (tileSize * 20) - (tileSize / 2), y = (tileSize * 20) - (tileSize / 2), health = 100, texture = enemyTextureId!!, renderCast = this, map, speed = (2.0 * ((18..19).random() / 10.0))))
+            enemies.add(Enemy(x = (tileSize * 20) - (tileSize / 2), y = (tileSize * 2) - (tileSize / 2), health = 100, texture = enemyTextureId!!, renderCast = this, map, speed = (2.0 * ((18..19).random() / 10.0))))
+            lightSources.add(LightSource(x = (enemies[0].x / tileSize), y = (enemies[0].y / tileSize), color = Color(20, 22, 255), intensity = 0.35, range = 1.5, owner = "${enemies[0]}"))
+            lightSources.add(LightSource(x = (enemies[1].x / tileSize), y = (enemies[1].y / tileSize), color = Color(255, 255, 22), intensity = 0.35, range = 1.5, owner = "${enemies[1]}"))
+            lightSources.add(LightSource(x = (enemies[2].x / tileSize), y = (enemies[2].y / tileSize), color = Color(22, 255, 22), intensity = 0.35, range = 1.5, owner = "${enemies[2]}"))
+            lightSources.add(LightSource(x = (enemies[3].x / tileSize), y = (enemies[3].y / tileSize), color = Color(255, 22, 22), intensity = 0.35, range = 1.5, owner = "${enemies[3]}"))
+
+            map.grid = arrayOf(
+                intArrayOf(2,5,2,2,2,2,2,2,2,2,5,2,2,2,2,2,2,2,2,5,2),
+                intArrayOf(5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5),
+                intArrayOf(2,0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2),
+                intArrayOf(2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2),
+                intArrayOf(2,0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2),
+                intArrayOf(2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2),
+                intArrayOf(2,0,2,0,2,0,1,0,1,0,1,0,1,0,1,0,2,0,2,0,2),
+                intArrayOf(2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2),
+                intArrayOf(2,0,2,0,2,0,1,0,1,1,0,1,1,0,1,0,2,0,2,0,2),
+                intArrayOf(2,0,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0,0,0,2),
+                intArrayOf(5,0,2,0,2,0,1,0,0,0,0,0,0,0,1,0,2,0,2,0,5),
+                intArrayOf(2,0,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0,0,0,2),
+                intArrayOf(2,0,2,0,2,0,1,0,1,1,0,1,1,0,1,0,2,0,2,0,2),
+                intArrayOf(2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2),
+                intArrayOf(2,0,2,0,2,0,1,0,1,0,1,0,1,0,1,0,2,0,2,0,2),
+                intArrayOf(2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2),
+                intArrayOf(2,0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2),
+                intArrayOf(2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2),
+                intArrayOf(2,0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2),
+                intArrayOf(5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5),
+                intArrayOf(2,5,2,2,2,2,2,2,2,2,5,2,2,2,2,2,2,2,2,5,2)
+            )
+            map.gridRooms = arrayOf(
+                intArrayOf(1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1),
+                intArrayOf(1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1),
+                intArrayOf(1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1),
+                intArrayOf(1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1),
+                intArrayOf(1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1),
+                intArrayOf(1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1),
+                intArrayOf(1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1),
+                intArrayOf(1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1),
+                intArrayOf(1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1),
+                intArrayOf(1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1),
+                intArrayOf(1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1),
+                intArrayOf(1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1),
+                intArrayOf(1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1),
+                intArrayOf(1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1),
+                intArrayOf(1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1),
+                intArrayOf(1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1),
+                intArrayOf(1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1),
+                intArrayOf(1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1),
+                intArrayOf(1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1),
+                intArrayOf(1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1),
+                intArrayOf(1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1)
+            )
+            deathGUI = false
+        }
+        if (mouseX in 500 until 880 && mouseY in 527 until 599) {
+            System.exit(0)
         }
     }
 
@@ -1429,6 +1578,7 @@ class RenderCast(private val map: Map) : JPanel() {
             is Glock34 -> entity.size * tileSize / 2 / tileSize
             is PPSz41 -> entity.size * tileSize / 2 / tileSize
             is CheyTacM200 -> entity.size * tileSize / 2 / tileSize
+            is Tnt -> entity.size * tileSize / 2 / tileSize
             else -> 0.5
         }
         val entityX = when (entity) {
@@ -1443,6 +1593,7 @@ class RenderCast(private val map: Map) : JPanel() {
             is Glock34 -> entity.x / tileSize
             is PPSz41 -> entity.x / tileSize
             is CheyTacM200 -> entity.x / tileSize
+            is Tnt -> entity.x / tileSize
             else -> 0.0
         }
         val entityY = when (entity) {
@@ -1457,6 +1608,7 @@ class RenderCast(private val map: Map) : JPanel() {
             is Glock34 -> entity.y / tileSize
             is PPSz41 -> entity.y / tileSize
             is CheyTacM200 -> entity.y / tileSize
+            is Tnt -> entity.y / tileSize
             else -> 0.0
         }
 
@@ -1802,7 +1954,6 @@ class RenderCast(private val map: Map) : JPanel() {
     }
 
     private fun renderAllEntities() {
-
         val configMap = mapOf(
             Chest::class to EntityRenderConfig(
                 height = wallHeight / 4,
@@ -1884,6 +2035,13 @@ class RenderCast(private val map: Map) : JPanel() {
                 maxSize = 64.0,
                 shadowScale = 1.2,
                 shadowVerticalScale = 0.1
+            ),
+            Tnt::class to EntityRenderConfig(
+                height = wallHeight / 4,
+                sizeMultiplier = 2.2,
+                maxSize = 64.0,
+                shadowScale = 1.2,
+                shadowVerticalScale = 0.1
             )
         )
 
@@ -1899,6 +2057,7 @@ class RenderCast(private val map: Map) : JPanel() {
         allEntities.addAll(visibleGlock34.map { Triple(it.first, it.second.toDouble(), it.third) })
         allEntities.addAll(visiblePPSz41.map { Triple(it.first, it.second.toDouble(), it.third) })
         allEntities.addAll(visibleCheyTacM200.map { Triple(it.first, it.second.toDouble(), it.third) })
+        allEntities.addAll(visibleTnt.map { Triple(it.first, it.second.toDouble(), it.third) })
 
         allEntities.sortByDescending { it.third }
 
@@ -1917,6 +2076,7 @@ class RenderCast(private val map: Map) : JPanel() {
                 is Glock34 -> entity.texture
                 is PPSz41 -> entity.texture
                 is CheyTacM200 -> entity.texture
+                is Tnt -> entity.texture
                 else -> return@forEach
             }
             val config = configMap[entity::class] ?: return@forEach
@@ -2204,6 +2364,227 @@ class RenderCast(private val map: Map) : JPanel() {
                     }
                 }
             }
+
+            tnts.toList().forEach { tnt ->
+                //tnt.damageDistance //tnt.damage
+                val dx = tnt.x / tileSize - playerPosX
+                val dy = tnt.y / tileSize - playerPosY
+                val rayLengthToTnt = dx * rayDirX + dy * rayDirY
+
+                if (rayLengthToTnt > 0 && rayLengthToTnt < wallDistance && rayLengthToTnt <= maxShotDistance) {
+                    val perpendicularDistance = abs(dx * rayDirY - dy * rayDirX)
+                    if ((perpendicularDistance < (tnt.size * 20) / 2 / tileSize)) {
+                        val angleToTnt = atan2(dy, dx)
+                        var angleDiff = abs(angleToTnt - shotAngleRad)
+                        angleDiff = min(angleDiff, 2 * Math.PI - angleDiff)
+
+                        if (angleDiff < Math.toRadians(35.0 / 3)) {
+                            println("boom")
+                            enemies.toList().forEach { enemy ->
+                                //enemy.health
+                                if (enemy.health > 0) {
+                                    val dxEnemy = enemy.x - tnt.x
+                                    val dyEnemy = enemy.y - tnt.y
+                                    val distanceToEnemy = sqrt(dxEnemy * dxEnemy + dyEnemy * dyEnemy)
+
+                                    // Jeśli przeciwnik jest w zasięgu eksplozji
+                                    if (distanceToEnemy <= tnt.damageDistance) {
+                                        val healthBeforeDamage = enemy.health
+                                        enemy.health -= tnt.damage.toInt() // Zadajemy obrażenia
+
+                                        // Sprawdzamy, czy przeciwnik zginął w wyniku eksplozji
+                                        if (enemy.health <= 0 && healthBeforeDamage > 0) {
+                                            // UWAGA: Poniższy blok kodu jest skopiowany z logiki śmierci po zwykłym strzale.
+                                            // W przyszłości warto go wydzielić do osobnej funkcji, aby uniknąć powtórzeń.
+                                            val spawnRadius = 1.0 * tileSize
+                                            var loots = when {
+                                                random < 0.50f -> 1
+                                                random < 0.80f -> 2
+                                                else -> 3
+                                            }
+                                            if (enemy.enemyType == 1) {
+                                                loots = when {
+                                                    random < 0.50f -> 13
+                                                    random < 0.80f -> 15
+                                                    else -> 17
+                                                }
+                                            }
+
+                                            for (i in 1..loots) {
+                                                var itemX = enemy.x
+                                                var itemY = enemy.y
+                                                var validPosition = false
+                                                val maxAttempts = 10
+
+                                                for (attempt in 0 until maxAttempts) {
+                                                    val randomAngle = Random.nextDouble(0.0, 2 * PI)
+                                                    val randomDistance =
+                                                        Random.nextDouble(0.2 * spawnRadius, spawnRadius)
+                                                    itemX = enemy.x + randomDistance * cos(randomAngle)
+                                                    itemY = enemy.y + randomDistance * sin(randomAngle)
+
+                                                    val mapX = (itemX / tileSize).toInt()
+                                                    val mapY = (itemY / tileSize).toInt()
+
+                                                    if (mapY in map.grid.indices && mapX in map.grid[0].indices && accessibleTiles.contains(
+                                                            map.grid[mapY][mapX]
+                                                        )
+                                                    ) {
+                                                        validPosition = true
+                                                        break
+                                                    }
+                                                }
+                                                if (!validPosition) {
+                                                    itemX = enemy.x
+                                                    itemY = enemy.y
+                                                }
+                                                if (enemy.enemyType == 0) {
+                                                    when {
+                                                        random < 0.80f -> keysList.add(
+                                                            Key(
+                                                                x = itemX,
+                                                                y = itemY,
+                                                                texture = keyTextureId!!
+                                                            )
+                                                        )
+
+                                                        random < 0.90f -> medications.add(
+                                                            Medication(
+                                                                x = itemX,
+                                                                y = itemY,
+                                                                texture = medicationTextureID!!,
+                                                                heal = 35
+                                                            )
+                                                        )
+
+                                                        else -> ammo.add(
+                                                            Ammo(
+                                                                x = itemX,
+                                                                y = itemY,
+                                                                texture = ammoTextureID!!
+                                                            )
+                                                        )
+                                                    }
+                                                }
+                                                if (enemy.enemyType == 1) {
+                                                    when {
+                                                        ((random < 0.25f) && (!weapon2Unlocked)) -> glock34s.add(
+                                                            Glock34(
+                                                                x = itemX,
+                                                                y = itemY,
+                                                                texture = glock34TextureId!!
+                                                            )
+                                                        )
+
+                                                        ((random < 0.50f) && (!weapon3Unlocked)) -> ppsz41s.add(
+                                                            PPSz41(
+                                                                x = itemX,
+                                                                y = itemY,
+                                                                texture = ppsz41TextureId!!
+                                                            )
+                                                        )
+
+                                                        ((random < 0.75f) && (!weapon4Unlocked)) -> cheytacm200s.add(
+                                                            CheyTacM200(
+                                                                x = itemX,
+                                                                y = itemY,
+                                                                texture = cheyTacM200TextureId!!
+                                                            )
+                                                        )
+
+                                                        else -> keysList.add(
+                                                            Key(
+                                                                x = itemX,
+                                                                y = itemY,
+                                                                texture = keyTextureId!!
+                                                            )
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                            if (enemy.enemyType == 0) {
+                                                points += (100 / level)
+                                            } else {
+                                                points += (300 / level)
+                                            }
+                                            if (points >= 100) {
+                                                playSound("levelup.wav", volume = 0.65f)
+                                                var levelUpTimer: Timer? = null
+                                                val availablePerks = Perk.values().toMutableList()
+                                                if (resetPerkSlot) {
+                                                    resetPerkSlot = false
+                                                    repeat(3) {
+                                                        val randomPerk = availablePerks.random()
+                                                        perkSlots[it] = randomPerk
+                                                        availablePerks.remove(randomPerk)
+                                                    }
+                                                }
+                                                perkGUI = true
+                                                levelUp = true
+                                                level += 1
+                                                if (level == 2) {
+                                                    points = 0
+                                                } else {
+                                                    points -= 100
+                                                }
+                                                levelUpTimer?.stop()
+                                                levelUpTimer = Timer(2500) {
+                                                    levelUp = false
+                                                    levelUpTimer?.stop()
+                                                }.apply {
+                                                    isRepeats = false
+                                                    start()
+                                                }
+                                            }
+                                            println("level: $level points: $points keys: $keys ammo: $currentAmmo")
+                                            playSound(
+                                                when {
+                                                    random < 0.16f -> "scream1.wav"
+                                                    random < 0.32f -> "scream2.wav"
+                                                    random < 0.48f -> "scream3.wav"
+                                                    random < 0.64f -> "scream4.wav"
+                                                    random < 0.80f -> "scream5.wav"
+                                                    else -> "scream6.wav"
+                                                }, volume = 0.65f
+                                            )
+                                            try {
+                                                lightSources.removeIf { it.owner == "$enemy" }
+                                                enemy.texture =
+                                                    ImageIO.read(this::class.java.classLoader.getResource("textures/boguch_bochen_chlepa.jpg"))
+                                            } catch (e: Exception) {
+                                                enemy.texture = createTexture(Color.black)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            val dxPlayer = positionX - tnt.x
+                            val dyPlayer = positionY - tnt.y
+                            val distanceToPlayer = sqrt(dxPlayer * dxPlayer + dyPlayer * dyPlayer)
+
+                            if (distanceToPlayer <= tnt.damageDistance) {
+                                if (!godMode) {
+                                    playerHealth -= tnt.damage.toInt()
+                                    val random = Random.nextFloat()
+                                    if (playerHealth > 15) {
+                                        playSound(soundFile = when {
+                                            random < 0.20f -> "hurt1.wav"
+                                            random < 0.40f -> "hurt2.wav"
+                                            random < 0.60f -> "hurt3.wav"
+                                            random < 0.80f -> "hurt4.wav"
+                                            else -> "hurt5.wav"
+                                        }, volume = 0.65f)
+                                    } else {
+                                        playSound(soundFile = "hurt6.wav", volume = 0.65f)
+                                    }
+                                }
+                            }
+                            tnt.active = false
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -2474,5 +2855,6 @@ class RenderCast(private val map: Map) : JPanel() {
         glock34s.removeIf { !it.active }
         ppsz41s.removeIf { !it.active }
         cheytacm200s.removeIf { !it.active }
+        tnts.removeIf { !it.active }
     }
 }

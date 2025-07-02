@@ -177,16 +177,18 @@ class Player(private val renderCast: RenderCast, private val map: Map) {
     }
 
     fun update(keysPressed: kotlin.collections.Map<Int, Boolean>) {
-        if (keysPressed.getOrDefault(KeyEvent.VK_W, false)) w()
-        if (keysPressed.getOrDefault(KeyEvent.VK_S, false)) s()
-        if (keysPressed.getOrDefault(KeyEvent.VK_A, false)) a()
-        if (keysPressed.getOrDefault(KeyEvent.VK_D, false)) d()
-        if (keysPressed.getOrDefault(KeyEvent.VK_LEFT, false)) anglea()
-        if (keysPressed.getOrDefault(KeyEvent.VK_RIGHT, false)) angled()
-        if (((keysPressed.getOrDefault(KeyEvent.VK_W, false)) and (keysPressed.getOrDefault(KeyEvent.VK_SHIFT, false)))) {
-            movementSpeed = 2.5 * SpeedMovement
-        } else {
-            movementSpeed = 1.5 * SpeedMovement
+        if (!deathGUI) {
+            if (keysPressed.getOrDefault(KeyEvent.VK_W, false)) w()
+            if (keysPressed.getOrDefault(KeyEvent.VK_S, false)) s()
+            if (keysPressed.getOrDefault(KeyEvent.VK_A, false)) a()
+            if (keysPressed.getOrDefault(KeyEvent.VK_D, false)) d()
+            if (keysPressed.getOrDefault(KeyEvent.VK_LEFT, false)) anglea()
+            if (keysPressed.getOrDefault(KeyEvent.VK_RIGHT, false)) angled()
+            if (((keysPressed.getOrDefault(KeyEvent.VK_W, false)) and (keysPressed.getOrDefault(KeyEvent.VK_SHIFT, false)))) {
+                movementSpeed = 2.5 * SpeedMovement
+            } else {
+                movementSpeed = 1.5 * SpeedMovement
+            }
         }
 
         val gridX = (positionX / tileSize).toInt()
@@ -206,64 +208,7 @@ class Player(private val renderCast: RenderCast, private val map: Map) {
         }
 
         if (playerHealth <= 0) {
-            positionX = (tileSize*11)-(tileSize/2)
-            positionY = (tileSize*11)-(tileSize/2)
-
-            level -= 2
-            if (level <= 0) {
-                level = 1
-            }
-            keys += level
-            playerHealth = 100
-            map.currentRooms = 0
-            currentAmmo += 45
-
-            enemies = mutableListOf<Enemy>()
-            lightSources = mutableListOf<LightSource>()
-            keysList = mutableListOf<Key>()
-            medications = mutableListOf<Medication>()
-            coinsList = mutableListOf<Coin>()
-            slotMachines = mutableListOf<SlotMachine>()
-            chests = mutableListOf<Chest>()
-            ammo = mutableListOf<Ammo>()
-            traders = mutableListOf<Trader>()
-            glock34s = mutableListOf<Glock34>()
-            ppsz41s = mutableListOf<PPSz41>()
-            cheytacm200s = mutableListOf<CheyTacM200>()
-
-            lightSources.add(LightSource(x = 0.0, y = 0.0, color = Color(200, 200, 100), intensity = 0.75, range = 0.15, owner = "player"))
-            enemies.add(Enemy(x = (tileSize * 2) - (tileSize / 2), y = (tileSize * 2) - (tileSize / 2), health = 100, texture = renderCast.enemyTextureId!!, renderCast, map, speed = (2.0 * ((18..19).random() / 10.0))))
-            enemies.add(Enemy(x = (tileSize * 2) - (tileSize / 2), y = (tileSize * 20) - (tileSize / 2), health = 100, texture = renderCast.enemyTextureId!!, renderCast , map, speed = (2.0 * ((18..19).random() / 10.0))))
-            enemies.add(Enemy(x = (tileSize * 20) - (tileSize / 2), y = (tileSize * 20) - (tileSize / 2), health = 100, texture = renderCast.enemyTextureId!!, renderCast, map, speed = (2.0 * ((18..19).random() / 10.0))))
-            enemies.add(Enemy(x = (tileSize * 20) - (tileSize / 2), y = (tileSize * 2) - (tileSize / 2), health = 100, texture = renderCast.enemyTextureId!!, renderCast, map, speed = (2.0 * ((18..19).random() / 10.0))))
-            lightSources.add(LightSource(x = (enemies[0].x / tileSize), y = (enemies[0].y / tileSize), color = Color(20, 22, 255), intensity = 0.35, range = 1.5, owner = "${enemies[0]}"))
-            lightSources.add(LightSource(x = (enemies[1].x / tileSize), y = (enemies[1].y / tileSize), color = Color(255, 255, 22), intensity = 0.35, range = 1.5, owner = "${enemies[1]}"))
-            lightSources.add(LightSource(x = (enemies[2].x / tileSize), y = (enemies[2].y / tileSize), color = Color(22, 255, 22), intensity = 0.35, range = 1.5, owner = "${enemies[2]}"))
-            lightSources.add(LightSource(x = (enemies[3].x / tileSize), y = (enemies[3].y / tileSize), color = Color(255, 22, 22), intensity = 0.35, range = 1.5, owner = "${enemies[3]}"))
-            // renderCast
-            map.grid = arrayOf(
-                intArrayOf(2,5,2,2,2,2,2,2,2,2,5,2,2,2,2,2,2,2,2,5,2),
-                intArrayOf(5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5),
-                intArrayOf(2,0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2),
-                intArrayOf(2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2),
-                intArrayOf(2,0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2),
-                intArrayOf(2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2),
-                intArrayOf(2,0,2,0,2,0,1,0,1,0,1,0,1,0,1,0,2,0,2,0,2),
-                intArrayOf(2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2),
-                intArrayOf(2,0,2,0,2,0,1,0,1,1,0,1,1,0,1,0,2,0,2,0,2),
-                intArrayOf(2,0,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0,0,0,2),
-                intArrayOf(5,0,2,0,2,0,1,0,0,0,0,0,0,0,1,0,2,0,2,0,5),
-                intArrayOf(2,0,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0,0,0,2),
-                intArrayOf(2,0,2,0,2,0,1,0,1,1,0,1,1,0,1,0,2,0,2,0,2),
-                intArrayOf(2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2),
-                intArrayOf(2,0,2,0,2,0,1,0,1,0,1,0,1,0,1,0,2,0,2,0,2),
-                intArrayOf(2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2),
-                intArrayOf(2,0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2),
-                intArrayOf(2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2),
-                intArrayOf(2,0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2),
-                intArrayOf(5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5),
-                intArrayOf(2,5,2,2,2,2,2,2,2,2,5,2,2,2,2,2,2,2,2,5,2)
-            )
+            deathGUI = true
         }
         checkKeyPickup()
     }
