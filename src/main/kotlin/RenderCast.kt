@@ -24,8 +24,8 @@ import kotlin.math.min
 import kotlin.math.pow
 
 class RenderCast(private val map: Map) : JPanel() {
-    private val screenWidth = (320*1.0).toInt() //1:1 4:3 9:16
-    private val screenHeight = (180*1.0).toInt()//320:180
+    private val screenWidth = (320*1.0).toInt() //1:1 4:3 16:9
+    private val screenHeight = (180*1.0).toInt()//320:180 90:50
     private val fov = 90.0
     private val textureSize = 64
     private val rayCount = (screenWidth*0.85).toInt()//85
@@ -114,7 +114,7 @@ class RenderCast(private val map: Map) : JPanel() {
             glock34TextureId = ImageIO.read(this::class.java.classLoader.getResource("textures/glock34.png"))
             ppsz41TextureId = ImageIO.read(this::class.java.classLoader.getResource("textures/ppsz41.png"))
             cheyTacM200TextureId = ImageIO.read(this::class.java.classLoader.getResource("textures/coin.png"))
-            tntTextureID = ImageIO.read(this::class.java.classLoader.getResource("textures/chest.png"))
+            tntTextureID = ImageIO.read(this::class.java.classLoader.getResource("textures/tnt.png"))
 
             loadTexture(1, "textures/bricks.jpg")
             loadTexture(2, "textures/black_bricks.png")
@@ -313,7 +313,7 @@ class RenderCast(private val map: Map) : JPanel() {
 
         // Update light sources
         lightSources.removeIf { light ->
-            if (light.owner != "player" && !light.owner.startsWith("projectile_")) {
+            if (light.owner != "player" && light.owner != "tnt" && light.owner != "tnt1" && light.owner != "tnt2" && !light.owner.startsWith("projectile_")) {
                 enemies.find { enemy -> light.owner == enemy.toString() }?.let { matchedEnemy ->
                     if (matchedEnemy.health > 0) {
                         light.x = matchedEnemy.x / tileSize
@@ -2380,6 +2380,81 @@ class RenderCast(private val map: Map) : JPanel() {
 
                         if (angleDiff < Math.toRadians(35.0 / 3)) {
                             println("boom")
+                            playSound("tntexplosion.wav", volume = 0.7f)
+                            //tnt light effect
+                            var tntEffectTimer: Timer? = null
+                            tntEffectTimer?.stop()
+                            tntEffectTimer = Timer(350) {
+                                lightSources.removeIf { it.owner == "tnt" }
+
+                                var tntEffectTimer2: Timer? = null
+                                tntEffectTimer2?.stop()
+                                tntEffectTimer2 = Timer(250) {
+                                    lightSources.removeIf { it.owner == "tnt1" }
+
+                                    var tntEffectTimer3: Timer? = null
+                                    tntEffectTimer3?.stop()
+                                    tntEffectTimer3 = Timer(150) {
+                                        lightSources.removeIf { it.owner == "tnt2" }
+                                        tntEffectTimer3?.stop()
+                                    }.apply {
+                                        isRepeats = false
+                                        start()
+                                    }
+
+                                    tntEffectTimer2?.stop()
+                                }.apply {
+                                    isRepeats = false
+                                    start()
+                                }
+                                tntEffectTimer?.stop()
+                            }.apply {
+                                lightSources.add(LightSource((tnt.x/tileSize), (tnt.y/tileSize), color = Color(250, 150, 20), intensity = 0.75, range = 1.5, owner = "tnt"))
+                                lightSources.add(LightSource((tnt.x/tileSize), (tnt.y/tileSize), color = Color(225, 100, 20), intensity = 0.75, range = 1.0, owner = "tnt1"))
+                                lightSources.add(LightSource((tnt.x/tileSize), (tnt.y/tileSize), color = Color(200, 50, 20), intensity = 0.75, range = 0.5, owner = "tnt2"))
+                                isRepeats = false
+                                start()
+                            }
+
+                            val gifReader = ImageIO.getImageReadersByFormatName("gif").next()
+                            gifReader.input = ImageIO.createImageInputStream(this::class.java.classLoader.getResourceAsStream("textures/tnt_exp.gif"))
+
+                            val animationFrames = listOfNotNull(
+                                try { gifReader.read(0) }
+                                catch (e: Exception) { null },
+                                try { gifReader.read(1) }
+                                catch (e: Exception) { null },
+                                try { gifReader.read(2) }
+                                catch (e: Exception) { null },
+                                try { gifReader.read(3) }
+                                catch (e: Exception) { null },
+                                try { gifReader.read(4) }
+                                catch (e: Exception) { null },
+                                try { gifReader.read(5) }
+                                catch (e: Exception) { null }
+                            )
+
+                            if (animationFrames.isNotEmpty()) {
+                                var frameIndex = 0
+                                var animationTimer: Timer? = null // Musi być zadeklarowany jako var, by można było go przypisać wewnątrz
+
+                                animationTimer = Timer(100) { timerEvent ->
+                                    if (frameIndex < animationFrames.size) {
+                                        tnt.texture = animationFrames[frameIndex]
+                                        frameIndex++
+                                    } else {
+                                        tnt.active = false
+                                        (timerEvent.source as? Timer)?.stop()
+                                    }
+                                }.apply {
+                                    tnt.size = 10.5 * tileSize
+                                    isRepeats = true
+                                    start()
+                                }
+                            } else {
+                                tnt.active = false
+                            }
+
                             enemies.toList().forEach { enemy ->
                                 //enemy.health
                                 if (enemy.health > 0) {
@@ -2580,7 +2655,6 @@ class RenderCast(private val map: Map) : JPanel() {
                                     }
                                 }
                             }
-                            tnt.active = false
                         }
                     }
                 }

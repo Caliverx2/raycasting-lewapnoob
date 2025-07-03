@@ -225,8 +225,8 @@ class Tnt(
     var active: Boolean = true,
 ) {
     var damage = 95.0
-    var damageDistance = 4.0 * tileSize
-    val size = 1.5 * tileSize
+    var damageDistance = 2.0 * tileSize
+    var size = 1.5 * tileSize
     val pickupDistance = 1.3*2
 }
 
@@ -369,6 +369,7 @@ fun killingPlayer(renderCast: RenderCast, map: Map) {
     glock34s = mutableListOf<Glock34>()
     ppsz41s = mutableListOf<PPSz41>()
     cheytacm200s = mutableListOf<CheyTacM200>()
+    tnts = mutableListOf<Tnt>()
 
     lightSources.add(LightSource(x = 0.0, y = 0.0, color = Color(200, 200, 100), intensity = 0.75, range = 0.15, owner = "player"))
     enemies.add(Enemy(x = (tileSize * 2) - (tileSize / 2), y = (tileSize * 2) - (tileSize / 2), health = 100, texture = renderCast.enemyTextureId!!, renderCast, map, speed = (2.0 * ((18..19).random() / 10.0))))
@@ -513,7 +514,7 @@ fun main() = runBlocking {
     var centerX = frame.width / 2
 
     // temp, spawn all guns
-    tnts.add(Tnt(x = (tileSize * (11)) - (tileSize / 1.5), y = (tileSize * (11)) - (tileSize / 1.5), texture = renderCast.tntTextureID!!, active = true))
+    tnts.add(Tnt(x = (tileSize * (11)) - (tileSize / 2), y = (tileSize * (13)) - (tileSize / 2), texture = renderCast.tntTextureID!!, active = true))
 
     glock34s.add(
         Glock34(

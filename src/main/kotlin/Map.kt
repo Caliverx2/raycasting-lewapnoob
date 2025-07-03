@@ -33,6 +33,17 @@ val rooms = listOf(
     ),
     RoomTemplate(
         grid = arrayOf(
+            intArrayOf(2, 2, 2, 2, 2),
+            intArrayOf(2, 0, 0, 0, 2),
+            intArrayOf(2, 0, 6, 0, 2),
+            intArrayOf(2, 0, 0, 0, 2),
+            intArrayOf(2, 2, 2, 2, 2)
+        ),
+        scale = 5,
+        weight = 0.15
+    ),
+    RoomTemplate(
+        grid = arrayOf(
             intArrayOf(2, 2, 5, 2, 2),
             intArrayOf(2, 0, 0, 0, 2),
             intArrayOf(5, 0, 10, 0, 5),
@@ -523,6 +534,7 @@ class Map(var renderCast: RenderCast? = null) {
                     else -> ((newY+YY)-(roomTemplate.scale/2))
                 }
 
+                // set closedDoor
                 if (enterdirection == Direction.UP) {
                     grid[newY+1][newX] = 0
                     if (grid[(newY+YY)-(roomTemplate.scale-(roomTemplate.scale+1))][(newX+XX)-(roomTemplate.scale/2)] == 5) {
@@ -604,6 +616,7 @@ class Map(var renderCast: RenderCast? = null) {
                     }
                 }
 
+                // summon all entity/items/enemy
                 if (roomTemplate.grid[XX][YY] == 3) {
                     renderCast?.let {
                         enemies.add(
