@@ -5,6 +5,7 @@ import java.awt.Graphics2D
 import java.awt.image.BufferedImage
 import java.util.PriorityQueue
 import kotlin.math.abs
+import kotlin.math.pow
 import kotlin.math.sqrt
 import kotlin.random.Random
 
@@ -15,14 +16,14 @@ class Enemy(
     var texture: BufferedImage,
     private val renderCast: RenderCast,
     private val map: Map,
-    val speed: Double = 0.9,
+    val speed: Double = (2.0 * ((13..17).random() / 10.0)),
     val maxHeal: Int = (100 + (level * 7.5) * 2).toInt(),
     val damage: Int = ((2.5 * level)*1.5).toInt(),
     var enemyShotAccuracy: Int = 10,
     val enemyType: Int = 0
 ) {
     var path: List<Node> = emptyList()
-    val size = 1.0
+    val size: Double = 1.0
     private val margin = 1
     private var pathUpdateTimer = 30
     private val pathUpdateInterval = 60 // More frequent updates to adapt to enemy positions
@@ -356,20 +357,6 @@ class Enemy(
         }
 
         val deltaTime = 1.0 / TARGET_FPS
-        val dx = x - lastX
-        val dy = y - lastY
-        val distanceMoved = sqrt(x = dx * dx + dy * dy)
-        accumulatedDistance += distanceMoved
-        lastX = x
-        lastY = y
-
-        if (accumulatedDistance >= moveThreshold) {
-            idleTimer = 0
-            accumulatedDistance = 0.0
-        } else {
-            idleTimer++
-        }
-
         val dxToPlayer = x - positionX
         val dyToPlayer = y - positionY
         val distanceToPlayer = sqrt(x = dxToPlayer * dxToPlayer + dyToPlayer * dyToPlayer)
@@ -383,7 +370,7 @@ class Enemy(
         }
 
         shootTimer++
-        if (shootTimer >= nextShootTime && isChasing && distanceToPlayer < (maxRayDistance*tileSize-3)) {
+        if (shootTimer >= nextShootTime && isChasing && distanceToPlayer < (maxRayDistance * tileSize - 3)) {
             shootAtPlayer()
             shootTimer = 0
             nextShootTime = Random.nextInt(from = minShootInterval, until = maxShootInterval + 1)
@@ -396,46 +383,8 @@ class Enemy(
         lastPlayerX = positionX
         lastPlayerY = positionY
 
-        if ((getGlobalChaseTimer() >= TARGET_FPS || playerMoved) && isChasing) {
-            path = findPath()
-            pathUpdateTimer = 0
-            stuckCounter = 0
-            smoothedMoveX = 0.0
-            smoothedMoveY = 0.0
-            resetGlobalChaseTimer()
-        }
-
-        if (distanceToPlayer < MIN_PLAYER_DISTANCE && path.isEmpty() && isChasing) {
-            val moveSpeed = speed * deltaTime * TARGET_FPS
-            val rawMoveX = if (distanceToPlayer > 0) (dxToPlayer / distanceToPlayer) * moveSpeed else 0.0
-            val rawMoveY = if (distanceToPlayer > 0) (dyToPlayer / distanceToPlayer) * moveSpeed else 0.0
-
-            smoothedMoveX = smoothedMoveX * (1.0 - smoothingFactor) + rawMoveX * smoothingFactor
-            smoothedMoveY = smoothedMoveY * (1.0 - smoothingFactor) + rawMoveY * smoothingFactor
-
-            val (canMove, collidedEnemy) = canMoveTo(newX = x + smoothedMoveX, newY = y + smoothedMoveY)
-            if (canMove) {
-                x += smoothedMoveX
-                y += smoothedMoveY
-                lastMoveX = smoothedMoveX
-                lastMoveY = smoothedMoveY
-                isMoving = true
-                stuckCounter = 0
-            } else if (collidedEnemy != null && tryPush(otherEnemy = collidedEnemy, moveX = smoothedMoveX, moveY = smoothedMoveY)) {
-                x += smoothedMoveX
-                y += smoothedMoveY
-                lastMoveX = smoothedMoveX
-                lastMoveY = smoothedMoveY
-                isMoving = true
-                stuckCounter = 0
-            } else {
-                stuckCounter++
-            }
-            return
-        }
-
         pathUpdateTimer++
-        if (pathUpdateTimer >= pathUpdateInterval || stuckCounter > maxStuckFrames) {
+        if (pathUpdateTimer >= pathUpdateInterval || stuckCounter > maxStuckFrames || (playerMoved && isChasing)) {
             if (isChasing) {
                 path = findPath()
             }
@@ -445,69 +394,92 @@ class Enemy(
 
         isMoving = path.isNotEmpty()
         if (path.isNotEmpty()) {
-            val targetNode = path.first()
-            val targetX = (targetNode.x + 0.5) * tileSize
-            val targetY = (targetNode.y + 0.5) * tileSize
+            var targetNode = path.first()
+            var targetX = (targetNode.x + 0.5) * tileSize
+            var targetY = (targetNode.y + 0.5) * tileSize
 
-            val dx = targetX - x
-            val dy = targetY - y
-            val distance = sqrt(x = dx * dx + dy * dy)
+            var dx = targetX - x
+            var dy = targetY - y
+            var distanceToTarget = sqrt(dx * dx + dy * dy)
 
-            if (distance > 0.1) {
-                val moveSpeed = speed * deltaTime * TARGET_FPS
-                val rawMoveX = (dx / distance) * moveSpeed
-                val rawMoveY = (dy / distance) * moveSpeed
-
-                val (repelX, repelY) = calculateRepulsion(enemies = renderCast.getEnemies())
-                smoothedMoveX = smoothedMoveX * (1.0 - smoothingFactor) + (rawMoveX + repelX) * smoothingFactor
-                smoothedMoveY = smoothedMoveY * (1.0 - smoothingFactor) + (rawMoveY + repelY) * smoothingFactor
-
-                val newX = x + smoothedMoveX
-                val newY = y + smoothedMoveY
-
-                val (canMove, collidedEnemy) = canMoveTo(newX, newY)
-                if (canMove) {
-                    x = newX
-                    y = newY
-                    lastMoveX = smoothedMoveX
-                    lastMoveY = smoothedMoveY
-                    stuckCounter = 0
-                } else if (collidedEnemy != null) {
-                    if (tryPush(otherEnemy = collidedEnemy, moveX = smoothedMoveX, moveY = smoothedMoveY)) {
-                        x = newX
-                        y = newY
-                        lastMoveX = smoothedMoveX
-                        lastMoveY = smoothedMoveY
-                        stuckCounter = 0
-                    } else {
-                        stuckCounter++
-                        val nudgeX = x - (dx / distance) * 0.1
-                        val nudgeY = y - (dy / distance) * 0.1
-                        if (canMoveTo(newX = nudgeX, newY = nudgeY).first) {
-                            x = nudgeX
-                            y = nudgeY
-                        }
-                    }
-                } else {
-                    stuckCounter++
-                    val nudgeX = x - (dx / distance) * 0.1
-                    val nudgeY = y - (dy / distance) * 0.1
-                    if (canMoveTo(newX = nudgeX, newY = nudgeY).first) {
-                        x = nudgeX
-                        y = nudgeY
-                    }
-                }
-            } else {
-                path = path.drop(n = 1)
-                stuckCounter = 0
-                isMoving = path.isNotEmpty()
+            if (distanceToTarget < tileSize * 1.5 && path.size > 1) {
+                val nextNode = path[1]
+                val nextTargetX = (nextNode.x + 0.5) * tileSize
+                val nextTargetY = (nextNode.y + 0.5) * tileSize
+                dx = nextTargetX - x
+                dy = nextTargetY - y
+                distanceToTarget = sqrt(dx * dx + dy * dy)
             }
+
+            val moveSpeed = speed * deltaTime * TARGET_FPS
+            if (sqrt((targetX - x).pow(2) + (targetY - y).pow(2)) < moveSpeed) {
+                path = path.drop(1)
+                if (path.isEmpty()) {
+                    isMoving = false
+                    return
+                }
+            }
+
+            val rawMoveX = if (distanceToTarget > 0.1) (dx / distanceToTarget) * moveSpeed else 0.0
+            val rawMoveY = if (distanceToTarget > 0.1) (dy / distanceToTarget) * moveSpeed else 0.0
+
+            val (repelX, repelY) = calculateRepulsion(enemies = renderCast.getEnemies())
+            smoothedMoveX = smoothedMoveX * (1.0 - smoothingFactor) + (rawMoveX + repelX) * smoothingFactor
+            smoothedMoveY = smoothedMoveY * (1.0 - smoothingFactor) + (rawMoveY + repelY) * smoothingFactor
+
+            val finalMoveX = smoothedMoveX
+            val finalMoveY = smoothedMoveY
+
+            val originalX = x
+            val originalY = y
+            var moved = false
+
+            val (canMoveX, collidedEnemyX) = canMoveTo(x + finalMoveX, y)
+            if (canMoveX) {
+                x += finalMoveX
+                moved = true
+            } else if (collidedEnemyX != null && tryPush(collidedEnemyX, finalMoveX, 0.0)) {
+                x += finalMoveX
+                moved = true
+            }
+
+            val (canMoveY, collidedEnemyY) = canMoveTo(x, y + finalMoveY)
+            if (canMoveY) {
+                y += finalMoveY
+                moved = true
+            } else if (collidedEnemyY != null && tryPush(collidedEnemyY, 0.0, finalMoveY)) {
+                y += finalMoveY
+                moved = true
+            }
+
+            if (moved) {
+                lastMoveX = x - originalX
+                lastMoveY = y - originalY
+                stuckCounter = 0
+            } else {
+                stuckCounter++
+            }
+        } else {
+            isMoving = false
+        }
+
+        val currentDx = x - lastX
+        val currentDy = y - lastY
+        accumulatedDistance += sqrt(currentDx * currentDx + currentDy * currentDy)
+        lastX = x
+        lastY = y
+
+        if (accumulatedDistance >= moveThreshold) {
+            idleTimer = 0
+            accumulatedDistance = 0.0
+        } else {
+            idleTimer++
         }
 
         randomMoveTimer++
         if (idleTimer >= idleThreshold && randomMoveTimer >= randomMoveInterval && isChasing) {
             val directions = listOf(
-                Pair(first = 1.0, second = 0.0), Pair(first = -1.0, second = 0.0), Pair(first = 0.0, second = 1.0), Pair(first = 0.0, second = -1.0)
+                Pair(1.0, 0.0), Pair(-1.0, 0.0), Pair(0.0, 1.0), Pair(0.0, -1.0)
             )
             val (moveX, moveY) = directions.random()
             val newX = x + moveX * randomMoveDistance
@@ -517,8 +489,6 @@ class Enemy(
             if (canMove) {
                 x = newX
                 y = newY
-                lastMoveX = moveX * randomMoveDistance
-                lastMoveY = moveY * randomMoveDistance
                 path = findPath()
                 isMoving = true
                 idleTimer = 0

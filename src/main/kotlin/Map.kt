@@ -627,7 +627,7 @@ class Map(var renderCast: RenderCast? = null) {
                                 texture = renderCast!!.enemyTextureId!!,
                                 renderCast = it,
                                 map = this,
-                                speed = (2.0 * ((10..15).random() / 10.0))
+                                speed = (2.0 * ((13..17).random() / 10.0))
                             )
                         )
                         if (gridmod && (offsetX != 0 || offsetY != 0)) {
@@ -841,7 +841,7 @@ class Map(var renderCast: RenderCast? = null) {
                                 texture = renderCast!!.enemyBossTextureId!!,
                                 renderCast = it,
                                 map = this,
-                                speed = (2.0 * ((10..15).random() / 10.0)),
+                                speed = (2.0 * ((10..13).random() / 10.0)),
                                 maxHeal = ((200 * level * 2)*1.75).toInt(),
                                 damage = ((7.5 * level)*1.5).toInt(), //2.5
                                 enemyType = 1

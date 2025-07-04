@@ -144,10 +144,10 @@ class RenderCast(private val map: Map) : JPanel() {
 
         lightSources.add(LightSource(0.0, 0.0, color = Color(200, 200, 100), intensity = 0.75, range = 0.15, owner = "player"))
 
-        enemies.add(Enemy((tileSize * 2) - (tileSize / 2), (tileSize * 2) - (tileSize / 2), health = 100, enemyTextureId!!, this, map, speed = (2.0 * ((18..19).random() / 10.0))))
-        enemies.add(Enemy((tileSize * 2) - (tileSize / 2), (tileSize * 20) - (tileSize / 2), health = 100, enemyTextureId!!, this, map, speed = (2.0 * ((18..19).random() / 10.0))))
-        enemies.add(Enemy((tileSize * 20) - (tileSize / 2), (tileSize * 20) - (tileSize / 2), health = 100, enemyTextureId!!, this, map, speed = (2.0 * ((18..19).random() / 10.0))))
-        enemies.add(Enemy((tileSize * 20) - (tileSize / 2), (tileSize * 2) - (tileSize / 2), health = 100, enemyTextureId!!, this, map, speed = (2.0 * ((18..19).random() / 10.0))))
+        enemies.add(Enemy((tileSize * 2) - (tileSize / 2), (tileSize * 2) - (tileSize / 2), health = 100, enemyTextureId!!, this, map, speed = (2.0 * ((13..17).random() / 10.0))))
+        enemies.add(Enemy((tileSize * 2) - (tileSize / 2), (tileSize * 20) - (tileSize / 2), health = 100, enemyTextureId!!, this, map, speed = (2.0 * ((13..17).random() / 10.0))))
+        enemies.add(Enemy((tileSize * 20) - (tileSize / 2), (tileSize * 20) - (tileSize / 2), health = 100, enemyTextureId!!, this, map, speed = (2.0 * ((13..17).random() / 10.0))))
+        enemies.add(Enemy((tileSize * 20) - (tileSize / 2), (tileSize * 2) - (tileSize / 2), health = 100, enemyTextureId!!, this, map, speed = (2.0 * ((13..17).random() / 10.0))))
 
         lightSources.add(LightSource((enemies[0].x / tileSize), (enemies[0].y / tileSize), color = Color(20, 22, 255), intensity = 0.35, range = 1.5, owner = "${enemies[0]}"))
         lightSources.add(LightSource((enemies[1].x / tileSize), (enemies[1].y / tileSize), color = Color(255, 255, 22), intensity = 0.35, range = 1.5, owner = "${enemies[1]}"))
