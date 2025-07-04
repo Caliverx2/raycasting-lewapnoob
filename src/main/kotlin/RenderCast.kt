@@ -372,9 +372,9 @@ class RenderCast(private val map: Map) : JPanel() {
         visiblePPSz41.clear()
         visibleCheyTacM200.clear()
         visibleTnt.clear()
-        lookchest = false
-        looktrader = false
-        lookslotMachine = false
+        lookChest = false
+        lookTrader = false
+        lookSlotMachine = false
 
         // Precompute raycasting arrays
         val rayDistances = DoubleArray(rayCount) { Double.MAX_VALUE }
@@ -962,7 +962,7 @@ class RenderCast(private val map: Map) : JPanel() {
     }
 
     fun clickTrader(mouseX: Int, mouseY: Int) {
-        if (!looktrader) return
+        if (!lookTrader) return
         if (mouseX in 870 until 1180 && mouseY in 380 until 420) {
             selectedOfferIndex = 0
             playSound("click.wav")
@@ -1021,7 +1021,10 @@ class RenderCast(private val map: Map) : JPanel() {
         if (mouseX in 500 until 880 && mouseY in 446 until 520) {
             println("2")
             playSound("click.wav")
+            playerHealth = 100
+            playerDamage = 25
             level = 1
+            points = 0
             HealBoost = 1.0
             SpeedMovement = 1.0
             MoreHitShot = 1.0
@@ -1114,6 +1117,7 @@ class RenderCast(private val map: Map) : JPanel() {
                 intArrayOf(1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1),
                 intArrayOf(1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1)
             )
+
             deathGUI = false
         }
         if (mouseX in 500 until 880 && mouseY in 527 until 599) {
@@ -1205,7 +1209,7 @@ class RenderCast(private val map: Map) : JPanel() {
             }
         }
 
-        if (!lookchest and !looktrader and !lookslotMachine) {
+        if (!lookChest and !lookTrader and !lookSlotMachine) {
             inventoryVisible = false
             weaponGUI = true
         }
@@ -1298,7 +1302,7 @@ class RenderCast(private val map: Map) : JPanel() {
         if (!inventoryVisible) return
 
         // GUI chest
-        if (lookchest){
+        if (lookChest){
             weaponGUI = false
             openChest?.let { chest ->
                 val chestY = 500
@@ -1335,7 +1339,7 @@ class RenderCast(private val map: Map) : JPanel() {
         }
 
         // GUI trader
-        if (looktrader) {
+        if (lookTrader) {
             weaponGUI = false
             openTrader?.let { trade ->
                 val chestY = 500
@@ -1689,9 +1693,9 @@ class RenderCast(private val map: Map) : JPanel() {
 
                     if (!hitWall || rayLength < wallDistance) {
                         interactionFlag = when (entity) {
-                            is Chest -> true.also { lookchest = true }
-                            is Trader -> true.also { looktrader = true }
-                            is SlotMachine -> true.also { lookslotMachine = true }
+                            is Chest -> true.also { lookChest = true }
+                            is Trader -> true.also { lookTrader = true }
+                            is SlotMachine -> true.also { lookSlotMachine = true }
                             else -> false
                         }
                     }

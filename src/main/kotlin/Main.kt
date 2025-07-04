@@ -87,9 +87,9 @@ var deathGUI: Boolean = false
 var inventoryVisible: Boolean = false
 var openChest: Chest? = null
 var openTrader: Trader? = null
-var lookchest: Boolean = false
-var lookslotMachine: Boolean = false
-var looktrader: Boolean = false
+var lookChest: Boolean = false
+var lookSlotMachine: Boolean = false
+var lookTrader: Boolean = false
 var playerInventory = MutableList<Item?>(9) { null }
 var playerWeaponInventory = MutableList<Item?>(6) { null }
 
@@ -348,7 +348,7 @@ fun killingPlayer(renderCast: RenderCast, map: Map) {
     positionX = (tileSize*11)-(tileSize/2)
     positionY = (tileSize*11)-(tileSize/2)
 
-    level -= 2
+    level -= 1
     if (level <= 0) {
         level = 1
     }
@@ -554,7 +554,7 @@ fun main() = runBlocking {
     frame.addMouseListener(object : MouseAdapter() {
         override fun mousePressed(event: MouseEvent) {
             if (event.button == MouseEvent.BUTTON1) {
-                if (inventoryVisible and lookchest) {
+                if (inventoryVisible and lookChest) {
                     renderCast.clickInventoryGUI(mouseX = event.x, mouseY = event.y)
                     return
                 }
@@ -562,7 +562,7 @@ fun main() = runBlocking {
                     renderCast.clickPerkGUI(mouseX = event.x, mouseY = event.y)
                     return
                 }
-                if (inventoryVisible and looktrader) {
+                if (inventoryVisible and lookTrader) {
                     renderCast.clickTrader(mouseX = event.x, mouseY = event.y)
                     return
                 }
@@ -613,7 +613,7 @@ fun main() = runBlocking {
                     KeyEvent.VK_SPACE -> isShooting = false
                     KeyEvent.VK_E -> {
                         openTrader?.let { trader ->
-                            if (looktrader) {
+                            if (lookTrader) {
                                 if (renderCast.purchaseItem(trader, selectedOfferIndex)) {
                                     println("Purchased ${trader.offer[selectedOfferIndex].type} for ${trader.prices[selectedOfferIndex]} COINs")
                                     playSound("purchase.wav")
@@ -624,7 +624,7 @@ fun main() = runBlocking {
                             }
                         } ?: run {
                             inventoryVisible = !inventoryVisible
-                            if (lookslotMachine) {
+                            if (lookSlotMachine) {
                                 inventoryVisible = false
                                 if (coins >= 3) {
                                     val coinSlot = playerInventory.indexOfFirst { it?.type == ItemType.COIN && it.quantity > 0 }
@@ -661,7 +661,7 @@ fun main() = runBlocking {
                     }
                     in KeyEvent.VK_1..KeyEvent.VK_9 -> {
                         selectedOfferIndex = event.keyCode - KeyEvent.VK_0-1
-                        if ((!looktrader) or (selectedOfferIndex >= 4)) {
+                        if ((!lookTrader) or (selectedOfferIndex >= 4)) {
                             selectSlot = event.keyCode - KeyEvent.VK_0-1
                             activateSlot = true
                             println("selectSlot: $selectSlot")

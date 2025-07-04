@@ -1161,21 +1161,28 @@ class Mappingmap(private val map: Map, private val renderCast: RenderCast) : JPa
         g2.drawString("POINTS: ${points}", 10, 380)
         g2.drawString("AMMO: ${totalAmmo}", 10, 400)
         g2.drawString("COINS: ${coins}", 10, 420)
-        if (lookchest and !inventoryVisible and !deathGUI) {
+        if (lookChest and !inventoryVisible and !deathGUI) {
             g2.color = Color(50, 50, 50, 180)
             g2.fillRoundRect(((1366+g2.font.size)/2)-10, ((768+g2.font.size)/2)-25, 150, 40, arcSize, arcSize)
             g2.color = Color.YELLOW
             g2.drawString("Open chest[E]", (1366+g2.font.size)/2, (768+g2.font.size)/2)
         }
 
-        if (looktrader and !inventoryVisible and !deathGUI) {
+        if (lookTrader and !inventoryVisible and !deathGUI) {
             g2.color = Color(50, 50, 50, 180)
             g2.fillRoundRect(((1366+g2.font.size)/2)-10, ((768+g2.font.size)/2)-25, 105, 40, arcSize, arcSize)
             g2.color = Color.YELLOW
             g2.drawString("Trade[E]", (1366+g2.font.size)/2, (768+g2.font.size)/2)
         }
 
-        if (lookslotMachine and !inventoryVisible and !deathGUI) {
+        if (lookTrader and inventoryVisible and !deathGUI) {
+            g2.color = Color(50, 50, 50, 180)
+            g2.fillRoundRect(((1366+g2.font.size)/2)-10, ((768+g2.font.size)/2)-25, 105, 40, arcSize, arcSize)
+            g2.color = Color.YELLOW
+            g2.drawString("  Buy[E]", (1366+g2.font.size)/2, (768+g2.font.size)/2)
+        }
+
+        if (lookSlotMachine and !inventoryVisible and !deathGUI) {
             g2.color = Color(50, 50, 50, 180)
             g2.fillRoundRect(((1366+g2.font.size)/2)-10, ((768+g2.font.size)/2)-25, 225, 40, arcSize, arcSize)
             g2.color = Color.YELLOW

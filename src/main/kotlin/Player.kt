@@ -1,6 +1,5 @@
 package org.lewapnoob.raycast
 
-import java.awt.Color
 import java.awt.MouseInfo
 import java.awt.event.KeyEvent
 import kotlin.math.cos
