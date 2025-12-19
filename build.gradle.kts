@@ -6,6 +6,7 @@ plugins {
 
 group = "org.lewapnoob"
 version = "2"
+val MainClass = "org.lewapnoob.raycast.MainKt"
 
 repositories {
     mavenCentral()
@@ -36,15 +37,15 @@ tasks {
 
 tasks.withType<Jar> {
     manifest {
-        attributes["Main-Class"] = "org.lewapnoob.raycast.MainKt"
+        attributes["Main-Class"] = MainClass
     }
 }
 
 tasks.jar {
     manifest {
         attributes(
-            "Main-Class" to "org.lewapnoob.raycast.MainKt",
-            "Class-Path" to "org.lewapnoob.raycast.MainKt",
+            "Main-Class" to MainClass,
+            "Class-Path" to MainClass,
             "JVM-Options" to "-Xmx2048m -Xms1024m"
         )
     }
